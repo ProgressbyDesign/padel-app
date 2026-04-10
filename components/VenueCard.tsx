@@ -1,5 +1,6 @@
 import { Award, Dumbbell, MapPin, ShieldCheck, Star, Trophy } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { isPremiumTrainingVenue, type Venue } from "../lib/venueFilters";
 
 type VenueCardProps = {
@@ -31,7 +32,11 @@ export default function VenueCard({ venue }: VenueCardProps) {
   const isPremium = isPremiumTrainingVenue(venue);
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
+    <Link
+      href={`/venue/${encodeURIComponent(String(venue.id))}`}
+      className="group/card block overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 focus-visible:ring-offset-2"
+    >
+    <article className="group overflow-hidden">
       <div className="relative">
         <div className="relative aspect-[3/2] w-full overflow-hidden">
           <Image
@@ -39,7 +44,7 @@ export default function VenueCard({ venue }: VenueCardProps) {
             alt={venue.name ? `${venue.name} venue` : "Padel venue"}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-            className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-110"
+            className="h-full w-full object-cover transition duration-500 ease-out group-hover/card:scale-110"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-black/20 opacity-80" />
@@ -110,5 +115,6 @@ export default function VenueCard({ venue }: VenueCardProps) {
         ) : null}
       </div>
     </article>
+    </Link>
   );
 }
