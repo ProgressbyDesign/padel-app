@@ -3,14 +3,24 @@ export type Venue = {
   name?: string | null;
   city?: string | null;
   country?: string | null;
+  address?: string | null;
   image_url?: string | null;
   courts?: number | null;
   court_type?: string | null;
   coaching_available?: boolean | null;
   coaching_description?: string | null;
+  /** AI-generated or curated venue summary */
+  description?: string | null;
   rating?: number | string | null;
+  review_count?: number | null;
   premium_training?: boolean | null;
   venue_type?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  opening_hours?: unknown;
+  lat?: number | null;
+  lng?: number | null;
+  google_place_id?: string | null;
 };
 
 export type VenueTypeFilter = "premium_training" | "casual" | "resort";
@@ -18,8 +28,8 @@ export type CourtEnvironmentFilter = "all" | "indoor" | "outdoor";
 export type MinCourtsFilter = 0 | 4 | 6 | 8;
 
 export type FilterState = {
-  country: string;
-  city: string;
+  /** Free-text location: filters by matching city / country (forgiving partial match). */
+  locationQuery: string;
   environment: CourtEnvironmentFilter;
   minCourts: MinCourtsFilter;
   coachingOnly: boolean;
@@ -27,13 +37,28 @@ export type FilterState = {
 };
 
 export const defaultFilters: FilterState = {
-  country: "all",
-  city: "all",
+  locationQuery: "",
   environment: "all",
   minCourts: 0,
   coachingOnly: false,
   venueTypes: [],
 };
+
+/** True if venue city/country matches search (exact preferred; includes for partial). */
+export function matchesLocationQuery(venue: Venue, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const city = (venue.city ?? "").trim();
+  const country = (venue.country ?? "").trim();
+  const cityL = city.toLowerCase();
+  const countryL = country.toLowerCase();
+  const lineL = `${city}, ${country}`.toLowerCase();
+
+  if (cityL === q || countryL === q || lineL === q) return true;
+  if (cityL.includes(q) || countryL.includes(q) || lineL.includes(q)) return true;
+  return false;
+}
 
 export function normalizeSurfaceType(raw?: string | null): "indoor" | "outdoor" | "unknown" {
   if (!raw) return "unknown";
@@ -66,6 +91,48 @@ export function getCityOptions(venues: Venue[], country: string): string[] {
   return [
     ...new Set(filteredByCountry.map((venue) => normalizeText(venue.city)).filter(Boolean) as string[]),
   ].sort((a, b) => a.localeCompare(b));
+}
+
+/** Single "Where" combobox: countries first, then city + country pairs (unique). */
+export type WhereOption =
+  | { id: string; kind: "country"; country: string; label: string }
+  | { id: string; kind: "city"; country: string; city: string; label: string };
+
+export function buildWhereOptions(venues: Venue[]): WhereOption[] {
+  const countries = getCountryOptions(venues);
+  const seen = new Set<string>();
+  const cityRows: Array<{ country: string; city: string }> = [];
+  for (const v of venues) {
+    const country = normalizeText(v.country);
+    const city = normalizeText(v.city);
+    if (country && city) {
+      const key = `${country}\0${city}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        cityRows.push({ country, city });
+      }
+    }
+  }
+  cityRows.sort((a, b) => {
+    const byCity = a.city.localeCompare(b.city);
+    if (byCity !== 0) return byCity;
+    return a.country.localeCompare(b.country);
+  });
+
+  const countryOpts: WhereOption[] = countries.map((country) => ({
+    id: `country:${country}`,
+    kind: "country",
+    country,
+    label: country,
+  }));
+  const cityOpts: WhereOption[] = cityRows.map(({ country, city }) => ({
+    id: `city:${country}:${city}`,
+    kind: "city",
+    country,
+    city,
+    label: `${city}, ${country}`,
+  }));
+  return [...countryOpts, ...cityOpts];
 }
 
 /** True when the DB marks the venue as premium training (boolean and/or venue_type). */
@@ -145,8 +212,7 @@ export function sortVenuesByBestMatch(venues: Venue[]): Venue[] {
 
 export function filterVenues(venues: Venue[], filters: FilterState): Venue[] {
   return venues.filter((venue) => {
-    if (filters.country !== "all" && venue.country !== filters.country) return false;
-    if (filters.city !== "all" && venue.city !== filters.city) return false;
+    if (!matchesLocationQuery(venue, filters.locationQuery)) return false;
 
     if (filters.environment !== "all" && normalizeSurfaceType(venue.court_type) !== filters.environment) {
       return false;

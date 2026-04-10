@@ -5,10 +5,9 @@ import { ChevronDown } from "lucide-react";
 import FilterBar from "./FilterBar";
 import VenueCard from "./VenueCard";
 import {
+  buildWhereOptions,
   defaultFilters,
   filterVenues,
-  getCityOptions,
-  getCountryOptions,
   sortVenuesByUserChoice,
   type FilterState,
   type MinCourtsFilter,
@@ -20,18 +19,21 @@ import {
 
 type VenuesClientProps = {
   venues: Venue[];
+  initialFilters?: Partial<FilterState>;
 };
 
 const sortSelectClass =
   "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 ease-out hover:border-slate-300 hover:shadow-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10";
 
-export default function VenuesClient({ venues }: VenuesClientProps) {
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
+export default function VenuesClient({ venues, initialFilters }: VenuesClientProps) {
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    ...defaultFilters,
+    ...initialFilters,
+  }));
   const [sortBy, setSortBy] = useState<SortBy>("best_match");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const countryOptions = useMemo(() => getCountryOptions(venues), [venues]);
-  const cityOptions = useMemo(() => getCityOptions(venues, filters.country), [venues, filters.country]);
+  const whereOptions = useMemo(() => buildWhereOptions(venues), [venues]);
 
   const filteredVenues = useMemo(() => {
     const filtered = filterVenues(venues, filters);
@@ -41,19 +43,11 @@ export default function VenuesClient({ venues }: VenuesClientProps) {
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
 
-    if (filters.country !== "all") {
+    if (filters.locationQuery.trim()) {
       chips.push({
-        key: `country-${filters.country}`,
-        label: `Country: ${filters.country}`,
-        onRemove: () => setFilters((prev) => ({ ...prev, country: "all", city: "all" })),
-      });
-    }
-
-    if (filters.city !== "all") {
-      chips.push({
-        key: `city-${filters.city}`,
-        label: `City: ${filters.city}`,
-        onRemove: () => setFilters((prev) => ({ ...prev, city: "all" })),
+        key: "where",
+        label: filters.locationQuery.trim(),
+        onRemove: () => setFilters((prev) => ({ ...prev, locationQuery: "" })),
       });
     }
 
@@ -101,17 +95,9 @@ export default function VenuesClient({ venues }: VenuesClientProps) {
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
       <FilterBar
         filters={filters}
-        countryOptions={countryOptions}
-        cityOptions={cityOptions}
+        whereOptions={whereOptions}
         activeChips={activeChips}
-        onCountryChange={(country) =>
-          setFilters((prev) => ({
-            ...prev,
-            country,
-            city: "all",
-          }))
-        }
-        onCityChange={(city) => setFilters((prev) => ({ ...prev, city }))}
+        onLocationQueryChange={(locationQuery) => setFilters((prev) => ({ ...prev, locationQuery }))}
         onEnvironmentChange={(environment) => setFilters((prev) => ({ ...prev, environment }))}
         onMinCourtsChange={(minCourts: MinCourtsFilter) => setFilters((prev) => ({ ...prev, minCourts }))}
         onCoachingOnlyChange={(coachingOnly) => setFilters((prev) => ({ ...prev, coachingOnly }))}
