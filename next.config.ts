@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+        {
+      protocol: 'https',
+      hostname: 'uebhforyugmvpqvkzrbt.supabase.co',
+    },
     ],
   },
 };

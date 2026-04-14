@@ -1,9 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import FilterBar from "./FilterBar";
 import VenueCard from "./VenueCard";
+import type { CoachSearchRow } from "../lib/coaches";
+import { toVenueSearchRows } from "../lib/coaches";
+import { addDistancesToVenues } from "../lib/distance";
+import { useUserGeolocation } from "../hooks/useUserGeolocation";
 import {
   buildWhereOptions,
   defaultFilters,
@@ -19,13 +24,16 @@ import {
 
 type VenuesClientProps = {
   venues: Venue[];
+  coachSearchRows?: CoachSearchRow[];
   initialFilters?: Partial<FilterState>;
 };
 
 const sortSelectClass =
   "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 ease-out hover:border-slate-300 hover:shadow-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10";
 
-export default function VenuesClient({ venues, initialFilters }: VenuesClientProps) {
+export default function VenuesClient({ venues, coachSearchRows = [], initialFilters }: VenuesClientProps) {
+  const router = useRouter();
+  const userPosition = useUserGeolocation();
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...defaultFilters,
     ...initialFilters,
@@ -34,11 +42,17 @@ export default function VenuesClient({ venues, initialFilters }: VenuesClientPro
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const whereOptions = useMemo(() => buildWhereOptions(venues), [venues]);
+  const venueSearchRows = useMemo(() => toVenueSearchRows(venues), [venues]);
+
+  const venuesWithDistance = useMemo(
+    () => addDistancesToVenues(venues, userPosition),
+    [venues, userPosition]
+  );
 
   const filteredVenues = useMemo(() => {
-    const filtered = filterVenues(venues, filters);
+    const filtered = filterVenues(venuesWithDistance, filters);
     return sortVenuesByUserChoice(filtered, sortBy, sortDirection);
-  }, [venues, filters, sortBy, sortDirection]);
+  }, [venuesWithDistance, filters, sortBy, sortDirection]);
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -96,8 +110,12 @@ export default function VenuesClient({ venues, initialFilters }: VenuesClientPro
       <FilterBar
         filters={filters}
         whereOptions={whereOptions}
+        coaches={coachSearchRows}
+        venueSearchRows={venueSearchRows}
         activeChips={activeChips}
         onLocationQueryChange={(locationQuery) => setFilters((prev) => ({ ...prev, locationQuery }))}
+        onCoachNavigate={(id) => router.push(`/coach/${encodeURIComponent(id)}`)}
+        onVenueNavigate={(id) => router.push(`/venue/${encodeURIComponent(id)}`)}
         onEnvironmentChange={(environment) => setFilters((prev) => ({ ...prev, environment }))}
         onMinCourtsChange={(minCourts: MinCourtsFilter) => setFilters((prev) => ({ ...prev, minCourts }))}
         onCoachingOnlyChange={(coachingOnly) => setFilters((prev) => ({ ...prev, coachingOnly }))}

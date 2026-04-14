@@ -32,6 +32,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="stylesheet" href="https://use.typekit.net/lvq0yfy.css" />
+      </head>
       <body className="flex min-h-full flex-col bg-white text-slate-900">
         <AppHeader />
         <main className="flex-1">{children}</main>

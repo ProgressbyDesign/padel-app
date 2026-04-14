@@ -164,7 +164,11 @@ function compareName(a: Venue, b: Venue): number {
  * Apply user-selected sort. `best_match` uses courts + coaching + premium_training.
  * Rating/courts respect `direction` (desc = highest/most first).
  */
-export function sortVenuesByUserChoice(venues: Venue[], sortBy: SortBy, direction: SortDirection): Venue[] {
+export function sortVenuesByUserChoice<T extends Venue>(
+  venues: T[],
+  sortBy: SortBy,
+  direction: SortDirection
+): T[] {
   if (sortBy === "best_match") return sortVenuesByBestMatch(venues);
 
   const list = [...venues];
@@ -191,7 +195,7 @@ export function sortVenuesByUserChoice(venues: Venue[], sortBy: SortBy, directio
 }
 
 /** Higher = better match: more courts, coaching preferred, premium_training preferred. */
-export function sortVenuesByBestMatch(venues: Venue[]): Venue[] {
+export function sortVenuesByBestMatch<T extends Venue>(venues: T[]): T[] {
   return [...venues].sort((a, b) => {
     const courtsA = typeof a.courts === "number" ? a.courts : 0;
     const courtsB = typeof b.courts === "number" ? b.courts : 0;
@@ -210,7 +214,7 @@ export function sortVenuesByBestMatch(venues: Venue[]): Venue[] {
   });
 }
 
-export function filterVenues(venues: Venue[], filters: FilterState): Venue[] {
+export function filterVenues<T extends Venue>(venues: T[], filters: FilterState): T[] {
   return venues.filter((venue) => {
     if (!matchesLocationQuery(venue, filters.locationQuery)) return false;
 

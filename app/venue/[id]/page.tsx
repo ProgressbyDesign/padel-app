@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import VenueDetailPage from "../../../components/VenueDetailPage";
 import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
+import type { Coach } from "../../../lib/coaches";
 import type { Venue } from "../../../lib/venueFilters";
 
 type PageProps = {
@@ -34,9 +35,30 @@ export default async function VenuePdpPage({ params }: PageProps) {
 
   const typedVenue = venue as Venue;
 
-  const { data: pool } = await supabase.from("venues").select("*").neq("id", id).limit(48);
+  const [{ data: pool }, { data: coachLinks }] = await Promise.all([
+    supabase.from("venues").select("*").neq("id", id).limit(48),
+    supabase.from("coach_venues").select("coach_id").eq("venue_id", id),
+  ]);
 
   const similarVenues = pickSimilarVenues(typedVenue, (pool ?? []) as Venue[], 4);
 
-  return <VenueDetailPage venue={typedVenue} similarVenues={similarVenues} />;
+  const coachIds = Array.from(
+    new Set(
+      (coachLinks ?? [])
+        .map((row: { coach_id?: string }) => row.coach_id)
+        .filter((cid): cid is string => Boolean(cid))
+    )
+  );
+
+  let coaches: Coach[] = [];
+  if (coachIds.length > 0) {
+    const { data: coachRows } = await supabase
+      .from("coaches")
+      .select("id, name, role, description, image_url")
+      .in("id", coachIds);
+    const byId = new Map((coachRows as Coach[] | null)?.map((c) => [String(c.id), c]) ?? []);
+    coaches = coachIds.map((cid) => byId.get(cid)).filter((c): c is Coach => Boolean(c));
+  }
+
+  return <VenueDetailPage venue={typedVenue} similarVenues={similarVenues} coaches={coaches} />;
 }

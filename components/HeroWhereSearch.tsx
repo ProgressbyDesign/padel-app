@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Search, X } from "lucide-react";
+import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
+import { capList, filterCoachRows, filterVenueRows } from "../lib/coaches";
 import type { WhereOption } from "../lib/venueFilters";
+import GroupedSearchSuggestions from "./GroupedSearchSuggestions";
 
 type HeroWhereSearchProps = {
   whereOptions: WhereOption[];
+  coachSearchRows: CoachSearchRow[];
+  venueSearchRows: VenueSearchRow[];
 };
 
-export default function HeroWhereSearch({ whereOptions }: HeroWhereSearchProps) {
+export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSearchRows }: HeroWhereSearchProps) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -17,10 +22,18 @@ export default function HeroWhereSearch({ whereOptions }: HeroWhereSearchProps) 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const q = value.trim().toLowerCase();
-  const filteredSuggestions = useMemo(() => {
-    if (!q) return whereOptions;
-    return whereOptions.filter((o) => o.label.toLowerCase().includes(q));
+
+  const filteredLocations = useMemo(() => {
+    const base = q ? whereOptions.filter((o) => o.label.toLowerCase().includes(q)) : whereOptions;
+    return capList(base, q ? 100 : 50);
   }, [whereOptions, q]);
+
+  const filteredCoaches = useMemo(() => capList(filterCoachRows(coachSearchRows, q), q ? 50 : 8), [coachSearchRows, q]);
+
+  const filteredVenues = useMemo(
+    () => capList(filterVenueRows(venueSearchRows, q), q ? 50 : 8),
+    [venueSearchRows, q]
+  );
 
   const closeDropdown = useCallback(() => setOpen(false), []);
 
@@ -64,11 +77,11 @@ export default function HeroWhereSearch({ whereOptions }: HeroWhereSearchProps) 
                 setOpen(true);
               }}
               onFocus={() => setOpen(true)}
-              placeholder="Where do you want to play?"
+              placeholder="Places, venues, or coaches"
               autoComplete="off"
               aria-autocomplete="list"
               className={`w-full bg-transparent py-2.5 pl-1 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none ${value ? "pr-10" : "pr-2"}`}
-              aria-label="Where do you want to play?"
+              aria-label="Search places, venues, or coaches"
             />
             {value ? (
               <button
@@ -95,42 +108,33 @@ export default function HeroWhereSearch({ whereOptions }: HeroWhereSearchProps) 
 
         {open ? (
           <div
-            className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-slate-200/90 bg-white py-1 shadow-lg ring-1 ring-black/5"
+            className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 max-h-96 overflow-y-auto rounded-2xl border border-slate-200/90 bg-white py-1 shadow-lg ring-1 ring-black/5"
             role="listbox"
-            aria-label="Location suggestions"
+            aria-label="Search suggestions"
           >
-            <button
-              type="button"
-              role="option"
-              aria-selected={!value.trim()}
-              onClick={() => {
+            <GroupedSearchSuggestions
+              locations={filteredLocations}
+              venues={filteredVenues}
+              coaches={filteredCoaches}
+              selectedLocationLabel={value}
+              onAnywhere={() => {
                 setValue("");
                 closeDropdown();
               }}
-              className="flex w-full px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50"
-            >
-              Anywhere
-            </button>
-            {filteredSuggestions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm text-slate-500">No suggestions — press Search to explore</div>
-            ) : (
-              filteredSuggestions.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  role="option"
-                  aria-selected={value.trim().toLowerCase() === opt.label.toLowerCase()}
-                  onClick={() => {
-                    setValue(opt.label);
-                    closeDropdown();
-                  }}
-                  className="flex w-full px-3 py-2.5 text-left text-sm text-slate-900 transition hover:bg-slate-50"
-                >
-                  <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-                  <span className="ml-2 shrink-0 text-xs text-slate-400">{opt.kind === "country" ? "Country" : "City"}</span>
-                </button>
-              ))
-            )}
+              onSelectLocation={(label) => {
+                setValue(label);
+                closeDropdown();
+              }}
+              onSelectVenue={(id) => {
+                closeDropdown();
+                router.push(`/venue/${encodeURIComponent(id)}`);
+              }}
+              onSelectCoach={(id) => {
+                closeDropdown();
+                router.push(`/coach/${encodeURIComponent(id)}`);
+              }}
+              emptyMessage={q ? "No matches — press Search to explore" : "No suggestions yet — press Search to explore"}
+            />
           </div>
         ) : null}
       </div>

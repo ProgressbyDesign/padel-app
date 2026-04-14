@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
+import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
 import type { Venue, WhereOption } from "../lib/venueFilters";
-import VenueCard from "./VenueCard";
+import VenueCardsWithDistance from "./VenueCardsWithDistance";
 import HeroWhereSearch from "./HeroWhereSearch";
 
 const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1622163642998-2d13d73993d1?auto=format&fit=crop&w=1920&q=85";
+  "https://uebhforyugmvpqvkzrbt.supabase.co/storage/v1/object/public/images/Depositphotos_850818406_XL.jpg";
 
 const WHY = [
   {
@@ -34,9 +35,11 @@ const DESTINATIONS = [
 type LandingPageProps = {
   featuredVenues: Venue[];
   whereOptions: WhereOption[];
+  coachSearchRows: CoachSearchRow[];
+  venueSearchRows: VenueSearchRow[];
 };
 
-export default function LandingPage({ featuredVenues, whereOptions }: LandingPageProps) {
+export default function LandingPage({ featuredVenues, whereOptions, coachSearchRows, venueSearchRows }: LandingPageProps) {
   return (
     <div className="min-h-full bg-white">
       {/* Hero */}
@@ -61,7 +64,11 @@ export default function LandingPage({ featuredVenues, whereOptions }: LandingPag
             Discover courts, coaching, and trusted clubs—built for players who care about quality sessions.
           </p>
           <div className="mt-10 sm:mt-12">
-            <HeroWhereSearch whereOptions={whereOptions} />
+            <HeroWhereSearch
+              whereOptions={whereOptions}
+              coachSearchRows={coachSearchRows}
+              venueSearchRows={venueSearchRows}
+            />
           </div>
         </div>
       </section>
@@ -86,11 +93,10 @@ export default function LandingPage({ featuredVenues, whereOptions }: LandingPag
             No venues yet—check back soon.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredVenues.map((v) => (
-              <VenueCard key={v.id} venue={v} />
-            ))}
-          </div>
+          <VenueCardsWithDistance
+            venues={featuredVenues}
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          />
         )}
       </section>
 
