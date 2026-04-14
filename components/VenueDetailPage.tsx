@@ -12,9 +12,11 @@ import {
   Star,
   Trophy,
 } from "lucide-react";
+import type { Coach } from "../lib/coaches";
 import type { Venue } from "../lib/venueFilters";
 import { isPremiumTrainingVenue } from "../lib/venueFilters";
-import VenueCard from "./VenueCard";
+import VenueCardsWithDistance from "./VenueCardsWithDistance";
+import VenueCoachChip from "./VenueCoachChip";
 import {
   formatOpeningHoursLines,
   formatRatingValue,
@@ -28,9 +30,10 @@ import {
 type VenueDetailPageProps = {
   venue: Venue;
   similarVenues: Venue[];
+  coaches?: Coach[];
 };
 
-export default function VenueDetailPage({ venue, similarVenues }: VenueDetailPageProps) {
+export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: VenueDetailPageProps) {
   const imageSrc = venue.image_url || "/assets/court-placeholder.jpg";
   const locationLine = [venue.city, venue.country].filter(Boolean).join(", ");
   const ratingStr = formatRatingValue(venue.rating);
@@ -184,6 +187,19 @@ export default function VenueDetailPage({ venue, similarVenues }: VenueDetailPag
           </section>
         ) : null}
 
+        {coaches.length > 0 ? (
+          <section className="mb-10">
+            <h2 className="mb-3 text-lg font-semibold text-slate-900">Coaches at this venue</h2>
+            <ul className="space-y-2">
+              {coaches.map((c) => (
+                <li key={c.id}>
+                  <VenueCoachChip coach={c} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {hasContactBlock ? (
           <section className="mb-10">
             <h2 className="mb-4 text-lg font-semibold text-slate-900">Contact & details</h2>
@@ -271,11 +287,10 @@ export default function VenueDetailPage({ venue, similarVenues }: VenueDetailPag
         {similarVenues.length > 0 ? (
           <section>
             <h2 className="mb-4 text-lg font-semibold text-slate-900">Similar venues</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {similarVenues.map((v) => (
-                <VenueCard key={v.id} venue={v} />
-              ))}
-            </div>
+            <VenueCardsWithDistance
+              venues={similarVenues}
+              className="grid grid-cols-1 gap-6 sm:grid-cols-2"
+            />
           </section>
         ) : null}
       </div>

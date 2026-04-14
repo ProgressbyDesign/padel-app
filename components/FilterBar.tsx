@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, SlidersHorizontal, X } from "lucide-react";
+import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
+import { capList, filterCoachRows, filterVenueRows } from "../lib/coaches";
 import type { FilterState, MinCourtsFilter, VenueTypeFilter, WhereOption } from "../lib/venueFilters";
+import GroupedSearchSuggestions from "./GroupedSearchSuggestions";
 
 type ActiveFilterChip = {
   key: string;
@@ -13,8 +16,12 @@ type ActiveFilterChip = {
 type FilterBarProps = {
   filters: FilterState;
   whereOptions: WhereOption[];
+  coaches: CoachSearchRow[];
+  venueSearchRows: VenueSearchRow[];
   activeChips: ActiveFilterChip[];
   onLocationQueryChange: (value: string) => void;
+  onCoachNavigate: (id: string) => void;
+  onVenueNavigate: (id: string) => void;
   onEnvironmentChange: (environment: FilterState["environment"]) => void;
   onMinCourtsChange: (minCourts: MinCourtsFilter) => void;
   onCoachingOnlyChange: (enabled: boolean) => void;
@@ -43,8 +50,12 @@ function modalFilterCount(filters: FilterState): number {
 export default function FilterBar({
   filters,
   whereOptions,
+  coaches,
+  venueSearchRows,
   activeChips,
   onLocationQueryChange,
+  onCoachNavigate,
+  onVenueNavigate,
   onEnvironmentChange,
   onMinCourtsChange,
   onCoachingOnlyChange,
@@ -59,10 +70,17 @@ export default function FilterBar({
   const modalCount = modalFilterCount(filters);
   const q = filters.locationQuery.trim().toLowerCase();
 
-  const filteredSuggestions = useMemo(() => {
-    if (!q) return whereOptions;
-    return whereOptions.filter((o) => o.label.toLowerCase().includes(q));
+  const filteredLocations = useMemo(() => {
+    const base = q ? whereOptions.filter((o) => o.label.toLowerCase().includes(q)) : whereOptions;
+    return capList(base, q ? 100 : 50);
   }, [whereOptions, q]);
+
+  const filteredCoaches = useMemo(() => capList(filterCoachRows(coaches, q), q ? 50 : 8), [coaches, q]);
+
+  const filteredVenueSearchRows = useMemo(
+    () => capList(filterVenueRows(venueSearchRows, q), q ? 50 : 8),
+    [venueSearchRows, q]
+  );
 
   const closeWhere = useCallback(() => setWhereOpen(false), []);
 
@@ -95,11 +113,6 @@ export default function FilterBar({
     return () => window.removeEventListener("keydown", onKey);
   }, [closeWhere]);
 
-  const isOptionSelected = useCallback(
-    (opt: WhereOption) => filters.locationQuery.trim().toLowerCase() === opt.label.toLowerCase(),
-    [filters.locationQuery]
-  );
-
   return (
     <div className="mb-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-2">
@@ -120,7 +133,7 @@ export default function FilterBar({
                 inputRef.current?.blur();
               }
             }}
-            placeholder="Where do you want to play?"
+            placeholder="Places, venues, or coaches"
             autoComplete="off"
             aria-autocomplete="list"
             className={`h-11 w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 ${
@@ -143,42 +156,33 @@ export default function FilterBar({
 
           {whereOpen ? (
             <div
-              className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
+              className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-black/5"
               role="listbox"
-              aria-label="Location suggestions"
+              aria-label="Search suggestions"
             >
-              <button
-                type="button"
-                role="option"
-                aria-selected={!filters.locationQuery.trim()}
-                onClick={() => {
+              <GroupedSearchSuggestions
+                locations={filteredLocations}
+                venues={filteredVenueSearchRows}
+                coaches={filteredCoaches}
+                selectedLocationLabel={filters.locationQuery}
+                onAnywhere={() => {
                   onLocationQueryChange("");
                   closeWhere();
                 }}
-                className="flex w-full px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50"
-              >
-                Anywhere
-              </button>
-              {filteredSuggestions.length === 0 ? (
-                <div className="px-3 py-4 text-center text-sm text-slate-500">No suggestions — press Enter to search</div>
-              ) : (
-                filteredSuggestions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    role="option"
-                    aria-selected={isOptionSelected(opt)}
-                    onClick={() => {
-                      onLocationQueryChange(opt.label);
-                      closeWhere();
-                    }}
-                    className="flex w-full px-3 py-2.5 text-left text-sm text-slate-900 transition hover:bg-slate-50"
-                  >
-                    <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-                    <span className="ml-2 shrink-0 text-xs text-slate-400">{opt.kind === "country" ? "Country" : "City"}</span>
-                  </button>
-                ))
-              )}
+                onSelectLocation={(label) => {
+                  onLocationQueryChange(label);
+                  closeWhere();
+                }}
+                onSelectVenue={(id) => {
+                  closeWhere();
+                  onVenueNavigate(id);
+                }}
+                onSelectCoach={(id) => {
+                  closeWhere();
+                  onCoachNavigate(id);
+                }}
+                emptyMessage={q ? "No matches — try another term" : "No suggestions yet"}
+              />
             </div>
           ) : null}
         </div>
