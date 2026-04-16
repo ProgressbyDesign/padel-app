@@ -54,9 +54,9 @@ export default function VenueCard({ venue }: VenueCardProps) {
 
         <div className="flex w-full flex-col gap-3 px-2">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-adobe-heading line-clamp-2 min-w-0 flex-1 text-[20px] font-bold leading-tight tracking-[-0.2px] text-[#020d0c]">
+            <p className="font-adobe-body line-clamp-2 min-w-0 flex-1 text-[20px] leading-tight tracking-[-0.2px] text-[#020d0c]">
               {venue.name || "Venue"}
-            </h2>
+            </p>
             {rating ? (
               <div className="flex shrink-0 items-center gap-[9px] pt-0.5">
                 <Star className="h-[14px] w-[14px] fill-neutral-900 text-neutral-900" aria-hidden />
