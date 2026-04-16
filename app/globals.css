@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #faf9f7;
   --foreground: #171717;
   /* Adobe Fonts (Typekit lvq0yfy): add Acumin Pro to the same web project if body text doesn’t load */
   --font-adobe-heading: "neue-haas-grotesk-display", var(--font-geist-sans), sans-serif;

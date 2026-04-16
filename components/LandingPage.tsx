@@ -7,7 +7,7 @@ import VenueCardsWithDistance from "./VenueCardsWithDistance";
 import HeroWhereSearch from "./HeroWhereSearch";
 
 const HERO_IMAGE =
-  "https://uebhforyugmvpqvkzrbt.supabase.co/storage/v1/object/public/images/Depositphotos_850818406_XL.jpg";
+  "/images/Depositphotos_850818406_XL.jpg";
 
 const WHY = [
   {
