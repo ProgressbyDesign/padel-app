@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import FilterBar from "./FilterBar";
@@ -8,7 +8,9 @@ import VenueCard from "./VenueCard";
 import type { CoachSearchRow } from "../lib/coaches";
 import { toVenueSearchRows } from "../lib/coaches";
 import { addDistancesToVenues } from "../lib/distance";
-import { useUserGeolocation } from "../hooks/useUserGeolocation";
+import { requestUserPosition } from "../lib/requestUserPosition";
+import { clearUserGeo, readUserGeo, writeUserGeo } from "../lib/userGeoSession";
+import type { UserGeolocation } from "../hooks/useUserGeolocation";
 import {
   buildWhereOptions,
   defaultFilters,
@@ -33,7 +35,9 @@ const sortSelectClass =
 
 export default function VenuesClient({ venues, coachSearchRows = [], initialFilters }: VenuesClientProps) {
   const router = useRouter();
-  const userPosition = useUserGeolocation();
+  const [userCoords, setUserCoords] = useState<UserGeolocation>(null);
+  const [nearbyMode, setNearbyMode] = useState(false);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...defaultFilters,
     ...initialFilters,
@@ -41,12 +45,44 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
   const [sortBy, setSortBy] = useState<SortBy>("best_match");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  useEffect(() => {
+    const g = readUserGeo();
+    if (g) {
+      setUserCoords(g);
+      setNearbyMode(true);
+      setSortBy("distance");
+      setSortDirection("asc");
+    }
+  }, []);
+
+  const clearNearby = useCallback(() => {
+    setUserCoords(null);
+    setNearbyMode(false);
+    clearUserGeo();
+    setSortBy("best_match");
+    setSortDirection("desc");
+  }, []);
+
+  const handleNearby = useCallback(async () => {
+    setNearbyLoading(true);
+    const pos = await requestUserPosition();
+    setNearbyLoading(false);
+    if (pos) {
+      setUserCoords(pos);
+      writeUserGeo(pos);
+      setNearbyMode(true);
+      setSortBy("distance");
+      setSortDirection("asc");
+      setFilters((prev) => ({ ...prev, locationQuery: "" }));
+    }
+  }, []);
+
   const whereOptions = useMemo(() => buildWhereOptions(venues), [venues]);
   const venueSearchRows = useMemo(() => toVenueSearchRows(venues), [venues]);
 
   const venuesWithDistance = useMemo(
-    () => addDistancesToVenues(venues, userPosition),
-    [venues, userPosition]
+    () => addDistancesToVenues(venues, userCoords),
+    [venues, userCoords]
   );
 
   const filteredVenues = useMemo(() => {
@@ -56,6 +92,14 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
+
+    if (nearbyMode && userCoords) {
+      chips.push({
+        key: "nearby",
+        label: "Nearby",
+        onRemove: clearNearby,
+      });
+    }
 
     if (filters.locationQuery.trim()) {
       chips.push({
@@ -103,7 +147,7 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
     });
 
     return chips;
-  }, [filters]);
+  }, [filters, nearbyMode, userCoords, clearNearby]);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
@@ -116,6 +160,9 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
         onLocationQueryChange={(locationQuery) => setFilters((prev) => ({ ...prev, locationQuery }))}
         onCoachNavigate={(id) => router.push(`/coach/${encodeURIComponent(id)}`)}
         onVenueNavigate={(id) => router.push(`/venue/${encodeURIComponent(id)}`)}
+        onClearNearby={clearNearby}
+        onNearby={handleNearby}
+        nearbyLoading={nearbyLoading}
         onEnvironmentChange={(environment) => setFilters((prev) => ({ ...prev, environment }))}
         onMinCourtsChange={(minCourts: MinCourtsFilter) => setFilters((prev) => ({ ...prev, minCourts }))}
         onCoachingOnlyChange={(coachingOnly) => setFilters((prev) => ({ ...prev, coachingOnly }))}
@@ -127,7 +174,10 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
               : [...prev.venueTypes, venueType],
           }))
         }
-        onReset={() => setFilters(defaultFilters)}
+        onReset={() => {
+          setFilters(defaultFilters);
+          clearNearby();
+        }}
       />
 
       <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
@@ -146,11 +196,13 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
                   const next = e.target.value as SortBy;
                   setSortBy(next);
                   if (next === "best_match") setSortDirection("desc");
+                  if (next === "distance") setSortDirection("asc");
                 }}
                 className={sortSelectClass}
                 aria-label="Sort venues by"
               >
                 <option value="best_match">Best match</option>
+                <option value="distance">Distance</option>
                 <option value="rating">Rating</option>
                 <option value="courts">Courts</option>
               </select>
@@ -169,12 +221,19 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
                   value={sortDirection}
                   onChange={(e) => setSortDirection(e.target.value as SortDirection)}
                   className={sortSelectClass}
-                  aria-label={sortBy === "rating" ? "Rating order" : "Courts order"}
+                  aria-label={
+                    sortBy === "rating" ? "Rating order" : sortBy === "distance" ? "Distance order" : "Courts order"
+                  }
                 >
                   {sortBy === "rating" ? (
                     <>
                       <option value="desc">Highest rated first</option>
                       <option value="asc">Lowest rated first</option>
+                    </>
+                  ) : sortBy === "distance" ? (
+                    <>
+                      <option value="asc">Nearest first</option>
+                      <option value="desc">Farthest first</option>
                     </>
                   ) : (
                     <>
@@ -199,7 +258,10 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
           <p className="mt-1 text-sm text-slate-600">Try removing one or two filters to see more results.</p>
           <button
             type="button"
-            onClick={() => setFilters(defaultFilters)}
+            onClick={() => {
+              setFilters(defaultFilters);
+              clearNearby();
+            }}
             className="mt-4 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             Clear all filters

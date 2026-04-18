@@ -1,8 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { LocateFixed } from "lucide-react";
 import type { WhereOption } from "../lib/venueFilters";
 import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
+
+export type NearbySearchOption = {
+  label: string;
+  description: string;
+  type: "nearby";
+};
 
 type GroupedSearchSuggestionsProps = {
   locations: WhereOption[];
@@ -14,6 +21,9 @@ type GroupedSearchSuggestionsProps = {
   onSelectCoach: (id: string) => void;
   onAnywhere: () => void;
   emptyMessage: string;
+  /** User-triggered geolocation (e.g. "Nearby"); no request until click */
+  onSelectNearby?: () => void | Promise<void>;
+  nearbyLoading?: boolean;
 };
 
 function SectionTitle({ children }: { children: ReactNode }) {
@@ -34,22 +44,45 @@ export default function GroupedSearchSuggestions({
   onSelectCoach,
   onAnywhere,
   emptyMessage,
+  onSelectNearby,
+  nearbyLoading = false,
 }: GroupedSearchSuggestionsProps) {
   const hasAny = coaches.length > 0 || venues.length > 0 || locations.length > 0;
+  const q = selectedLocationLabel.trim();
 
   return (
     <>
+      {onSelectNearby ? (
+        <button
+          type="button"
+          role="option"
+          disabled={nearbyLoading}
+          onClick={() => void onSelectNearby()}
+          className="flex w-full items-start gap-3 border-b border-slate-100 px-3 py-3 text-left transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <LocateFixed className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-slate-900">
+              {nearbyLoading ? "Detecting location…" : "Nearby"}
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              {nearbyLoading ? "This may take a few seconds" : "Find venues around you"}
+            </span>
+          </span>
+        </button>
+      ) : null}
+
       <button
         type="button"
         role="option"
-        aria-selected={!selectedLocationLabel.trim()}
+        aria-selected={!q}
         onClick={onAnywhere}
         className="flex w-full px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-50"
       >
         Anywhere
       </button>
 
-      {!hasAny ? (
+      {!hasAny && q ? (
         <div className="px-3 py-4 text-center text-sm text-slate-500">{emptyMessage}</div>
       ) : (
         <>
@@ -100,7 +133,7 @@ export default function GroupedSearchSuggestions({
                   key={opt.id}
                   type="button"
                   role="option"
-                  aria-selected={selectedLocationLabel.trim().toLowerCase() === opt.label.toLowerCase()}
+                  aria-selected={q.toLowerCase() === opt.label.toLowerCase()}
                   onClick={() => onSelectLocation(opt.label)}
                   className="flex w-full px-3 py-2.5 text-left text-sm text-slate-900 transition hover:bg-slate-50"
                 >

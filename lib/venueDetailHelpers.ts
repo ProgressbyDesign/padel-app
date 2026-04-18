@@ -1,5 +1,21 @@
 import type { Venue } from "./venueFilters";
 
+/** Resolved hero URL: `main_image` → `image_url` → placeholder path handled by caller */
+export function getVenueMainImageUrl(venue: Venue): string | null {
+  const m = venue.main_image?.trim() || venue.image_url?.trim();
+  return m || null;
+}
+
+/** Non-empty, de-duplicated gallery URLs from `venue.images` */
+export function normalizeGalleryImages(venue: Venue): string[] {
+  const raw = venue.images;
+  if (!Array.isArray(raw)) return [];
+  const urls = raw
+    .map((x) => (typeof x === "string" ? x.trim() : String(x).trim()))
+    .filter(Boolean);
+  return [...new Set(urls)];
+}
+
 export function formatRatingValue(raw: Venue["rating"]): string | null {
   const n = typeof raw === "string" ? Number(raw) : raw;
   if (typeof n !== "number" || Number.isNaN(n)) return null;
