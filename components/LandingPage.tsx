@@ -58,10 +58,10 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
             Train anywhere
           </p>
           <h1 className="mx-auto max-w-3xl text-center text-4xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl">
-            Find the best padel venues abroad
+           Find the Best Padel Coaching & Training Camps Worldwide
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-center text-lg text-white/90 sm:text-xl">
-            Discover courts, coaching, and trusted clubs—built for players who care about quality sessions.
+           Compare academies, book trips, and train like a pro
           </p>
           <div className="mt-10 sm:mt-12">
             <HeroWhereSearch

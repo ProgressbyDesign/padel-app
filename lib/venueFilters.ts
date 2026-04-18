@@ -1,9 +1,23 @@
+/**
+ * Example shape (Supabase / API):
+ * {
+ *   id, name, city, country,
+ *   image_url: "https://...",      // legacy single hero
+ *   main_image: "https://...",      // optional; preferred over image_url when set
+ *   images: ["url1", "url2"],      // optional gallery; when non-empty, PDP uses grid gallery
+ *   courts, court_type, rating, ...
+ * }
+ */
 export type Venue = {
   id: string | number;
   name?: string | null;
   city?: string | null;
   country?: string | null;
   address?: string | null;
+  /** Primary hero image (optional; falls back to `image_url`) */
+  main_image?: string | null;
+  /** Optional gallery URLs; when empty, PDP shows single hero only */
+  images?: string[] | null;
   image_url?: string | null;
   courts?: number | null;
   court_type?: string | null;
@@ -145,7 +159,7 @@ function coachingScore(venue: Venue): number {
   return venue.coaching_available ? 1 : 0;
 }
 
-export type SortBy = "best_match" | "rating" | "courts";
+export type SortBy = "best_match" | "rating" | "courts" | "distance";
 export type SortDirection = "desc" | "asc";
 
 function parseRatingValue(raw: Venue["rating"]): number | null {
@@ -164,6 +178,10 @@ function compareName(a: Venue, b: Venue): number {
  * Apply user-selected sort. `best_match` uses courts + coaching + premium_training.
  * Rating/courts respect `direction` (desc = highest/most first).
  */
+function distanceMilesOnVenue(venue: Venue & { distance?: number }): number | null {
+  return typeof venue.distance === "number" && Number.isFinite(venue.distance) ? venue.distance : null;
+}
+
 export function sortVenuesByUserChoice<T extends Venue>(
   venues: T[],
   sortBy: SortBy,
@@ -172,6 +190,19 @@ export function sortVenuesByUserChoice<T extends Venue>(
   if (sortBy === "best_match") return sortVenuesByBestMatch(venues);
 
   const list = [...venues];
+
+  if (sortBy === "distance") {
+    return list.sort((a, b) => {
+      const da = distanceMilesOnVenue(a as Venue & { distance?: number });
+      const db = distanceMilesOnVenue(b as Venue & { distance?: number });
+      if (da == null && db == null) return compareName(a, b);
+      if (da == null) return 1;
+      if (db == null) return -1;
+      const cmp = direction === "asc" ? da - db : db - da;
+      if (cmp !== 0) return cmp;
+      return compareName(a, b);
+    });
+  }
 
   if (sortBy === "courts") {
     return list.sort((a, b) => {

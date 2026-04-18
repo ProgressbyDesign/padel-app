@@ -22,6 +22,10 @@ type FilterBarProps = {
   onLocationQueryChange: (value: string) => void;
   onCoachNavigate: (id: string) => void;
   onVenueNavigate: (id: string) => void;
+  /** Clear text search and exit “Nearby” mode (optional). */
+  onClearNearby?: () => void;
+  onNearby?: () => void | Promise<void>;
+  nearbyLoading?: boolean;
   onEnvironmentChange: (environment: FilterState["environment"]) => void;
   onMinCourtsChange: (minCourts: MinCourtsFilter) => void;
   onCoachingOnlyChange: (enabled: boolean) => void;
@@ -56,6 +60,9 @@ export default function FilterBar({
   onLocationQueryChange,
   onCoachNavigate,
   onVenueNavigate,
+  onClearNearby,
+  onNearby,
+  nearbyLoading,
   onEnvironmentChange,
   onMinCourtsChange,
   onCoachingOnlyChange,
@@ -165,8 +172,11 @@ export default function FilterBar({
                 venues={filteredVenueSearchRows}
                 coaches={filteredCoaches}
                 selectedLocationLabel={filters.locationQuery}
+                onSelectNearby={onNearby}
+                nearbyLoading={nearbyLoading}
                 onAnywhere={() => {
                   onLocationQueryChange("");
+                  onClearNearby?.();
                   closeWhere();
                 }}
                 onSelectLocation={(label) => {

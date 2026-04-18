@@ -27,7 +27,7 @@ function distanceLabel(miles: number) {
 }
 
 export default function VenueCard({ venue }: VenueCardProps) {
-  const imageSrc = venue.image_url || "/assets/court-placeholder.jpg";
+  const imageSrc = venue.image_url || "/images/venue-default.png";
   const location = [venue.city, venue.country].filter(Boolean).join(", ");
   const distanceMiles = typeof venue.distance === "number" ? venue.distance : null;
   const rating = formatRating(venue.rating);

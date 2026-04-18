@@ -6,6 +6,8 @@ import { MapPin, Search, X } from "lucide-react";
 import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
 import { capList, filterCoachRows, filterVenueRows } from "../lib/coaches";
 import type { WhereOption } from "../lib/venueFilters";
+import { requestUserPosition } from "../lib/requestUserPosition";
+import { writeUserGeo } from "../lib/userGeoSession";
 import GroupedSearchSuggestions from "./GroupedSearchSuggestions";
 
 type HeroWhereSearchProps = {
@@ -18,6 +20,7 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
   const router = useRouter();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +62,17 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
     closeDropdown();
     if (v) router.push(`/venues?location=${encodeURIComponent(v)}`);
     else router.push("/venues");
+  }
+
+  async function handleNearby() {
+    setNearbyLoading(true);
+    const pos = await requestUserPosition();
+    setNearbyLoading(false);
+    if (pos) {
+      writeUserGeo(pos);
+      closeDropdown();
+      router.push("/venues");
+    }
   }
 
   return (
@@ -117,6 +131,8 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
               venues={filteredVenues}
               coaches={filteredCoaches}
               selectedLocationLabel={value}
+              onSelectNearby={handleNearby}
+              nearbyLoading={nearbyLoading}
               onAnywhere={() => {
                 setValue("");
                 closeDropdown();
