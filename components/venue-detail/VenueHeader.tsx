@@ -31,6 +31,7 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
     typeof venue.review_count === "number" && venue.review_count > 0
       ? venue.review_count.toLocaleString()
       : null;
+  const coachingAvailable = Boolean(venue.coaching_available);
 
   const distanceMiles = useMemo(() => {
     if (!sessionCoords) return null;
@@ -55,6 +56,13 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
           {venue.name?.trim() || "Venue"}
         </h1>
 
+        {coachingAvailable ? (
+          <p className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-100">
+            <span aria-hidden>🎾</span>
+            Coaching available
+          </p>
+        ) : null}
+
         {locationLine ? (
           <p className="flex flex-wrap items-center gap-1.5 text-base text-slate-600">
             <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
@@ -71,8 +79,8 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
         ) : null}
 
         {ratingStr ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900">
               <Star className="h-4 w-4 fill-neutral-900 text-neutral-900" aria-hidden />
               {ratingStr}
               {reviewCount ? <span className="font-normal text-slate-500">({reviewCount} reviews)</span> : null}
