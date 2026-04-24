@@ -4,6 +4,10 @@ export type Coach = {
   role: string | null;
   description: string | null;
   image_url: string | null;
+  /** Optional: e.g. skill band (future / extended profile) */
+  level?: string | null;
+  /** Optional: focus area (future / extended profile) */
+  specialty?: string | null;
 };
 
 /** Minimal coach row for search dropdowns */

@@ -8,6 +8,7 @@ import CourtDetailsSection from "./venue-detail/CourtDetailsSection";
 import ExpandableDescription from "./venue-detail/ExpandableDescription";
 import FacilitiesGrid from "./venue-detail/FacilitiesGrid";
 import QuickFacts from "./venue-detail/QuickFacts";
+import VenueContactSection from "./venue-detail/VenueContactSection";
 import ReviewsSection from "./venue-detail/ReviewsSection";
 import VenueGallery from "./venue-detail/VenueGallery";
 import VenueHeader from "./venue-detail/VenueHeader";
@@ -26,9 +27,8 @@ export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: 
     <div className="min-h-full bg-white">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mx-auto space-y-8 pb-8">
-
-                      <VenueHeader venue={venue} />
-            <VenueGallery venue={venue} />
+          <VenueHeader venue={venue} />
+          <VenueGallery venue={venue} />
         </div>
         <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-10">
           <div className="min-w-0 space-y-8">
@@ -44,12 +44,13 @@ export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: 
             <CoachesSection coaches={coaches} />
             <CourtDetailsSection venue={venue} />
             <FacilitiesGrid venue={venue} />
+            <VenueContactSection venue={venue} />
             <ReviewsSection venue={venue} />
             <VenueMapSection venue={venue} />
           </div>
 
-          <aside className="mt-10 lg:mt-0 sticky top-24">
-              <BookingCard venueName={venue.name} />
+          <aside className="sticky top-24 mt-10 lg:mt-0">
+            <BookingCard venueName={venue.name} />
           </aside>
         </div>
 
