@@ -22,7 +22,7 @@ export default function VenueGallery({ venue }: VenueGalleryProps) {
   if (gallery.length === 0) {
     const src = mainResolved || PLACEHOLDER;
     return (
-      <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[21/9]">
+      <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-surface sm:aspect-[21/9]">
         <Image
           src={src}
           alt={fallbackAlt}
@@ -37,7 +37,7 @@ export default function VenueGallery({ venue }: VenueGalleryProps) {
 
   if (gallery.length === 1) {
     return (
-      <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[21/9]">
+      <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl bg-surface sm:aspect-[21/9]">
         <GalleryImg src={gallery[0]} alt={fallbackAlt} className="h-full w-full object-cover" />
       </div>
     );
@@ -48,12 +48,12 @@ export default function VenueGallery({ venue }: VenueGalleryProps) {
 
   return (
     <div className="flex flex-col gap-2 lg:h-[min(28rem,52vh)] lg:flex-row lg:gap-2">
-      <div className="relative min-h-[14rem] flex-[1.12] overflow-hidden rounded-2xl bg-slate-100 lg:min-h-0">
+      <div className="relative min-h-[14rem] flex-[1.12] overflow-hidden rounded-2xl bg-surface lg:min-h-0">
         <GalleryImg src={primary} alt={fallbackAlt} />
       </div>
       <div className="grid min-h-[10rem] flex-1 grid-cols-2 grid-rows-2 gap-2 lg:min-h-0">
         {thumbs.map((url, i) => (
-          <div key={`${url}-${i}`} className="relative min-h-[6rem] overflow-hidden rounded-xl bg-slate-100 lg:min-h-0">
+          <div key={`${url}-${i}`} className="relative min-h-[6rem] overflow-hidden rounded-xl bg-surface lg:min-h-0">
             <GalleryImg src={url} alt="" className="absolute inset-0 size-full object-cover" />
           </div>
         ))}

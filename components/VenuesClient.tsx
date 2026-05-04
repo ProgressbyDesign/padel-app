@@ -1,40 +1,38 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
-import FilterBar from "./FilterBar";
+import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import VenueCard from "./VenueCard";
-import type { CoachSearchRow } from "../lib/coaches";
-import { toVenueSearchRows } from "../lib/coaches";
+import FiltersModal from "./listing/FiltersModal";
+import ListingWhereSearch from "./listing/ListingWhereSearch";
 import { addDistancesToVenues } from "../lib/distance";
+import { toCoachSearchRows, toVenueSearchRows } from "../lib/coaches";
+import type { CoachSearchRow } from "../lib/coaches";
 import { requestUserPosition } from "../lib/requestUserPosition";
 import { clearUserGeo, readUserGeo, writeUserGeo } from "../lib/userGeoSession";
 import type { UserGeolocation } from "../hooks/useUserGeolocation";
 import {
   buildWhereOptions,
+  countVenueModalFiltersActive,
   defaultFilters,
   filterVenues,
   sortVenuesByUserChoice,
   type FilterState,
-  type MinCourtsFilter,
   type SortBy,
   type SortDirection,
   type Venue,
-  type VenueTypeFilter,
 } from "../lib/venueFilters";
 
 type VenuesClientProps = {
   venues: Venue[];
-  coachSearchRows?: CoachSearchRow[];
+  coachSearchRows: CoachSearchRow[];
   initialFilters?: Partial<FilterState>;
 };
 
 const sortSelectClass =
-  "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-9 text-sm font-medium text-slate-900 shadow-sm outline-none transition duration-200 ease-out hover:border-slate-300 hover:shadow-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10";
+  "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-primary/15 bg-white pl-3 pr-9 text-sm font-medium text-primary shadow-sm outline-none transition duration-200 ease-out hover:border-primary/25 hover:shadow-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
 
-export default function VenuesClient({ venues, coachSearchRows = [], initialFilters }: VenuesClientProps) {
-  const router = useRouter();
+export default function VenuesClient({ venues, coachSearchRows, initialFilters }: VenuesClientProps) {
   const [userCoords, setUserCoords] = useState<UserGeolocation>(null);
   const [nearbyMode, setNearbyMode] = useState(false);
   const [nearbyLoading, setNearbyLoading] = useState(false);
@@ -42,8 +40,10 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
     ...defaultFilters,
     ...initialFilters,
   }));
+  const [locationDraft, setLocationDraft] = useState(() => initialFilters?.locationQuery ?? "");
   const [sortBy, setSortBy] = useState<SortBy>("best_match");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const g = readUserGeo();
@@ -63,7 +63,7 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
     setSortDirection("desc");
   }, []);
 
-  const handleNearby = useCallback(async () => {
+  const handleNearbyFromSearch = useCallback(async () => {
     setNearbyLoading(true);
     const pos = await requestUserPosition();
     setNearbyLoading(false);
@@ -74,8 +74,17 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
       setSortBy("distance");
       setSortDirection("asc");
       setFilters((prev) => ({ ...prev, locationQuery: "" }));
+      setLocationDraft("");
     }
   }, []);
+
+  const applyLocationSearch = useCallback(() => {
+    const next = locationDraft.trim();
+    setFilters((prev) => ({ ...prev, locationQuery: next }));
+    if (next) {
+      clearNearby();
+    }
+  }, [locationDraft, clearNearby]);
 
   const whereOptions = useMemo(() => buildWhereOptions(venues), [venues]);
   const venueSearchRows = useMemo(() => toVenueSearchRows(venues), [venues]);
@@ -89,6 +98,8 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
     const filtered = filterVenues(venuesWithDistance, filters);
     return sortVenuesByUserChoice(filtered, sortBy, sortDirection);
   }, [venuesWithDistance, filters, sortBy, sortDirection]);
+
+  const modalFilterCount = useMemo(() => countVenueModalFiltersActive(filters), [filters]);
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -105,7 +116,10 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
       chips.push({
         key: "where",
         label: filters.locationQuery.trim(),
-        onRemove: () => setFilters((prev) => ({ ...prev, locationQuery: "" })),
+        onRemove: () => {
+          setFilters((prev) => ({ ...prev, locationQuery: "" }));
+          setLocationDraft("");
+        },
       });
     }
 
@@ -125,70 +139,101 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
       });
     }
 
-    if (filters.coachingOnly) {
-      chips.push({
-        key: "coaching-only",
-        label: "Coaching only",
-        onRemove: () => setFilters((prev) => ({ ...prev, coachingOnly: false })),
-      });
-    }
-
-    filters.venueTypes.forEach((venueType) => {
-      const label = venueType === "premium_training" ? "Premium" : venueType[0].toUpperCase() + venueType.slice(1);
-      chips.push({
-        key: `venue-type-${venueType}`,
-        label: `Type: ${label}`,
-        onRemove: () =>
-          setFilters((prev) => ({
-            ...prev,
-            venueTypes: prev.venueTypes.filter((value) => value !== venueType),
-          })),
-      });
-    });
-
     return chips;
   }, [filters, nearbyMode, userCoords, clearNearby]);
 
+  const hasActiveFilters = activeChips.length > 0;
+
+  const clearAll = useCallback(() => {
+    setFilters(defaultFilters);
+    setLocationDraft("");
+    clearNearby();
+  }, [clearNearby]);
+
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
-      <FilterBar
-        filters={filters}
-        whereOptions={whereOptions}
-        coaches={coachSearchRows}
-        venueSearchRows={venueSearchRows}
-        activeChips={activeChips}
-        onLocationQueryChange={(locationQuery) => setFilters((prev) => ({ ...prev, locationQuery }))}
-        onCoachNavigate={(id) => router.push(`/coach/${encodeURIComponent(id)}`)}
-        onVenueNavigate={(id) => router.push(`/venue/${encodeURIComponent(id)}`)}
-        onClearNearby={clearNearby}
-        onNearby={handleNearby}
-        nearbyLoading={nearbyLoading}
-        onEnvironmentChange={(environment) => setFilters((prev) => ({ ...prev, environment }))}
-        onMinCourtsChange={(minCourts: MinCourtsFilter) => setFilters((prev) => ({ ...prev, minCourts }))}
-        onCoachingOnlyChange={(coachingOnly) => setFilters((prev) => ({ ...prev, coachingOnly }))}
-        onVenueTypeToggle={(venueType: VenueTypeFilter) =>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <ListingWhereSearch
+          variant="venues"
+          draftValue={locationDraft}
+          onDraftChange={setLocationDraft}
+          onSearchSubmit={applyLocationSearch}
+          whereOptions={whereOptions}
+          coachSearchRows={coachSearchRows}
+          venueSearchRows={venueSearchRows}
+          onSelectNearby={handleNearbyFromSearch}
+          nearbyLoading={nearbyLoading}
+        />
+
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-primary/15 bg-white px-4 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/25 hover:bg-surface sm:w-auto"
+        >
+          <SlidersHorizontal className="h-4 w-4 text-secondary" aria-hidden />
+          Filters
+          {modalFilterCount > 0 ? (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-white">
+              {modalFilterCount}
+            </span>
+          ) : null}
+        </button>
+
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="h-11 shrink-0 rounded-xl px-3 text-sm font-semibold text-primary/70 underline-offset-4 transition hover:text-primary hover:underline sm:ml-auto"
+          >
+            Clear all
+          </button>
+        ) : null}
+      </div>
+
+      <FiltersModal
+        type="venue"
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        environment={filters.environment}
+        minCourts={filters.minCourts}
+        onApply={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        onReset={() =>
           setFilters((prev) => ({
             ...prev,
-            venueTypes: prev.venueTypes.includes(venueType)
-              ? prev.venueTypes.filter((value) => value !== venueType)
-              : [...prev.venueTypes, venueType],
+            environment: "all",
+            minCourts: 0,
           }))
         }
-        onReset={() => {
-          setFilters(defaultFilters);
-          clearNearby();
-        }}
       />
 
-      <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-        <p className="text-sm text-slate-600">
-          Showing <span className="font-semibold text-slate-900">{filteredVenues.length}</span> of{" "}
-          <span className="font-semibold text-slate-900">{venues.length}</span> venues
+      {activeChips.length > 0 ? (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {activeChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.onRemove}
+              aria-label={`Remove filter: ${chip.label}`}
+              className="group/chip inline-flex items-center gap-1 rounded-full bg-primary/10 py-1 pl-3 pr-1 text-xs font-medium text-primary transition hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
+            >
+              <span className="max-w-[min(240px,75vw)] truncate">{chip.label}</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full text-primary/60 group-hover/chip:bg-white/80 group-hover/chip:text-primary">
+                <X className="h-3.5 w-3.5" strokeWidth={2.25} />
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mb-5 flex flex-col gap-4 border-b border-primary/10 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+        <p className="text-sm text-primary/70">
+          Showing <span className="font-semibold text-primary">{filteredVenues.length}</span> of{" "}
+          <span className="font-semibold text-primary">{venues.length}</span> venues
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
           <label className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Sort by</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-primary/60">Sort by</span>
             <div className="relative">
               <select
                 value={sortBy}
@@ -207,7 +252,7 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
                 <option value="courts">Courts</option>
               </select>
               <ChevronDown
-                className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/45"
                 aria-hidden
               />
             </div>
@@ -215,7 +260,7 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
 
           {sortBy !== "best_match" ? (
             <label className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Order</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-primary/60">Order</span>
               <div className="relative">
                 <select
                   value={sortDirection}
@@ -243,7 +288,7 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
                   )}
                 </select>
                 <ChevronDown
-                  className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/45"
                   aria-hidden
                 />
               </div>
@@ -253,16 +298,13 @@ export default function VenuesClient({ venues, coachSearchRows = [], initialFilt
       </div>
 
       {filteredVenues.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
-          <p className="text-base font-semibold text-slate-900">No venues match these filters</p>
-          <p className="mt-1 text-sm text-slate-600">Try removing one or two filters to see more results.</p>
+        <div className="rounded-2xl border border-dashed border-primary/25 bg-white px-6 py-12 text-center">
+          <p className="text-base font-semibold text-primary">No venues match these filters</p>
+          <p className="mt-1 text-sm text-primary/70">Try removing one or two filters to see more results.</p>
           <button
             type="button"
-            onClick={() => {
-              setFilters(defaultFilters);
-              clearNearby();
-            }}
-            className="mt-4 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            onClick={clearAll}
+            className="mt-4 rounded-full border border-primary/25 px-4 py-2 text-sm font-semibold text-primary/80 transition hover:bg-surface"
           >
             Clear all filters
           </button>

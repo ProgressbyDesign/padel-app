@@ -1,3 +1,4 @@
+import type { CoachListingItem } from "./coachListing";
 import type { Venue } from "./venueFilters";
 
 export type VenueWithDistance = Venue & { distance?: number };
@@ -44,5 +45,40 @@ export function addDistancesToVenues(
       return { ...v };
     }
     return { ...v, distance: getDistanceInMiles(lat1, lng1, lat2, lng2) };
+  });
+}
+
+export type CoachListingWithDistance = CoachListingItem & { distance?: number };
+
+function coachCoord(lat: CoachListingItem["locationLat"], lng: CoachListingItem["locationLng"]): {
+  lat: number;
+  lng: number;
+} | null {
+  const la = typeof lat === "number" ? lat : lat != null ? Number(lat) : NaN;
+  const ln = typeof lng === "number" ? lng : lng != null ? Number(lng) : NaN;
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
+  return { lat: la, lng: ln };
+}
+
+/** Uses `location_lat` / `location_lng` from coach profile (Supabase). */
+export function addDistancesToCoaches(
+  coaches: CoachListingItem[],
+  user: { latitude: number; longitude: number } | null
+): CoachListingWithDistance[] {
+  if (!user) {
+    return coaches.map((c) => ({ ...c }));
+  }
+
+  const { latitude: lat1, longitude: lng1 } = user;
+
+  return coaches.map((c) => {
+    const coords = coachCoord(c.locationLat, c.locationLng);
+    if (!coords) {
+      return { ...c };
+    }
+    return {
+      ...c,
+      distance: getDistanceInMiles(lat1, lng1, coords.lat, coords.lng),
+    };
   });
 }

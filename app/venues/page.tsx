@@ -6,7 +6,7 @@ import type { FilterState, Venue } from "../../lib/venueFilters";
 
 export const metadata = {
   title: "Explore venues",
-  description: "Filter and compare padel venues by location, courts, coaching, and more.",
+  description: "Filter and compare padel venues by location, playing conditions, and court count.",
 };
 
 type PageProps = {
@@ -41,9 +41,11 @@ export default async function VenuesPage({ searchParams }: PageProps) {
     supabase.from("coaches").select("id, name, role, description, image_url").limit(200),
   ]);
 
-  const venues = (venuesRes.data ?? []) as Venue[];
+  const venues = (venuesRes.error ? [] : (venuesRes.data ?? [])) as Venue[];
   const coachSearchRows =
     coachesRes.error || !coachesRes.data ? [] : toCoachSearchRows(coachesRes.data as Coach[]);
 
-  return <VenuesClient venues={venues} coachSearchRows={coachSearchRows} initialFilters={initialFilters} />;
+  return (
+    <VenuesClient venues={venues} coachSearchRows={coachSearchRows} initialFilters={initialFilters} />
+  );
 }

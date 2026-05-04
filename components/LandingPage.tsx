@@ -41,7 +41,7 @@ type LandingPageProps = {
 
 export default function LandingPage({ featuredVenues, whereOptions, coachSearchRows, venueSearchRows }: LandingPageProps) {
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full bg-surface">
       {/* Hero */}
       <section className="relative min-h-[min(88vh,780px)]">
         <Image
@@ -77,19 +77,19 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
         <div className="mb-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Featured venues</h2>
-            <p className="mt-1 text-slate-600">Top picks based on courts, coaching, and premium signals.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Featured venues</h2>
+            <p className="mt-1 text-primary/70">Top picks based on courts, coaching, and premium signals.</p>
           </div>
           <Link
             href="/venues"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-900"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
           >
             View all
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
         {featuredVenues.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-slate-600">
+          <p className="rounded-2xl border border-dashed border-primary/20 bg-white px-6 py-12 text-center text-primary/70">
             No venues yet—check back soon.
           </p>
         ) : (
@@ -101,20 +101,20 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
       </section>
 
       {/* Why */}
-      <section className="border-y border-slate-100 bg-slate-50/80">
+      <section className="border-y border-primary/10 bg-white/60">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="mx-auto max-w-2xl text-center text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mx-auto max-w-2xl text-center text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
             Why players use Padel
           </h2>
-          <p className="mx-auto mt-2 max-w-xl text-center text-slate-600">
+          <p className="mx-auto mt-2 max-w-xl text-center text-primary/70">
             Less noise, faster decisions—so you can book with confidence.
           </p>
           <ul className="mt-12 grid gap-8 sm:grid-cols-3">
             {WHY.map((item) => (
-              <li key={item.title} className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-                <CheckCircle2 className="mb-4 h-8 w-8 text-slate-900" aria-hidden />
-                <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.body}</p>
+              <li key={item.title} className="rounded-2xl border border-primary/15 bg-surface p-6 shadow-sm">
+                <CheckCircle2 className="mb-4 h-8 w-8 text-secondary" aria-hidden />
+                <h3 className="text-lg font-semibold text-primary">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-primary/70">{item.body}</p>
               </li>
             ))}
           </ul>
@@ -123,14 +123,14 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
 
       {/* Destinations */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Popular destinations</h2>
-        <p className="mt-1 max-w-xl text-slate-600">Jump into cities players love—filters apply in one tap.</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Popular destinations</h2>
+        <p className="mt-1 max-w-xl text-primary/70">Jump into cities players love—filters apply in one tap.</p>
         <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
           {DESTINATIONS.map((d) => (
             <Link
               key={`${d.city}-${d.country}`}
               href={`/venues?location=${encodeURIComponent(`${d.city}, ${d.country}`)}`}
-              className="group relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-black/5 transition hover:ring-slate-900/10"
+              className="group relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-black/5 transition hover:ring-primary/20"
             >
               <Image
                 src={d.image}
@@ -152,14 +152,14 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
 
       {/* CTA */}
       <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
-        <div className="overflow-hidden rounded-3xl bg-slate-900 px-6 py-12 text-center sm:px-12 sm:py-14">
+        <div className="overflow-hidden rounded-3xl bg-dark px-6 py-12 text-center sm:px-12 sm:py-14">
           <h2 className="text-2xl font-semibold text-white sm:text-3xl">Ready to find your next court?</h2>
-          <p className="mx-auto mt-2 max-w-md text-slate-300">
+          <p className="mx-auto mt-2 max-w-md text-white/75">
             Browse every venue, refine by location and training needs, and compare at a glance.
           </p>
           <Link
             href="/venues"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="mt-8 inline-flex items-center justify-center rounded-full bg-accent px-8 py-3.5 text-sm font-semibold text-primary shadow-lg transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             Explore all venues
           </Link>

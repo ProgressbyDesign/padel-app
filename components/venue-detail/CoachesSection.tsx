@@ -10,10 +10,10 @@ export default function CoachesSection({ coaches }: CoachesSectionProps) {
   if (coaches.length === 0) return null;
 
   return (
-    <section className="space-y-2 border-t border-slate-100 pt-8">
+    <section className="space-y-2 border-t border-primary/10 pt-8">
       <div>
-        <h2 className="text-xl font-semibold text-slate-900">Coaches</h2>
-        <p className="mt-1 text-sm text-slate-600">Train with our coaches</p>
+        <h2 className="text-xl font-semibold text-primary">Coaches</h2>
+        <p className="mt-1 text-sm text-primary/70">Train with our coaches</p>
       </div>
       <ul className="mt-6 grid gap-4 sm:grid-cols-2">
         {coaches.map((coach) => {
@@ -25,7 +25,7 @@ export default function CoachesSection({ coaches }: CoachesSectionProps) {
             <li key={coach.id}>
               <Link
                 href={`/coach/${encodeURIComponent(coach.id)}`}
-                className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15"
+                className="flex gap-4 rounded-2xl border border-primary/15 bg-white p-4 transition hover:border-primary/25 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
               >
                 {coach.image_url?.trim() ? (
                   <img
@@ -35,18 +35,18 @@ export default function CoachesSection({ coaches }: CoachesSectionProps) {
                   />
                 ) : (
                   <div
-                    className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-slate-100"
+                    className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-surface"
                     aria-hidden
                   >
-                    <User className="h-8 w-8 text-slate-400" strokeWidth={1.25} />
+                    <User className="h-8 w-8 text-secondary" strokeWidth={1.25} />
                   </div>
                 )}
                 <div className="min-w-0 flex-1 py-0.5">
-                  <p className="font-semibold text-slate-900">{name}</p>
+                  <p className="font-semibold text-primary">{name}</p>
                   {level ? (
-                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">{level}</p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-primary/60">{level}</p>
                   ) : null}
-                  {specialty ? <p className="mt-1 text-sm text-slate-600">{specialty}</p> : null}
+                  {specialty ? <p className="mt-1 text-sm text-primary/70">{specialty}</p> : null}
                 </div>
               </Link>
             </li>

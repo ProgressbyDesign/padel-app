@@ -17,13 +17,13 @@ export default function CourtDetailsSection({ venue }: CourtDetailsSectionProps)
   ];
 
   return (
-    <section className="space-y-3 border-t border-slate-100 pt-8">
-      <h2 className="text-lg font-semibold text-slate-900">Court details</h2>
+    <section className="space-y-3 border-t border-primary/10 pt-8">
+      <h2 className="text-lg font-semibold text-primary">Court details</h2>
       <dl className="grid gap-3 sm:grid-cols-3">
         {rows.map(({ label, value }) => (
           <div key={label} className="rounded-lg px-1 py-2">
-            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-            <dd className="mt-1 text-sm font-medium text-slate-900">{value}</dd>
+            <dt className="text-xs font-medium uppercase tracking-wide text-primary/60">{label}</dt>
+            <dd className="mt-1 text-sm font-medium text-primary">{value}</dd>
           </div>
         ))}
       </dl>

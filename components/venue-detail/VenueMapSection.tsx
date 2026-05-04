@@ -25,8 +25,8 @@ export default function VenueMapSection({ venue }: VenueMapSectionProps) {
   if (!mapEmbedUrl) {
     return (
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-slate-900">Where you&apos;ll play</h2>
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-600">
+        <h2 className="text-xl font-semibold text-primary">Where you&apos;ll play</h2>
+        <div className="rounded-2xl border border-dashed border-primary/20 bg-white px-4 py-10 text-center text-sm text-primary/70">
           Map preview unavailable—this venue has no coordinates on file.
         </div>
       </section>
@@ -36,19 +36,19 @@ export default function VenueMapSection({ venue }: VenueMapSectionProps) {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold text-slate-900">Where you&apos;ll play</h2>
+        <h2 className="text-xl font-semibold text-primary">Where you&apos;ll play</h2>
         {mapsLink ? (
           <a
             href={mapsLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
+            className="text-sm font-medium text-primary underline decoration-primary/25 underline-offset-4 hover:decoration-primary"
           >
             Open in Google Maps
           </a>
         ) : null}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-primary/15 bg-surface shadow-sm">
         <iframe
           title={`Map — ${venue.name ?? "venue"}`}
           src={mapEmbedUrl}

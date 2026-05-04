@@ -1,5 +1,6 @@
 import type { Coach } from "../lib/coaches";
 import type { Venue } from "../lib/venueFilters";
+import EnquiryButton from "./enquiry/EnquiryButton";
 import { getVenueDescriptionForPdp } from "../lib/venueDetailHelpers";
 import VenueCardsWithDistance from "./VenueCardsWithDistance";
 import BookingCard from "./venue-detail/BookingCard";
@@ -24,7 +25,7 @@ export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: 
   const description = getVenueDescriptionForPdp(venue);
 
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full bg-surface">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mx-auto space-y-8 pb-8">
           <VenueHeader venue={venue} />
@@ -36,7 +37,7 @@ export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: 
 
             {description ? (
               <section className="space-y-3">
-                <h2 className="text-xl font-semibold text-slate-900">About this venue</h2>
+                <h2 className="text-xl font-semibold text-primary">About this venue</h2>
                 <ExpandableDescription text={description} />
               </section>
             ) : null}
@@ -49,14 +50,15 @@ export default function VenueDetailPage({ venue, similarVenues, coaches = [] }: 
             <VenueMapSection venue={venue} />
           </div>
 
-          <aside className="sticky top-24 mt-10 lg:mt-0">
+          <aside className="sticky top-24 mt-10 space-y-4 lg:mt-0">
+            <EnquiryButton venueId={String(venue.id)} label="Send venue enquiry" />
             <BookingCard venueName={venue.name} />
           </aside>
         </div>
 
         {similarVenues.length > 0 ? (
-          <section className="mt-14 border-t border-slate-100 pt-12">
-            <h2 className="mb-6 text-xl font-semibold text-slate-900">Similar venues</h2>
+          <section className="mt-14 border-t border-primary/10 pt-12">
+            <h2 className="mb-6 text-xl font-semibold text-primary">Similar venues</h2>
             <VenueCardsWithDistance
               venues={similarVenues}
               className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"

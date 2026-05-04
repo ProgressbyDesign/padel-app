@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import CoachProfilePage from "../../../components/CoachProfilePage";
-import type { Coach } from "../../../lib/coaches";
+import { fetchCoachPdpById } from "../../../lib/fetchCoachPdp";
 import type { Venue } from "../../../lib/venueFilters";
 
 type PageProps = {
@@ -26,13 +26,10 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function CoachPdpPage({ params }: PageProps) {
   const { id } = await params;
 
-  const { data: coachRow, error: coachErr } = await supabase.from("coaches").select("*").eq("id", id).maybeSingle();
-
-  if (coachErr || !coachRow) {
+  const coach = await fetchCoachPdpById(id);
+  if (!coach) {
     notFound();
   }
-
-  const coach = coachRow as Coach;
 
   const { data: links } = await supabase.from("coach_venues").select("venue_id").eq("coach_id", id);
 
