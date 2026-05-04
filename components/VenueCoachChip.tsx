@@ -13,25 +13,25 @@ export default function VenueCoachChip({ coach }: VenueCoachChipProps) {
   return (
     <Link
       href={`/coach/${encodeURIComponent(coach.id)}`}
-      className="flex min-h-[52px] items-center gap-3 rounded-xl border border-slate-200/90 bg-white px-3 py-2 shadow-sm transition hover:border-slate-300 hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15"
+      className="flex min-h-[52px] items-center gap-3 rounded-xl border border-primary/15 bg-white px-3 py-2 shadow-sm transition hover:border-primary/25 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
     >
       {coach.image_url?.trim() ? (
         <img
           src={coach.image_url}
           alt=""
-          className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-slate-200/80"
+          className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-primary/12"
         />
       ) : (
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200/60"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface ring-1 ring-primary/12"
           aria-hidden
         >
-          <User className="h-5 w-5 text-slate-400" strokeWidth={1.5} />
+          <User className="h-5 w-5 text-secondary" strokeWidth={1.5} />
         </div>
       )}
       <div className="min-w-0 flex-1 text-left">
-        <p className="truncate text-sm font-medium text-slate-900">{name}</p>
-        {role ? <p className="truncate text-xs text-slate-500">{role}</p> : null}
+        <p className="truncate text-sm font-medium text-primary">{name}</p>
+        {role ? <p className="truncate text-xs text-primary/60">{role}</p> : null}
       </div>
     </Link>
   );

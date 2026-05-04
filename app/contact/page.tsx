@@ -8,16 +8,16 @@ export const metadata = {
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Contact</h1>
-      <p className="mt-3 text-slate-600">
+      <h1 className="text-3xl font-semibold tracking-tight text-primary">Contact</h1>
+      <p className="mt-3 text-primary/70">
         We&apos;re building the best way to discover padel venues abroad. Questions, feedback, or partnership
         ideas? We&apos;d love to hear from you.
       </p>
-      <p className="mt-8 text-sm text-slate-500">
+      <p className="mt-8 text-sm text-primary/60">
         For now, reach out through your usual channels—an email form will land here soon.
       </p>
       <p className="mt-6">
-        <Link href="/venues" className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900">
+        <Link href="/venues" className="text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 hover:decoration-primary">
           Browse venues →
         </Link>
       </p>

@@ -17,13 +17,13 @@ export default function ExpandableDescription({ text, collapsedLength = 320 }: E
 
   return (
     <div className="space-y-2">
-      <p id={id} className="text-base leading-relaxed text-slate-600">
+      <p id={id} className="text-base leading-relaxed text-primary/70">
         {shown}
       </p>
       {needsToggle ? (
         <button
           type="button"
-          className="text-sm font-semibold text-slate-900 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-900"
+          className="text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((v) => !v)}

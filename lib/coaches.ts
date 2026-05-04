@@ -1,13 +1,49 @@
+/** Skill bands for listings / profile badges */
+export type CoachSkillLevel = "Beginner" | "Intermediate" | "Advanced" | "Pro";
+
+export type CoachAchievement = {
+  title: string;
+  description?: string;
+  year?: number;
+  is_highlight?: boolean;
+};
+
 export type Coach = {
   id: string;
   name: string | null;
   role: string | null;
   description: string | null;
   image_url: string | null;
+  /** Resolved avatar for PDP / cards (primary coach_images or fallback image_url) */
+  image?: string;
+  slug?: string | null;
   /** Optional: e.g. skill band (future / extended profile) */
   level?: string | null;
   /** Optional: focus area (future / extended profile) */
   specialty?: string | null;
+  /** Supabase geography for distance (primary source for coach PLP distance) */
+  location_lat?: number | string | null;
+  location_lng?: number | string | null;
+  city?: string | null;
+  country?: string | null;
+  location_city?: string | null;
+  location_country?: string | null;
+  rating?: number | string | null;
+  review_count?: number | null;
+  experience_years?: number | string | null;
+  travel_available?: boolean | null;
+  email?: string | null;
+  phone?: string | null;
+  /** Legacy single headline on `coaches` (optional fallback when no rows in coach_outcomes) */
+  outcome?: string | null;
+  /** Parsed labels from `coach_outcomes` (and optional legacy `outcome`) */
+  outcomes?: string[];
+  /** Raw embed from Supabase when listing/PDP query joins coach_outcomes */
+  coach_outcomes?: { outcome?: string | null }[] | null;
+  /** Listing / PDP: who the coach trains (e.g. Adults, Juniors) */
+  audience?: string[];
+  achievements?: CoachAchievement[];
+  price_from?: string | null;
 };
 
 /** Minimal coach row for search dropdowns */

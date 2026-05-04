@@ -13,22 +13,22 @@ export default function QuickFacts({ venue }: QuickFactsProps) {
   const coaching = Boolean(venue.coaching_available);
 
   return (
-    <section aria-label="Quick facts" className="border-b border-slate-100 pb-6">
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-slate-700">
+    <section aria-label="Quick facts" className="border-b border-primary/10 pb-6">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-primary/80">
         <div className="flex items-center gap-2">
-          <Trophy className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-          <span className="text-slate-500">Courts</span>
-          <span className="font-medium text-slate-900">{courtsDisplay ?? "—"}</span>
+          <Trophy className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
+          <span className="text-primary/60">Courts</span>
+          <span className="font-medium text-primary">{courtsDisplay ?? "—"}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-          <span className="text-slate-500">Environment</span>
-          <span className="font-medium text-slate-900">{env}</span>
+          <Building2 className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
+          <span className="text-primary/60">Environment</span>
+          <span className="font-medium text-primary">{env}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Dumbbell className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-          <span className="text-slate-500">Coaching</span>
-          <span className="font-medium text-slate-900">{coaching ? "Yes" : "No"}</span>
+          <Dumbbell className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
+          <span className="text-primary/60">Coaching</span>
+          <span className="font-medium text-primary">{coaching ? "Yes" : "No"}</span>
         </div>
       </div>
     </section>

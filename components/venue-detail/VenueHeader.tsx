@@ -45,34 +45,34 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
     <header className="space-y-4">
       <Link
         href="/venues"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary/70 transition hover:text-primary"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
         Back to venues
       </Link>
 
       <div className="space-y-3">
-        <h1 className="font-adobe-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+        <h1>
           {venue.name?.trim() || "Venue"}
         </h1>
 
         {coachingAvailable ? (
-          <p className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-100">
+          <p className="inline-flex items-center gap-2 rounded-full bg-secondary/20 px-3 py-1 text-sm font-semibold text-primary ring-1 ring-secondary/35">
             <span aria-hidden>🎾</span>
             Coaching available
           </p>
         ) : null}
 
         {locationLine ? (
-          <p className="flex flex-wrap items-center gap-1.5 text-base text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+          <p className="flex flex-wrap items-center gap-1.5 text-base text-primary/70">
+            <MapPin className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
             <span>{locationLine}</span>
             {distanceMiles != null ? (
               <>
-                <span className="text-slate-400" aria-hidden>
+                <span className="text-primary/45" aria-hidden>
                   ·
                 </span>
-                <span className="font-semibold text-slate-900">{distanceLabel(distanceMiles)}</span>
+                <span className="font-semibold text-primary">{distanceLabel(distanceMiles)}</span>
               </>
             ) : null}
           </p>
@@ -80,14 +80,14 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
 
         {ratingStr ? (
           <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-              <Star className="h-4 w-4 fill-neutral-900 text-neutral-900" aria-hidden />
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+              <Star className="h-4 w-4 fill-secondary text-secondary" aria-hidden />
               {ratingStr}
-              {reviewCount ? <span className="font-normal text-slate-500">({reviewCount} reviews)</span> : null}
+              {reviewCount ? <span className="font-normal text-primary/60">({reviewCount} reviews)</span> : null}
             </span>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">No rating yet</p>
+          <p className="text-sm text-primary/60">No rating yet</p>
         )}
       </div>
     </header>

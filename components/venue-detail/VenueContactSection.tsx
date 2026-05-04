@@ -18,28 +18,28 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
   if (!hasContact && !hasHours) {
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Contact &amp; info</h2>
-        <p className="text-sm text-slate-500">No contact details on file.</p>
+        <h2 className="text-lg font-semibold text-primary">Contact &amp; info</h2>
+        <p className="text-sm text-primary/60">No contact details on file.</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900">Contact &amp; info</h2>
+      <h2 className="text-lg font-semibold text-primary">Contact &amp; info</h2>
 
       {hasContact ? (
         <ul className="space-y-3 text-sm">
           {website ? (
             <li className="flex gap-3">
-              <Globe className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+              <Globe className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Website</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-primary/60">Website</p>
                 <a
                   href={website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-0.5 inline-block font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900"
+                  className="mt-0.5 inline-block font-medium text-primary underline decoration-primary/25 underline-offset-2 hover:decoration-primary"
                 >
                   {venue.website?.replace(/^https?:\/\//, "") ?? "Visit site"}
                 </a>
@@ -48,10 +48,10 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
           ) : null}
           {phone ? (
             <li className="flex gap-3">
-              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Phone</p>
-                <a href={`tel:${phone.replace(/\s/g, "")}`} className="mt-0.5 font-medium text-slate-900 hover:underline">
+                <p className="text-xs font-medium uppercase tracking-wide text-primary/60">Phone</p>
+                <a href={`tel:${phone.replace(/\s/g, "")}`} className="mt-0.5 font-medium text-primary hover:underline">
                   {phone}
                 </a>
               </div>
@@ -59,10 +59,10 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
           ) : null}
           {address ? (
             <li className="flex gap-3">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Address</p>
-                <p className="mt-0.5 leading-relaxed text-slate-800">{address}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-primary/60">Address</p>
+                <p className="mt-0.5 leading-relaxed text-primary">{address}</p>
               </div>
             </li>
           ) : null}
@@ -70,24 +70,24 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
       ) : null}
 
       {hasHours ? (
-        <div className={hasContact ? "border-t border-slate-100 pt-4" : ""}>
+        <div className={hasContact ? "border-t border-primary/10 pt-4" : ""}>
           <div className="flex gap-3">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Opening hours</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-primary/60">Opening hours</p>
               {hoursUi?.kind === "grouped" ? (
-                <ul className="mt-2 list-none space-y-1.5 text-sm text-slate-700">
+                <ul className="mt-2 list-none space-y-1.5 text-sm text-primary/80">
                   {hoursUi.rows.map((row) => (
                     <li key={`${row.label}-${row.hours}`}>
-                      <strong className="font-semibold text-slate-900">{row.label}:</strong>{" "}
+                      <strong className="font-semibold text-primary">{row.label}:</strong>{" "}
                       {row.hours}
                     </li>
                   ))}
                 </ul>
               ) : hoursUi?.kind === "fallback" ? (
-                <p className="mt-2 text-sm leading-relaxed text-slate-700">{hoursUi.text}</p>
+                <p className="mt-2 text-sm leading-relaxed text-primary/80">{hoursUi.text}</p>
               ) : (
-                <p className="mt-2 text-sm text-slate-500">Opening hours unavailable</p>
+                <p className="mt-2 text-sm text-primary/60">Opening hours unavailable</p>
               )}
             </div>
           </div>

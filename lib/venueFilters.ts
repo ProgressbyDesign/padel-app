@@ -46,17 +46,23 @@ export type FilterState = {
   locationQuery: string;
   environment: CourtEnvironmentFilter;
   minCourts: MinCourtsFilter;
-  coachingOnly: boolean;
-  venueTypes: VenueTypeFilter[];
 };
 
 export const defaultFilters: FilterState = {
   locationQuery: "",
   environment: "all",
   minCourts: 0,
-  coachingOnly: false,
-  venueTypes: [],
 };
+
+/** Badge count for venue filters modal (playing conditions + min courts). */
+export function countVenueModalFiltersActive(
+  f: Pick<FilterState, "environment" | "minCourts">
+): number {
+  let n = 0;
+  if (f.environment !== "all") n += 1;
+  if (f.minCourts > 0) n += 1;
+  return n;
+}
 
 /** True if venue city/country matches search (exact preferred; includes for partial). */
 export function matchesLocationQuery(venue: Venue, query: string): boolean {
@@ -254,12 +260,6 @@ export function filterVenues<T extends Venue>(venues: T[], filters: FilterState)
     }
 
     if (filters.minCourts > 0 && (typeof venue.courts !== "number" || venue.courts < filters.minCourts)) {
-      return false;
-    }
-
-    if (filters.coachingOnly && !venue.coaching_available) return false;
-
-    if (filters.venueTypes.length > 0 && !filters.venueTypes.includes(normalizeVenueType(venue))) {
       return false;
     }
 

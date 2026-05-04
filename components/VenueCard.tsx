@@ -34,15 +34,15 @@ export default function VenueCard({ venue }: VenueCardProps) {
   const surfaceType = getSurfaceType(venue.court_type);
   const hasCoaching = Boolean(venue.coaching_available);
 
-  const iconMuted = "h-4 w-4 shrink-0 text-[#6e6d6c]";
+  const iconMuted = "h-4 w-4 shrink-0 text-secondary";
 
   return (
     <Link
       href={`/venue/${encodeURIComponent(String(venue.id))}`}
-      className="group/card font-adobe-body block rounded-[20px] bg-white pt-2 pr-2 pb-4 pl-2 shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-neutral-200/80 transition duration-200 hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)] hover:ring-neutral-300/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 focus-visible:ring-offset-2"
+      className="group/card block rounded-[20px] bg-white pt-2 pr-2 pb-4 pl-2 shadow-[0_2px_8px_rgba(0,60,60,0.06)] ring-1 ring-primary/12 transition duration-200 hover:shadow-[0_8px_24px_rgba(0,60,60,0.08)] hover:ring-primary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
     >
       <article className="flex flex-col gap-5">
-        <div className="relative aspect-[313/181] w-full shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+        <div className="relative aspect-[313/181] w-full shrink-0 overflow-hidden rounded-xl bg-surface">
           <Image
             src={imageSrc}
             alt={venue.name ? `${venue.name} venue` : "Padel venue"}
@@ -54,13 +54,13 @@ export default function VenueCard({ venue }: VenueCardProps) {
 
         <div className="flex w-full flex-col gap-3 px-2">
           <div className="flex items-start justify-between gap-3">
-            <p className="font-adobe-body line-clamp-2 min-w-0 flex-1 text-[20px] leading-tight tracking-[-0.2px] text-[#020d0c]">
+            <p className="line-clamp-2 min-w-0 flex-1 text-[20px] leading-tight tracking-[-0.2px] text-primary">
               {venue.name || "Venue"}
             </p>
             {rating ? (
               <div className="flex shrink-0 items-center gap-[9px] pt-0.5">
-                <Star className="h-[14px] w-[14px] fill-neutral-900 text-neutral-900" aria-hidden />
-                <span className="text-[16px] font-normal leading-normal tracking-[-0.16px] text-[#a19f9e]">
+                <Star className="h-[14px] w-[14px] fill-secondary text-secondary" aria-hidden />
+                <span className="text-[16px] font-normal leading-normal tracking-[-0.16px] text-primary/50">
                   {rating}
                 </span>
               </div>
@@ -70,12 +70,12 @@ export default function VenueCard({ venue }: VenueCardProps) {
           {location ? (
             <div className="flex w-full items-center gap-2">
               <MapPin className={iconMuted} aria-hidden />
-              <p className="min-w-0 flex-1 text-[14px] leading-normal tracking-[-0.14px] text-[#6e6d6c] line-clamp-2">
+              <p className="min-w-0 flex-1 text-[14px] leading-normal tracking-[-0.14px] text-primary/65 line-clamp-2">
                 <span>{location}</span>
                 {distanceMiles != null ? (
                   <>
                     <span> · </span>
-                    <span className="font-semibold text-[#020d0c]">{distanceLabel(distanceMiles)}</span>
+                    <span className="font-semibold text-primary">{distanceLabel(distanceMiles)}</span>
                   </>
                 ) : null}
               </p>
@@ -86,12 +86,12 @@ export default function VenueCard({ venue }: VenueCardProps) {
             {hasCoaching ? (
               <div className="flex items-center gap-2">
                 <Dumbbell className={iconMuted} aria-hidden />
-                <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-[#6e6d6c]">Coaching</span>
+                <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-primary/65">Coaching</span>
               </div>
             ) : null}
             <div className="flex items-center gap-2">
               <Building2 className={iconMuted} aria-hidden />
-              <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-[#6e6d6c]">{surfaceType}</span>
+              <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-primary/65">{surfaceType}</span>
             </div>
           </div>
         </div>
