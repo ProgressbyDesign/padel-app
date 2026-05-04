@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import CoachCard from "../CoachCard";
 import CoachCardSkeleton from "./CoachCardSkeleton";
 import FiltersModal from "../listing/FiltersModal";
 import ListingWhereSearch from "../listing/ListingWhereSearch";
-import type { CoachSearchRow, VenueSearchRow } from "../../lib/coaches";
+import type { CoachSearchRow, CoachSkillLevel, VenueSearchRow } from "../../lib/coaches";
 import type { CoachListingFilters, CoachListingItem, CoachListingSort } from "../../lib/coachListing";
 import {
   COACH_LIST_PAGE_SIZE,
@@ -69,6 +70,8 @@ export default function CoachesListingClient({
   const [visibleCount, setVisibleCount] = useState(COACH_LIST_PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [bootSkeleton, setBootSkeleton] = useState(initialSkeletonMs > 0);
+  const searchParams = useSearchParams();
+  const urlFiltersApplied = useRef(false);
 
   useEffect(() => {
     if (initialSkeletonMs <= 0) return;
@@ -93,6 +96,25 @@ export default function CoachesListingClient({
     setFilters((prev) => ({ ...prev, locationQuery: q }));
     setLocationDraft(q);
   }, [initialCitySlug, coaches]);
+
+  useEffect(() => {
+    if (urlFiltersApplied.current) return;
+    if (initialCitySlug?.trim()) {
+      urlFiltersApplied.current = true;
+      return;
+    }
+    const loc = searchParams.get("location")?.trim();
+    const level = searchParams.get("level")?.trim();
+    if (!loc && !level) return;
+    urlFiltersApplied.current = true;
+    if (loc) {
+      setFilters((prev) => ({ ...prev, locationQuery: loc }));
+      setLocationDraft(loc);
+    }
+    if (level === "Beginner" || level === "Intermediate" || level === "Advanced" || level === "Pro") {
+      setFilters((prev) => ({ ...prev, level: level as CoachSkillLevel }));
+    }
+  }, [searchParams, initialCitySlug]);
 
   const clearNearby = useCallback(() => {
     setUserCoords(null);

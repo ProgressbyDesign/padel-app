@@ -7,6 +7,7 @@ const nav = [
   { href: "/", label: "Home" },
   { href: "/venues", label: "Venues" },
   { href: "/coaches", label: "Coaches" },
+  { href: "/join", label: "Join" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
@@ -24,7 +25,8 @@ export default function AppHeader() {
             const active =
               pathname === item.href ||
               (item.href === "/venues" && (pathname === "/venues" || pathname.startsWith("/venue/"))) ||
-              (item.href === "/coaches" && (pathname === "/coaches" || pathname.startsWith("/coach/")));
+              (item.href === "/coaches" && (pathname === "/coaches" || pathname.startsWith("/coach/"))) ||
+              (item.href === "/join" && pathname.startsWith("/join"));
             return (
               <Link
                 key={item.href}

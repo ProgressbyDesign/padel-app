@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import CoachesListingClient from "../../../components/coaches/CoachesListingClient";
 import { toCoachSearchRows, toVenueSearchRows } from "../../../lib/coaches";
 import {
@@ -47,13 +48,19 @@ export default async function CoachesCityPage({ params }: PageProps) {
   const venueSearchRows = toVenueSearchRows(venues);
 
   return (
-    <CoachesListingClient
-      coaches={coaches}
-      whereOptions={whereOptions}
-      coachSearchRows={coachSearchRows}
-      venueSearchRows={venueSearchRows}
-      initialCitySlug={slug}
-      loading={false}
-    />
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-16 text-center text-sm text-primary/60">Loading coaches…</div>
+      }
+    >
+      <CoachesListingClient
+        coaches={coaches}
+        whereOptions={whereOptions}
+        coachSearchRows={coachSearchRows}
+        venueSearchRows={venueSearchRows}
+        initialCitySlug={slug}
+        loading={false}
+      />
+    </Suspense>
   );
 }

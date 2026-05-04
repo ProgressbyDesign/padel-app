@@ -1,45 +1,67 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
+import { ArrowRight, Quote } from "lucide-react";
 import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
-import type { Venue, WhereOption } from "../lib/venueFilters";
-import VenueCardsWithDistance from "./VenueCardsWithDistance";
+import type { CoachListingItem } from "../lib/coachListing";
+import { coachListingProfileHref } from "../lib/coachListing";
+import CoachCard from "./CoachCard";
+import type { WhereOption } from "../lib/venueFilters";
 import HeroWhereSearch from "./HeroWhereSearch";
+import HomeEnquiryCta from "./home/HomeEnquiryCta";
+import HomeBentoGrid from "./home/HomeBentoGrid";
+import DestinationsCarousel from "./home/DestinationsCarousel";
 
-const HERO_IMAGE =
-  "/images/Depositphotos_850818406_XL.jpg";
+const HERO_IMAGE = "/images/Depositphotos_850818406_XL.jpg";
 
-const WHY = [
+const TESTIMONIALS = [
   {
-    title: "Curated venues",
-    body: "Hand-picked clubs with reliable court quality and clear information—so you spend less time guessing.",
+    quote: "Finally found a coach who matched my level before I booked flights. The whole flow felt premium.",
+    name: "Alex M.",
+    location: "London, UK",
   },
   {
-    title: "Coaching-first",
-    body: "Spot coaching availability fast and choose venues that match how you want to train.",
+    quote: "We used Padel Pathways to shortlist academies in Spain—saved hours of DMs and guesswork.",
+    name: "Sofia R.",
+    location: "Madrid, Spain",
   },
   {
-    title: "High-quality courts",
-    body: "Compare indoor and outdoor options, court counts, and ratings in one calm, scannable view.",
+    quote: "Clear profiles and honest locations. Exactly what I wanted when planning a training week abroad.",
+    name: "Jonas K.",
+    location: "Stockholm, Sweden",
   },
 ] as const;
 
-const DESTINATIONS = [
-  { city: "Madrid", country: "Spain", image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=600&q=80" },
-  { city: "Barcelona", country: "Spain", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=600&q=80" },
-  { city: "Marbella", country: "Spain", image: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=600&q=80" },
-  { city: "Valencia", country: "Spain", image: "https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?auto=format&fit=crop&w=600&q=80" },
-  { city: "Lisbon", country: "Portugal", image: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?auto=format&fit=crop&w=600&q=80" },
-] as const;
+export type HomeStats = {
+  coachesListed: number;
+  countriesCovered: number;
+  locationsAvailable: number;
+  enquiriesCompleted: number | null;
+};
 
 type LandingPageProps = {
-  featuredVenues: Venue[];
+  featuredCoaches: CoachListingItem[];
   whereOptions: WhereOption[];
   coachSearchRows: CoachSearchRow[];
   venueSearchRows: VenueSearchRow[];
+  enquiryVenueId: string | null;
+  stats: HomeStats;
 };
 
-export default function LandingPage({ featuredVenues, whereOptions, coachSearchRows, venueSearchRows }: LandingPageProps) {
+function formatStat(n: number | null): string {
+  if (n == null) return "—";
+  return n.toLocaleString();
+}
+
+export default function LandingPage({
+  featuredCoaches,
+  whereOptions,
+  coachSearchRows,
+  venueSearchRows,
+  enquiryVenueId,
+  stats,
+}: LandingPageProps) {
+  const bentoCoaches = featuredCoaches.slice(0, 3);
+
   return (
     <div className="min-h-full bg-surface">
       {/* Hero */}
@@ -49,19 +71,19 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
           alt=""
           fill
           priority
-          className="object-cover"
+          className="object-cover object-center"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/35 to-black/65" />
-        <div className="relative mx-auto flex min-h-[min(88vh,780px)] max-w-5xl flex-col justify-center px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-20">
+        <div className="relative mx-auto flex min-h-[min(88vh,780px)] max-w-6xl flex-col justify-center px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-20">
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
             Train anywhere
           </p>
           <h1 className="mx-auto max-w-3xl text-center text-4xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl">
-           Find the Best Padel Coaching & Training Camps Worldwide
+            Find the Best Padel Coaching & Training Camps Worldwide
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-center text-lg text-white/90 sm:text-xl">
-           Compare academies, book trips, and train like a pro
+            Compare academies, book trips, and train like a pro
           </p>
           <div className="mt-10 sm:mt-12">
             <HeroWhereSearch
@@ -73,96 +95,131 @@ export default function LandingPage({ featuredVenues, whereOptions, coachSearchR
         </div>
       </section>
 
-      {/* Featured */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mb-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Featured venues</h2>
-            <p className="mt-1 text-primary/70">Top picks based on courts, coaching, and premium signals.</p>
-          </div>
-          <Link
-            href="/venues"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
-          >
-            View all
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+      {/* Bento */}
+      <section className="border-b border-primary/10 bg-white py-14 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-primary/50">Start here</h2>
+          <p className="mx-auto mt-2 max-w-lg text-center text-lg font-semibold text-primary">Choose your path</p>
         </div>
-        {featuredVenues.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-primary/20 bg-white px-6 py-12 text-center text-primary/70">
-            No venues yet—check back soon.
-          </p>
-        ) : (
-          <VenueCardsWithDistance
-            venues={featuredVenues}
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          />
-        )}
-      </section>
-
-      {/* Why */}
-      <section className="border-y border-primary/10 bg-white/60">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 className="mx-auto max-w-2xl text-center text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
-            Why players use Padel
-          </h2>
-          <p className="mx-auto mt-2 max-w-xl text-center text-primary/70">
-            Less noise, faster decisions—so you can book with confidence.
-          </p>
-          <ul className="mt-12 grid gap-8 sm:grid-cols-3">
-            {WHY.map((item) => (
-              <li key={item.title} className="rounded-2xl border border-primary/15 bg-surface p-6 shadow-sm">
-                <CheckCircle2 className="mb-4 h-8 w-8 text-secondary" aria-hidden />
-                <h3 className="text-lg font-semibold text-primary">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-primary/70">{item.body}</p>
-              </li>
-            ))}
-          </ul>
+        <div className="mt-10">
+          <HomeBentoGrid recommendedCoaches={bentoCoaches} enquiryVenueId={enquiryVenueId} />
         </div>
       </section>
 
-      {/* Destinations */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Popular destinations</h2>
-        <p className="mt-1 max-w-xl text-primary/70">Jump into cities players love—filters apply in one tap.</p>
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
-          {DESTINATIONS.map((d) => (
+      {/* Featured coaches */}
+      <section className="border-b border-primary/10 bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Featured coaches</h2>
+              <p className="mt-1 max-w-xl text-primary/70">
+                Hand-picked from our directory—compare levels, locations, and coaching focus.
+              </p>
+            </div>
             <Link
-              key={`${d.city}-${d.country}`}
-              href={`/venues?location=${encodeURIComponent(`${d.city}, ${d.country}`)}`}
-              className="group relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-black/5 transition hover:ring-primary/20"
+              href="/coaches"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
             >
-              <Image
-                src={d.image}
-                alt=""
-                fill
-                className="object-cover transition duration-500 group-hover:scale-105"
-                sizes="(max-width: 640px) 50vw, 20vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <p className="font-semibold text-white">{d.city}</p>
-                <p className="text-xs text-white/80">{d.country}</p>
-              </div>
-              <MapPin className="absolute right-2 top-2 h-4 w-4 text-white/90 opacity-0 transition group-hover:opacity-100" aria-hidden />
+              View all coaches
+              <ArrowRight className="h-4 w-4" />
             </Link>
-          ))}
+          </div>
+
+          {featuredCoaches.length === 0 ? (
+            <p className="mt-10 rounded-2xl border border-dashed border-primary/20 bg-white px-6 py-12 text-center text-primary/70">
+              No coaches listed yet—check back soon.
+            </p>
+          ) : (
+            <div className="mt-10 -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible lg:grid-cols-3">
+              {featuredCoaches.map((c) => (
+                <CoachCard
+                  key={c.id}
+                  name={c.name}
+                  avatarImage={c.avatarImage}
+                  rating={c.rating}
+                  reviewCount={c.reviewCount}
+                  level={c.level}
+                  locationCity={c.locationCity}
+                  locationCountry={c.locationCountry}
+                  experienceYears={c.experienceYears}
+                  audience={c.audience}
+                  travelAvailable={c.travelAvailable}
+                  outcomes={c.outcomes}
+                  priceFrom={c.priceFrom}
+                  href={coachListingProfileHref(c.id)}
+                  className="min-w-[min(100%,320px)] shrink-0 sm:min-w-0"
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
-        <div className="overflow-hidden rounded-3xl bg-dark px-6 py-12 text-center sm:px-12 sm:py-14">
-          <h2 className="text-2xl font-semibold text-white sm:text-3xl">Ready to find your next court?</h2>
-          <p className="mx-auto mt-2 max-w-md text-white/75">
-            Browse every venue, refine by location and training needs, and compare at a glance.
+      {/* Destinations carousel */}
+      <section id="destinations" className="scroll-mt-24 border-b border-primary/10 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Popular training destinations</h2>
+          <p className="mt-1 max-w-xl text-sm text-primary/65">
+            Tap a country to see coaches—we&apos;ll apply location on the listing.
           </p>
-          <Link
-            href="/venues"
-            className="mt-8 inline-flex items-center justify-center rounded-full bg-accent px-8 py-3.5 text-sm font-semibold text-primary shadow-lg transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            Explore all venues
-          </Link>
+          <div className="mt-10">
+            <DestinationsCarousel />
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="border-b border-primary/10 bg-dark">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-10">
+            {[
+              { label: "Coaches listed", value: formatStat(stats.coachesListed) },
+              { label: "Countries covered", value: formatStat(stats.countriesCovered) },
+              { label: "Locations available", value: formatStat(stats.locationsAvailable) },
+              { label: "Enquiries completed", value: formatStat(stats.enquiriesCompleted) },
+            ].map((item) => (
+              <div key={item.label} className="text-center md:text-left">
+                <p className="text-3xl font-semibold tabular-nums tracking-tight text-white sm:text-4xl md:text-5xl">
+                  {item.value}
+                </p>
+                <p className="mt-2 text-xs font-medium uppercase tracking-wider text-white/55 sm:text-sm">{item.label}</p>
+              </div>
+            ))}
+          </div>
+          {stats.enquiriesCompleted == null ? (
+            <p className="mt-8 text-center text-xs text-white/45 md:text-left">
+              Enquiry total updates when available.
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      {/* Reviews */}
+      <section className="border-b border-primary/10 bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <h2 className="text-center text-xl font-semibold tracking-tight text-primary sm:text-2xl">What players say</h2>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {TESTIMONIALS.map((t) => (
+              <figure
+                key={t.name}
+                className="flex flex-col rounded-2xl border border-primary/10 bg-white p-6 shadow-sm"
+              >
+                <Quote className="h-8 w-8 text-secondary/80" aria-hidden />
+                <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-primary/85">&ldquo;{t.quote}&rdquo;</blockquote>
+                <figcaption className="mt-4 border-t border-primary/10 pt-4 text-sm">
+                  <span className="font-semibold text-primary">{t.name}</span>
+                  <span className="block text-xs text-primary/55">{t.location}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="bg-surface pb-16 pt-4 sm:pb-24 sm:pt-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <HomeEnquiryCta venueId={enquiryVenueId} />
         </div>
       </section>
     </div>

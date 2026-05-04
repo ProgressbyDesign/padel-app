@@ -20,6 +20,8 @@ type ListingWhereSearchProps = {
   venueSearchRows: VenueSearchRow[];
   onSelectNearby: () => void | Promise<void>;
   nearbyLoading?: boolean;
+  /** Submit button label (default: "Search") */
+  submitLabel?: string;
 };
 
 export default function ListingWhereSearch({
@@ -32,6 +34,7 @@ export default function ListingWhereSearch({
   venueSearchRows,
   onSelectNearby,
   nearbyLoading = false,
+  submitLabel = "Search",
 }: ListingWhereSearchProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -121,10 +124,10 @@ export default function ListingWhereSearch({
           </div>
           <button
             type="submit"
-            className="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-primary transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+            className="flex h-10 max-w-[42%] shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-2.5 text-sm font-semibold text-primary transition hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 sm:max-w-none sm:px-4"
           >
-            <Search className="h-4 w-4 sm:hidden" aria-hidden />
-            <span className="hidden sm:inline">Search</span>
+            <Search className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
+            <span className="truncate text-xs sm:text-sm">{submitLabel}</span>
           </button>
         </div>
 
