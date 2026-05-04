@@ -8,7 +8,6 @@ import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiry
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
 
 export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<SubmitEnquiryResult> {
-  console.log("🚀 submitEnquiry CALLED");
   const err = validateEnquiryPayload(payload);
   if (err) return { ok: false, message: err };
 
@@ -53,37 +52,62 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
     };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
   const from =
-    process.env.ENQUIRY_FROM_EMAIL ??
-    process.env.RESEND_FROM_EMAIL ??
+    process.env.ENQUIRY_FROM_EMAIL?.trim() ||
+    process.env.RESEND_FROM_EMAIL?.trim() ||
     "Padel Pathways <matthew@progressbydesign.co.uk>";
   const notifyTo = process.env.ENQUIRY_NOTIFY_EMAIL?.trim();
 
-  if (apiKey) {
-    const resend = new Resend(apiKey);
-    if (notifyTo) {
-      try {
-        await resend.emails.send({
-          from,
-          to: notifyTo,
-          subject: "New enquiry — Padel Pathways",
-          html: buildTeamEnquiryEmailHtml(payload),
-        });
-      } catch (e) {
-        console.error("enquiry team email", e);
-      }
-    }
+  if (!apiKey) {
+    console.warn(
+      "[enquiry] RESEND_API_KEY is missing — enquiry saved but no emails were sent."
+    );
+    return { ok: true };
+  }
+
+  const resend = new Resend(apiKey);
+
+  if (notifyTo) {
     try {
-      await resend.emails.send({
+      const teamResult = await resend.emails.send({
         from,
-        to: payload.email.trim(),
-        subject: "We received your enquiry",
-        html: buildUserConfirmationEmailHtml(payload),
+        to: notifyTo,
+        subject: "New enquiry — Padel Pathways",
+        html: buildTeamEnquiryEmailHtml(payload),
       });
+      if (teamResult.error) {
+        console.error(
+          "[enquiry] team notify email failed:",
+          teamResult.error.name,
+          teamResult.error.message,
+          teamResult.error.statusCode != null ? `(status ${teamResult.error.statusCode})` : ""
+        );
+      }
     } catch (e) {
-      console.error("enquiry user confirmation email", e);
+      console.error("[enquiry] team notify email exception", e);
     }
+  } else {
+    console.warn("[enquiry] ENQUIRY_NOTIFY_EMAIL is not set — skipping team notification email.");
+  }
+
+  try {
+    const userResult = await resend.emails.send({
+      from,
+      to: payload.email.trim(),
+      subject: "We received your enquiry",
+      html: buildUserConfirmationEmailHtml(payload),
+    });
+    if (userResult.error) {
+      console.error(
+        "[enquiry] user confirmation email failed:",
+        userResult.error.name,
+        userResult.error.message,
+        userResult.error.statusCode != null ? `(status ${userResult.error.statusCode})` : ""
+      );
+    }
+  } catch (e) {
+    console.error("[enquiry] user confirmation email exception", e);
   }
 
   return { ok: true };
