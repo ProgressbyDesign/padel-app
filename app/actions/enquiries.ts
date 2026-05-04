@@ -6,7 +6,22 @@ import { buildTeamEnquiryEmailHtml, buildUserConfirmationEmailHtml } from "@/lib
 import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiryPayload";
 
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
- 
+
+function buildEnquirySourceUrl(
+  subjectType: "coach" | "venue" | null,
+  subjectSlug: string | null,
+  coachId: string | null,
+  venueId: string | null
+): string | null {
+  const baseRaw = process.env.NEXT_PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
+  if (!subjectType) return null;
+  const pathSegment = (subjectSlug?.trim() || coachId || venueId)?.trim();
+  if (!pathSegment) return null;
+  const path = `${subjectType}/${encodeURIComponent(pathSegment)}`;
+  if (baseRaw) return `${baseRaw}/${path}`;
+  return `/${path}`;
+}
+
 export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<SubmitEnquiryResult> {
   const err = validateEnquiryPayload(payload);
   if (err) return { ok: false, message: err };
@@ -14,11 +29,60 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
   const coachId = payload.coachId?.trim() || null;
   const venueId = payload.venueId?.trim() || null;
 
+  let subjectType: "coach" | "venue" | null = null;
+  let subjectName: string | null = null;
+  let subjectSlug: string | null = null;
+  let subjectLocation: string | null = null;
+
+  if (coachId) {
+    const { data: coach, error: coachFetchError } = await supabase
+      .from("coaches")
+      .select("name, slug, location_city, location_country")
+      .eq("id", coachId)
+      .maybeSingle();
+
+    if (coachFetchError) {
+      console.warn("[enquiry] coach lookup failed (using id fallback in email):", coachFetchError.message);
+    }
+
+    subjectType = "coach";
+    subjectName = coach?.name?.trim() ?? null;
+    subjectSlug = coach?.slug?.trim() ?? null;
+    subjectLocation =
+      [coach?.location_city, coach?.location_country]
+        .filter((x): x is string => Boolean(x && String(x).trim()))
+        .join(", ") || null;
+  } else if (venueId) {
+    const { data: venue, error: venueFetchError } = await supabase
+      .from("venues")
+      .select("name, city, country")
+      .eq("id", venueId)
+      .maybeSingle();
+
+    if (venueFetchError) {
+      console.warn("[enquiry] venue lookup failed (using id fallback in email):", venueFetchError.message);
+    }
+
+    subjectType = "venue";
+    subjectName = venue?.name?.trim() ?? null;
+    subjectSlug = null;
+    subjectLocation =
+      [venue?.city, venue?.country]
+        .filter((x): x is string => Boolean(x && String(x).trim()))
+        .join(", ") || null;
+  }
+
+  const sourceUrl = buildEnquirySourceUrl(subjectType, subjectSlug, coachId, venueId);
+
   const startDate = payload.preferred_start_date?.trim() || null;
 
   const row = {
     coach_id: coachId,
     venue_id: venueId,
+    subject_type: subjectType,
+    subject_name: subjectName,
+    subject_slug: subjectSlug,
+    source_url: sourceUrl,
     full_name: payload.full_name.trim(),
     email: payload.email.trim(),
     phone: payload.phone?.trim() || null,
@@ -52,6 +116,14 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
     };
   }
 
+  const teamEmailPayload = {
+    ...payload,
+    subject_name: subjectName,
+    subject_type: subjectType,
+    subject_location: subjectLocation,
+    source_url: sourceUrl,
+  };
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from =
     process.env.ENQUIRY_FROM_EMAIL?.trim() ||
@@ -74,7 +146,7 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
         from,
         to: notifyTo,
         subject: "New enquiry — Padel Pathways",
-        html: buildTeamEnquiryEmailHtml(payload),
+        html: buildTeamEnquiryEmailHtml(teamEmailPayload),
       });
       if (teamResult.error) {
         console.error(
