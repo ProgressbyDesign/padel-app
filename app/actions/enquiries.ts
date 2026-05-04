@@ -6,7 +6,7 @@ import { buildTeamEnquiryEmailHtml, buildUserConfirmationEmailHtml } from "@/lib
 import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiryPayload";
 
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
-
+ 
 export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<SubmitEnquiryResult> {
   const err = validateEnquiryPayload(payload);
   if (err) return { ok: false, message: err };
