@@ -1,31 +1,75 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Compass, MessageSquarePlus, Sparkles } from "lucide-react";
+import { ArrowRight, Compass, MapPin, MessageSquarePlus } from "lucide-react";
 import type { CoachListingItem } from "@/lib/coachListing";
 import { coachListingProfileHref } from "@/lib/coachListing";
-import CoachCard from "@/components/CoachCard";
 import EnquiryButton from "@/components/enquiry/EnquiryButton";
 
+/** Minimal venue preview for the bento tile (same ranking as enquiry venue). */
+export type BentoVenuePreview = {
+  id: string;
+  name: string;
+  subtitle: string;
+  imageUrl: string | null;
+};
+
+const GENERIC_COACH_BG =
+  "https://images.unsplash.com/photo-1626228290616-844bc768965e?auto=format&fit=crop&w=1400&q=80";
+
+const GENERIC_COACH_CARD =
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80";
+
+const GENERIC_VENUE_CARD =
+  "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80";
+
 type HomeBentoGridProps = {
-  recommendedCoaches: CoachListingItem[];
+  recommendedCoach: CoachListingItem | null;
+  recommendedVenue: BentoVenuePreview | null;
   enquiryVenueId: string | null;
 };
 
-export default function HomeBentoGrid({ recommendedCoaches, enquiryVenueId }: HomeBentoGridProps) {
+function RecommendedBadge() {
+  return (
+    <span className="absolute left-3 top-3 z-10 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary shadow-md ring-1 ring-black/5 backdrop-blur-sm">
+      Recommended
+    </span>
+  );
+}
+
+export default function HomeBentoGrid({ recommendedCoach, recommendedVenue, enquiryVenueId }: HomeBentoGridProps) {
+  const coachHref = recommendedCoach ? coachListingProfileHref(recommendedCoach.id) : "/coaches";
+  const coachImage =
+    recommendedCoach?.avatarImage?.trim() || GENERIC_COACH_CARD;
+  const coachLocation = [recommendedCoach?.locationCity, recommendedCoach?.locationCountry]
+    .filter((x) => x?.trim())
+    .join(", ");
+
+  const venueHref = recommendedVenue ? `/venue/${encodeURIComponent(recommendedVenue.id)}` : "/venues";
+  const venueImage = recommendedVenue?.imageUrl?.trim() || GENERIC_VENUE_CARD;
+
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 lg:gap-5">
-        {/* 1 — Find a Coach (large) */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:gap-5">
+        {/* 1 — Find a coach (large, generic coach imagery) */}
         <Link
           href="/coaches"
-          className="group relative flex min-h-[280px] flex-col justify-end overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-dark p-6 text-white shadow-lg ring-1 ring-white/10 transition hover:shadow-xl md:min-h-[300px] lg:col-span-2 lg:row-span-2 lg:min-h-[340px]"
+          className="group relative flex min-h-[260px] flex-col justify-end overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10 transition hover:shadow-xl sm:min-h-[300px] lg:col-span-6 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:min-h-[340px]"
         >
-          <Sparkles className="absolute right-5 top-5 h-8 w-8 text-white/40 transition group-hover:text-white/70" aria-hidden />
-          <div className="relative z-10">
+          <Image
+            src={GENERIC_COACH_BG}
+            alt=""
+            fill
+            className="object-cover transition duration-500 group-hover:scale-[1.03]"
+            sizes="(max-width:1024px) 100vw, 58vw"
+            priority={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/25" aria-hidden />
+          <div className="relative z-10 p-6 text-white">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/75">Discover</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Find a coach</h3>
-            <p className="mt-2 max-w-sm text-sm text-white/85">
+            <p className="mt-2 max-w-md text-sm text-white/90">
               Browse profiles by location, level, and coaching focus—then book with confidence.
             </p>
             <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold">
@@ -33,82 +77,106 @@ export default function HomeBentoGrid({ recommendedCoaches, enquiryVenueId }: Ho
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
             </span>
           </div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" aria-hidden />
         </Link>
 
-        {/* 2 — Get Matched */}
-        <div className="flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-white p-5 shadow-sm lg:col-start-3 lg:row-start-1">
-          <div>
-            <MessageSquarePlus className="h-7 w-7 text-secondary" aria-hidden />
-            <h3 className="mt-3 text-lg font-semibold text-primary">Get matched</h3>
-            <p className="mt-1 text-sm text-primary/65">Tell us your goals—we&apos;ll help narrow options.</p>
-          </div>
-          {enquiryVenueId ? (
-            <EnquiryButton
-              venueId={enquiryVenueId}
-              label="Start enquiry"
-              className="mt-4 w-full !rounded-xl py-2.5 text-sm"
-            />
-          ) : (
-            <Link
-              href="/venues"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-primary/15 bg-surface py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
-            >
-              Browse venues first
-            </Link>
-          )}
-        </div>
-
-        {/* 3 — Train Abroad */}
-        <Link
-          href="#destinations"
-          className="group flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-gradient-to-br from-surface to-white p-5 shadow-sm transition hover:border-primary/25 hover:shadow-md lg:col-start-4 lg:row-start-1"
-        >
-          <Compass className="h-7 w-7 text-secondary" aria-hidden />
-          <div>
-            <h3 className="text-lg font-semibold text-primary">Train abroad</h3>
-            <p className="mt-1 text-sm text-primary/65">Explore countries & cities players love.</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">
-              View destinations
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
-            </span>
-          </div>
-        </Link>
-
-        {/* 4 — Recommended coaches */}
-        <div className="rounded-3xl border border-primary/12 bg-white p-4 shadow-sm lg:col-span-2 lg:col-start-3 lg:row-start-2">
-          <div className="mb-3 flex items-center justify-between gap-2 px-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-primary/55">Recommended</h3>
-            <Link href="/coaches" className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
-              View all
-            </Link>
-          </div>
-          {recommendedCoaches.length === 0 ? (
-            <p className="rounded-xl bg-surface px-4 py-8 text-center text-sm text-primary/60">Coaches coming soon.</p>
-          ) : (
-            <div className="-mx-2 flex gap-3 overflow-x-auto pb-1 pt-1 [-webkit-overflow-scrolling:touch]">
-              {recommendedCoaches.slice(0, 3).map((c) => (
-                <CoachCard
-                  key={c.id}
-                  name={c.name}
-                  avatarImage={c.avatarImage}
-                  rating={c.rating}
-                  reviewCount={c.reviewCount}
-                  level={c.level}
-                  locationCity={c.locationCity}
-                  locationCountry={c.locationCountry}
-                  experienceYears={c.experienceYears}
-                  audience={c.audience}
-                  travelAvailable={c.travelAvailable}
-                  outcomes={c.outcomes}
-                  priceFrom={c.priceFrom}
-                  href={coachListingProfileHref(c.id)}
-                  className="min-w-[min(100%,260px)] max-w-[280px] shrink-0 scale-[0.92] sm:scale-95"
-                />
-              ))}
+        {/* 2 & 3 — Get matched + Train abroad (stacked) */}
+        <div className="flex flex-col gap-4 lg:col-span-6 lg:col-start-7 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:justify-between lg:gap-4">
+          <div className="flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-white p-5 shadow-sm lg:flex-1">
+            <div>
+              <MessageSquarePlus className="h-7 w-7 text-secondary" aria-hidden />
+              <h3 className="mt-3 text-lg font-semibold text-primary">Get matched</h3>
+              <p className="mt-1 text-sm text-primary/65">Tell us your goals—we&apos;ll help narrow options.</p>
             </div>
-          )}
+            {enquiryVenueId ? (
+              <EnquiryButton
+                venueId={enquiryVenueId}
+                label="Start enquiry"
+                className="mt-4 w-full !rounded-xl py-2.5 text-sm"
+              />
+            ) : (
+              <Link
+                href="/venues"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-primary/15 bg-surface py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+              >
+                Browse venues first
+              </Link>
+            )}
+          </div>
+
+          <Link
+            href="#destinations"
+            className="group flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-gradient-to-br from-surface to-white p-5 shadow-sm transition hover:border-primary/25 hover:shadow-md lg:flex-1"
+          >
+            <Compass className="h-7 w-7 text-secondary" aria-hidden />
+            <div>
+              <h3 className="text-lg font-semibold text-primary">Train abroad</h3>
+              <p className="mt-1 text-sm text-primary/65">Explore countries & cities players love.</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                View destinations
+                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
+              </span>
+            </div>
+          </Link>
         </div>
+
+        {/* 4 — Recommended coach (destination-style card) */}
+        <Link
+          href={coachHref}
+          className="group relative aspect-[5/6] min-h-[200px] w-full overflow-hidden rounded-3xl ring-1 ring-black/5 transition hover:ring-primary/25 sm:aspect-[16/10] sm:min-h-[220px] lg:col-span-3 lg:col-start-7 lg:row-start-3 lg:aspect-[5/6] lg:min-h-[240px]"
+        >
+          <Image
+            src={coachImage}
+            alt=""
+            fill
+            className="object-cover transition duration-500 group-hover:scale-105"
+            sizes="(max-width:1024px) 100vw, 50vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
+          <RecommendedBadge />
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-lg font-semibold text-white">
+              {recommendedCoach?.name?.trim() || "Find a coach"}
+            </p>
+            {coachLocation ? (
+              <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
+                <MapPin className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                {coachLocation}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-white/80">Browse the directory</p>
+            )}
+            {recommendedCoach?.level ? (
+              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-white/75">{recommendedCoach.level}</p>
+            ) : null}
+          </div>
+        </Link>
+
+        {/* 5 — Recommended venue (destination-style card) */}
+        <Link
+          href={venueHref}
+          className="group relative aspect-[5/6] min-h-[200px] w-full overflow-hidden rounded-3xl ring-1 ring-black/5 transition hover:ring-primary/25 sm:aspect-[16/10] sm:min-h-[220px] lg:col-span-3 lg:col-start-10 lg:row-start-3 lg:aspect-[5/6] lg:min-h-[240px]"
+        >
+          <Image
+            src={venueImage}
+            alt=""
+            fill
+            className="object-cover transition duration-500 group-hover:scale-105"
+            sizes="(max-width:1024px) 100vw, 50vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
+          <RecommendedBadge />
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-lg font-semibold text-white">{recommendedVenue?.name?.trim() || "Explore venues"}</p>
+            {recommendedVenue?.subtitle ? (
+              <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
+                <MapPin className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                {recommendedVenue.subtitle}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-white/80">Courts & coaching worldwide</p>
+            )}
+          </div>
+        </Link>
       </div>
     </div>
   );

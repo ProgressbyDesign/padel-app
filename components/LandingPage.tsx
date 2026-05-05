@@ -8,7 +8,7 @@ import CoachCard from "./CoachCard";
 import type { WhereOption } from "../lib/venueFilters";
 import HeroWhereSearch from "./HeroWhereSearch";
 import HomeEnquiryCta from "./home/HomeEnquiryCta";
-import HomeBentoGrid from "./home/HomeBentoGrid";
+import HomeBentoGrid, { type BentoVenuePreview } from "./home/HomeBentoGrid";
 import DestinationsCarousel from "./home/DestinationsCarousel";
 
 const HERO_IMAGE = "/images/Depositphotos_850818406_XL.jpg";
@@ -43,6 +43,8 @@ type LandingPageProps = {
   whereOptions: WhereOption[];
   coachSearchRows: CoachSearchRow[];
   venueSearchRows: VenueSearchRow[];
+  recommendedCoach: CoachListingItem | null;
+  recommendedVenue: BentoVenuePreview | null;
   enquiryVenueId: string | null;
   stats: HomeStats;
 };
@@ -57,11 +59,11 @@ export default function LandingPage({
   whereOptions,
   coachSearchRows,
   venueSearchRows,
+  recommendedCoach,
+  recommendedVenue,
   enquiryVenueId,
   stats,
 }: LandingPageProps) {
-  const bentoCoaches = featuredCoaches.slice(0, 3);
-
   return (
     <div className="min-h-full bg-surface">
       {/* Hero */}
@@ -102,7 +104,11 @@ export default function LandingPage({
           <p className="mx-auto mt-2 max-w-lg text-center text-lg font-semibold text-primary">Choose your path</p>
         </div>
         <div className="mt-10">
-          <HomeBentoGrid recommendedCoaches={bentoCoaches} enquiryVenueId={enquiryVenueId} />
+          <HomeBentoGrid
+            recommendedCoach={recommendedCoach}
+            recommendedVenue={recommendedVenue}
+            enquiryVenueId={enquiryVenueId}
+          />
         </div>
       </section>
 
