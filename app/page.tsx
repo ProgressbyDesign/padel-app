@@ -1,5 +1,6 @@
 import LandingPage from "../components/LandingPage";
 import type { HomeStats } from "../components/LandingPage";
+import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
 import { supabase } from "../lib/supabase";
 import { toCoachSearchRows, toVenueSearchRows } from "../lib/coaches";
 import { buildWhereOptions, sortVenuesByBestMatch } from "../lib/venueFilters";
@@ -37,7 +38,23 @@ export default async function Home() {
   const featuredCoaches = [...coaches].sort((a, b) => recommendedScore(b) - recommendedScore(a)).slice(0, 6);
 
   const sortedVenues = sortVenuesByBestMatch(venues);
-  const enquiryVenueId = sortedVenues[0]?.id != null ? String(sortedVenues[0].id) : null;
+  const topVenue = sortedVenues[0];
+  const enquiryVenueId = topVenue?.id != null ? String(topVenue.id) : null;
+
+  const recommendedCoach = featuredCoaches[0] ?? null;
+  let recommendedVenue: BentoVenuePreview | null = null;
+  if (topVenue) {
+    const subtitle = [topVenue.city, topVenue.country]
+      .map((x) => (x != null ? String(x).trim() : ""))
+      .filter(Boolean)
+      .join(", ");
+    recommendedVenue = {
+      id: String(topVenue.id),
+      name: topVenue.name?.trim() || "Venue",
+      subtitle,
+      imageUrl: topVenue.main_image?.trim() || topVenue.image_url?.trim() || null,
+    };
+  }
 
   const countrySet = new Set<string>();
   for (const v of venues) {
@@ -63,6 +80,8 @@ export default async function Home() {
       whereOptions={whereOptions}
       coachSearchRows={coachSearchRows}
       venueSearchRows={venueSearchRows}
+      recommendedCoach={recommendedCoach}
+      recommendedVenue={recommendedVenue}
       enquiryVenueId={enquiryVenueId}
       stats={stats}
     />
