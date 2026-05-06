@@ -35,9 +35,10 @@ export default async function Home() {
   const venueSearchRows = toVenueSearchRows(venues);
   const whereOptions = buildWhereOptions(venues);
 
-  const featuredCoaches = [...coaches].sort((a, b) => recommendedScore(b) - recommendedScore(a)).slice(0, 6);
+  const featuredCoaches = [...coaches].sort((a, b) => recommendedScore(b) - recommendedScore(a)).slice(0, 12);
 
   const sortedVenues = sortVenuesByBestMatch(venues);
+  const featuredVenues = sortedVenues.slice(0, 12);
   const topVenue = sortedVenues[0];
   const enquiryVenueId = topVenue?.id != null ? String(topVenue.id) : null;
 
@@ -77,6 +78,7 @@ export default async function Home() {
   return (
     <LandingPage
       featuredCoaches={featuredCoaches}
+      featuredVenues={featuredVenues}
       whereOptions={whereOptions}
       coachSearchRows={coachSearchRows}
       venueSearchRows={venueSearchRows}

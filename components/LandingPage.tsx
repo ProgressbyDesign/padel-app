@@ -5,11 +5,14 @@ import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
 import type { CoachListingItem } from "../lib/coachListing";
 import { coachListingProfileHref } from "../lib/coachListing";
 import CoachCard from "./CoachCard";
-import type { WhereOption } from "../lib/venueFilters";
+import type { Venue, WhereOption } from "../lib/venueFilters";
+import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 import HeroWhereSearch from "./HeroWhereSearch";
 import HomeEnquiryCta from "./home/HomeEnquiryCta";
 import HomeBentoGrid, { type BentoVenuePreview } from "./home/HomeBentoGrid";
 import DestinationsCarousel from "./home/DestinationsCarousel";
+import VenueCard from "./VenueCard";
+import Carousel from "./ui/Carousel";
 
 const HERO_IMAGE = "/images/Depositphotos_850818406_XL.jpg";
 
@@ -40,6 +43,7 @@ export type HomeStats = {
 
 type LandingPageProps = {
   featuredCoaches: CoachListingItem[];
+  featuredVenues: Venue[];
   whereOptions: WhereOption[];
   coachSearchRows: CoachSearchRow[];
   venueSearchRows: VenueSearchRow[];
@@ -56,6 +60,7 @@ function formatStat(n: number | null): string {
 
 export default function LandingPage({
   featuredCoaches,
+  featuredVenues,
   whereOptions,
   coachSearchRows,
   venueSearchRows,
@@ -112,12 +117,12 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* Featured coaches */}
+      {/* Top-rated coaches */}
       <section className="border-b border-primary/10 bg-surface">
         <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Featured coaches</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Top-rated coaches</h2>
               <p className="mt-1 max-w-xl text-primary/70">
                 Hand-picked from our directory—compare levels, locations, and coaching focus.
               </p>
@@ -136,26 +141,73 @@ export default function LandingPage({
               No coaches listed yet—check back soon.
             </p>
           ) : (
-            <div className="mt-10 -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible lg:grid-cols-3">
-              {featuredCoaches.map((c) => (
-                <CoachCard
-                  key={c.id}
-                  name={c.name}
-                  avatarImage={c.avatarImage}
-                  rating={c.rating}
-                  reviewCount={c.reviewCount}
-                  level={c.level}
-                  locationCity={c.locationCity}
-                  locationCountry={c.locationCountry}
-                  experienceYears={c.experienceYears}
-                  audience={c.audience}
-                  travelAvailable={c.travelAvailable}
-                  outcomes={c.outcomes}
-                  priceFrom={c.priceFrom}
-                  href={coachListingProfileHref(c.id)}
-                  className="min-w-[min(100%,320px)] shrink-0 sm:min-w-0"
-                />
-              ))}
+            <div className="mt-10 -mx-4 sm:-mx-6">
+              <div className="px-4 sm:px-6">
+                <Carousel>
+                  {featuredCoaches.map((c) => (
+                    <CoachCard
+                      key={c.id}
+                      name={c.name}
+                      avatarImage={c.avatarImage}
+                      rating={c.rating}
+                      reviewCount={c.reviewCount}
+                      level={c.level}
+                      locationCity={c.locationCity}
+                      locationCountry={c.locationCountry}
+                      experienceYears={c.experienceYears}
+                      audience={c.audience}
+                      travelAvailable={c.travelAvailable}
+                      outcomes={c.outcomes}
+                      priceFrom={c.priceFrom}
+                      href={coachListingProfileHref(c.id)}
+                      className="h-full w-full"
+                    />
+                  ))}
+                </Carousel>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Player favourite courts */}
+      <section className="border-b border-primary/10 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Player favourite courts</h2>
+              <p className="mt-1 max-w-xl text-primary/70">
+                Venues players return to—courts, coaching, and locations worth the trip.
+              </p>
+            </div>
+            <Link
+              href="/venues"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
+            >
+              View all venues
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {featuredVenues.length === 0 ? (
+            <p className="mt-10 rounded-2xl border border-dashed border-primary/20 bg-surface px-6 py-12 text-center text-primary/70">
+              No venues listed yet—check back soon.
+            </p>
+          ) : (
+            <div className="mt-10 -mx-4 sm:-mx-6">
+              <div className="px-4 sm:px-6">
+                <Carousel>
+                  {featuredVenues.map((v) => (
+                    <VenueCard
+                      key={String(v.id)}
+                      venue={{
+                        ...v,
+                        image_url: getVenueMainImageUrl(v) ?? v.image_url ?? null,
+                      }}
+                    />
+                  ))}
+                </Carousel>
+              </div>
             </div>
           )}
         </div>

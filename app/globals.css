@@ -74,3 +74,52 @@
     @apply font-body text-sm font-semibold text-primary;
   }
 }
+
+/* Homepage Swiper carousels: arrows on large screens only; brand-colored controls */
+@media (max-width: 1023px) {
+  .pp-home-carousel .swiper-button-next,
+  .pp-home-carousel .swiper-button-prev {
+    display: none !important;
+  }
+}
+
+.pp-home-carousel .swiper-button-next,
+.pp-home-carousel .swiper-button-prev {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: 0;
+  top: 42%;
+  color: #003c3c;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
+  box-shadow: 0 2px 12px rgba(0, 60, 60, 0.12);
+  border: 1px solid rgba(0, 60, 60, 0.1);
+}
+
+.pp-home-carousel .swiper-button-next::after,
+.pp-home-carousel .swiper-button-prev::after {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pp-home-carousel .swiper-button-prev {
+  left: 0;
+}
+
+.pp-home-carousel .swiper-button-next {
+  right: 0;
+}
+
+.pp-home-carousel .swiper-button-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.pp-home-carousel .swiper-pagination-bullet {
+  background: #003c3c;
+  opacity: 0.25;
+}
+
+.pp-home-carousel .swiper-pagination-bullet-active {
+  opacity: 1;
+}
