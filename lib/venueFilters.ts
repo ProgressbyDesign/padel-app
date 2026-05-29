@@ -34,6 +34,9 @@ export type Venue = {
   opening_hours?: unknown;
   lat?: number | null;
   lng?: number | null;
+  /** Alternate column names (some DB schemas) */
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   google_place_id?: string | null;
 };
 
@@ -42,14 +45,17 @@ export type CourtEnvironmentFilter = "all" | "indoor" | "outdoor";
 export type MinCourtsFilter = 0 | 4 | 6 | 8;
 
 export type FilterState = {
-  /** Free-text location: filters by matching city / country (forgiving partial match). */
+  /** City / country (Where field). */
   locationQuery: string;
+  /** Venue name (Venue field on venue PLP). */
+  venueQuery: string;
   environment: CourtEnvironmentFilter;
   minCourts: MinCourtsFilter;
 };
 
 export const defaultFilters: FilterState = {
   locationQuery: "",
+  venueQuery: "",
   environment: "all",
   minCourts: 0,
 };
@@ -118,6 +124,29 @@ export type WhereOption =
   | { id: string; kind: "country"; country: string; label: string }
   | { id: string; kind: "city"; country: string; city: string; label: string };
 
+/** Countries always offered in location search even when no venue row exists yet. */
+const SUGGESTED_COUNTRY_LABELS = ["Sweden"] as const;
+
+function prependSuggestedCountries(options: WhereOption[]): WhereOption[] {
+  const have = new Set(
+    options
+      .filter((o): o is WhereOption & { kind: "country" } => o.kind === "country")
+      .map((o) => o.country.toLowerCase())
+  );
+  const prepend: WhereOption[] = [];
+  for (const country of SUGGESTED_COUNTRY_LABELS) {
+    if (!have.has(country.toLowerCase())) {
+      prepend.push({
+        id: `country:${country}`,
+        kind: "country",
+        country,
+        label: country,
+      });
+    }
+  }
+  return prepend.length > 0 ? [...prepend, ...options] : options;
+}
+
 export function buildWhereOptions(venues: Venue[]): WhereOption[] {
   const countries = getCountryOptions(venues);
   const seen = new Set<string>();
@@ -152,7 +181,7 @@ export function buildWhereOptions(venues: Venue[]): WhereOption[] {
     city,
     label: `${city}, ${country}`,
   }));
-  return [...countryOpts, ...cityOpts];
+  return prependSuggestedCountries([...countryOpts, ...cityOpts]);
 }
 
 /** True when the DB marks the venue as premium training (boolean and/or venue_type). */

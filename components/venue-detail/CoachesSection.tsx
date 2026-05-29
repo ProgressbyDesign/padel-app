@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { User } from "lucide-react";
 import type { Coach } from "../../lib/coaches";
+import { coachListingProfileHref } from "../../lib/coachListing";
 
 type CoachesSectionProps = {
   coaches: Coach[];
@@ -24,7 +25,7 @@ export default function CoachesSection({ coaches }: CoachesSectionProps) {
           return (
             <li key={coach.id}>
               <Link
-                href={`/coach/${encodeURIComponent(coach.id)}`}
+                href={coachListingProfileHref(String(coach.id), "venues")}
                 className="flex gap-4 rounded-2xl border border-primary/15 bg-white p-4 transition hover:border-primary/25 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
               >
                 {coach.image_url?.trim() ? (

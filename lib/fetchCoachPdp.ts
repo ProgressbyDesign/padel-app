@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { COACH_VENUES_WITH_VENUE_SELECT } from "./coachVenueGeo";
 import { rawCoachRowToProfileView, type CoachPdpQueryRow, type CoachProfileView } from "./coachProfileView";
 
 const COACH_PDP_NESTED_SELECT = `
@@ -13,8 +14,6 @@ const COACH_PDP_NESTED_SELECT = `
     rating,
     review_count,
     price_from,
-    location_city,
-    location_country,
     travel_available,
     image_url,
 
@@ -37,7 +36,9 @@ const COACH_PDP_NESTED_SELECT = `
     coach_images (
       image_url,
       is_primary
-    )
+    ),
+
+    ${COACH_VENUES_WITH_VENUE_SELECT}
   `;
 
 /**
@@ -48,6 +49,15 @@ export async function fetchCoachPdpById(id: string): Promise<CoachProfileView | 
   const nested = await supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id).maybeSingle();
   if (!nested.error && nested.data) {
     return rawCoachRowToProfileView(nested.data as CoachPdpQueryRow);
+  }
+
+  const withVenues = await supabase
+    .from("coaches")
+    .select(`*, ${COACH_VENUES_WITH_VENUE_SELECT}`)
+    .eq("id", id)
+    .maybeSingle();
+  if (!withVenues.error && withVenues.data) {
+    return rawCoachRowToProfileView(withVenues.data as CoachPdpQueryRow);
   }
 
   const basic = await supabase.from("coaches").select("*").eq("id", id).maybeSingle();

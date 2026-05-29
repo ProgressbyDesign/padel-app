@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { User } from "lucide-react";
 import type { Coach } from "../lib/coaches";
+import { coachListingProfileHref } from "../lib/coachListing";
 
 type VenueCoachChipProps = {
   coach: Coach;
@@ -12,7 +13,7 @@ export default function VenueCoachChip({ coach }: VenueCoachChipProps) {
 
   return (
     <Link
-      href={`/coach/${encodeURIComponent(coach.id)}`}
+      href={coachListingProfileHref(String(coach.id), "venues")}
       className="flex min-h-[52px] items-center gap-3 rounded-xl border border-primary/15 bg-white px-3 py-2 shadow-sm transition hover:border-primary/25 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
     >
       {coach.image_url?.trim() ? (

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { MapPin, Search, X } from "lucide-react";
 import type { CoachSearchRow, VenueSearchRow } from "../lib/coaches";
 import { capList, filterCoachRows, filterVenueRows } from "../lib/coaches";
+import { fuzzyFilterLabels } from "../lib/searchFuzzy";
 import type { WhereOption } from "../lib/venueFilters";
 import { requestUserPosition } from "../lib/requestUserPosition";
 import { writeUserGeo } from "../lib/userGeoSession";
 import GroupedSearchSuggestions from "./GroupedSearchSuggestions";
+import { coachListingProfileHref } from "../lib/coachListing";
 
 type HeroWhereSearchProps = {
   whereOptions: WhereOption[];
@@ -24,17 +26,20 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const q = value.trim().toLowerCase();
+  const q = value.trim();
 
   const filteredLocations = useMemo(() => {
-    const base = q ? whereOptions.filter((o) => o.label.toLowerCase().includes(q)) : whereOptions;
+    const base = q ? fuzzyFilterLabels(whereOptions, q, 100) : whereOptions;
     return capList(base, q ? 100 : 50);
   }, [whereOptions, q]);
 
-  const filteredCoaches = useMemo(() => capList(filterCoachRows(coachSearchRows, q), q ? 50 : 8), [coachSearchRows, q]);
+  const filteredCoaches = useMemo(
+    () => capList(filterCoachRows(coachSearchRows, q, q ? 50 : 8), q ? 50 : 8),
+    [coachSearchRows, q]
+  );
 
   const filteredVenues = useMemo(
-    () => capList(filterVenueRows(venueSearchRows, q), q ? 50 : 8),
+    () => capList(filterVenueRows(venueSearchRows, q, q ? 50 : 8), q ? 50 : 8),
     [venueSearchRows, q]
   );
 
@@ -130,6 +135,7 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
               locations={filteredLocations}
               venues={filteredVenues}
               coaches={filteredCoaches}
+              suggestionGroupOrder="venues-first"
               selectedLocationLabel={value}
               onSelectNearby={handleNearby}
               nearbyLoading={nearbyLoading}
@@ -147,7 +153,7 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
               }}
               onSelectCoach={(id) => {
                 closeDropdown();
-                router.push(`/coach/${encodeURIComponent(id)}`);
+                router.push(coachListingProfileHref(id, "coaches"));
               }}
               emptyMessage={q ? "No matches — press Search to explore" : "No suggestions yet — press Search to explore"}
             />

@@ -1,3 +1,6 @@
+import type { CoachVenueLinkRow } from "./coachVenueGeo";
+import { rankSearchMatches } from "./searchFuzzy";
+
 /** Skill bands for listings / profile badges */
 export type CoachSkillLevel = "Beginner" | "Intermediate" | "Advanced" | "Pro";
 
@@ -21,13 +24,6 @@ export type Coach = {
   level?: string | null;
   /** Optional: focus area (future / extended profile) */
   specialty?: string | null;
-  /** Supabase geography for distance (primary source for coach PLP distance) */
-  location_lat?: number | string | null;
-  location_lng?: number | string | null;
-  city?: string | null;
-  country?: string | null;
-  location_city?: string | null;
-  location_country?: string | null;
   rating?: number | string | null;
   review_count?: number | null;
   experience_years?: number | string | null;
@@ -40,6 +36,8 @@ export type Coach = {
   outcomes?: string[];
   /** Raw embed from Supabase when listing/PDP query joins coach_outcomes */
   coach_outcomes?: { outcome?: string | null }[] | null;
+  /** Geography via linked venues (`is_primary` preferred) */
+  coach_venues?: CoachVenueLinkRow[] | null;
   /** Listing / PDP: who the coach trains (e.g. Adults, Juniors) */
   audience?: string[];
   achievements?: CoachAchievement[];
@@ -73,20 +71,17 @@ export function toVenueSearchRows(venues: { id: string | number; name?: string |
   }));
 }
 
-function includesNorm(hay: string, needle: string) {
-  return hay.toLowerCase().includes(needle);
-}
-
-export function filterCoachRows(rows: CoachSearchRow[], queryLower: string): CoachSearchRow[] {
-  if (!queryLower) return rows;
-  return rows.filter(
-    (r) => includesNorm(r.name, queryLower) || (r.role && includesNorm(r.role, queryLower))
+export function filterCoachRows(rows: CoachSearchRow[], query: string, limit = 50): CoachSearchRow[] {
+  return rankSearchMatches(
+    rows,
+    query,
+    (r) => ({ primary: r.name, secondary: r.role ?? "" }),
+    limit
   );
 }
 
-export function filterVenueRows(rows: VenueSearchRow[], queryLower: string): VenueSearchRow[] {
-  if (!queryLower) return rows;
-  return rows.filter((r) => includesNorm(r.name, queryLower));
+export function filterVenueRows(rows: VenueSearchRow[], query: string, limit = 50): VenueSearchRow[] {
+  return rankSearchMatches(rows, query, (r) => ({ primary: r.name }), limit);
 }
 
 export function capList<T>(arr: T[], max: number): T[] {

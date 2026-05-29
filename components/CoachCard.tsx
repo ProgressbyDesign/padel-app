@@ -23,6 +23,8 @@ export type CoachCardProps = {
   travelAvailable?: boolean;
   /** Single headline: pass the first structured outcome (or a short fallback line). */
   outcomes?: string | null;
+  /** Optional chips from `coach_outcomes`. */
+  outcomeTags?: string[];
   priceFrom?: string | null;
   /** Profile destination — entire card is a single interactive region */
   href: string;
@@ -61,11 +63,21 @@ export default function CoachCard({
   audience,
   travelAvailable,
   outcomes,
+  outcomeTags,
   priceFrom,
   href,
   className = "",
 }: CoachCardProps) {
-  const locationLine = [locationCity, locationCountry].filter((x) => x?.trim()).join(", ");
+  const skipLoc = (x?: string | null) => {
+    const t = x?.trim();
+    return !t || t.toLowerCase() === "unknown" || t === "—";
+  };
+  const locationLine = [locationCity, locationCountry].filter((x) => !skipLoc(x)).join(", ");
+  const tags =
+    (outcomeTags?.length ? outcomeTags : outcomes?.trim() ? [outcomes.trim()] : [])
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 3);
   const levelLabel = level?.trim();
   const audienceClean = (audience ?? []).map((a) => a.trim()).filter(Boolean);
   const outcomesText = outcomes?.trim() ?? null;
@@ -144,7 +156,19 @@ export default function CoachCard({
             ) : null}
           </header>
 
-          {outcomesText ? (
+          {tags.length > 0 ? (
+            <ul className="flex flex-wrap gap-1.5" aria-label="Coaching focus">
+              {tags.map((tag) => (
+                <li
+                  key={tag}
+                  className="max-w-full truncate rounded-full border border-secondary/25 bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                  title={tag}
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          ) : outcomesText ? (
             <p
               className="line-clamp-1 text-sm font-medium leading-snug text-primary/75"
               title={outcomesText}

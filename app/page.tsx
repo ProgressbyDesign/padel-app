@@ -2,9 +2,7 @@ import LandingPage from "../components/LandingPage";
 import type { HomeStats } from "../components/LandingPage";
 import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
 import { supabase } from "../lib/supabase";
-import { toCoachSearchRows, toVenueSearchRows } from "../lib/coaches";
-import { buildWhereOptions, sortVenuesByBestMatch } from "../lib/venueFilters";
-import { loadCoachesExplorerData, recommendedScore } from "../lib/coachListing";
+import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
 
 export const metadata = {
   title: "Find the best venues abroad",
@@ -26,23 +24,20 @@ function buildHomeStats(
 }
 
 export default async function Home() {
-  const { venues, coaches, coachEntities } = await loadCoachesExplorerData();
+  const [featuredCoaches, featuredVenues, coachCountRes, venueCountRes, countriesRes, enquiryCountRes] =
+    await Promise.all([
+      fetchTopRatedCoachesForHome(),
+      fetchTopRatedVenuesForHome(),
+      supabase.from("coaches").select("*", { count: "exact", head: true }),
+      supabase.from("venues").select("*", { count: "exact", head: true }),
+      supabase.from("venues").select("country").not("country", "is", null).limit(2000),
+      supabase.from("enquiries").select("*", { count: "exact", head: true }),
+    ]);
 
-  const coachSearchRows =
-    coachEntities.length > 0
-      ? toCoachSearchRows(coachEntities)
-      : coaches.map((c) => ({ id: c.id, name: c.name, role: c.level }));
-  const venueSearchRows = toVenueSearchRows(venues);
-  const whereOptions = buildWhereOptions(venues);
-
-  const featuredCoaches = [...coaches].sort((a, b) => recommendedScore(b) - recommendedScore(a)).slice(0, 12);
-
-  const sortedVenues = sortVenuesByBestMatch(venues);
-  const featuredVenues = sortedVenues.slice(0, 12);
-  const topVenue = sortedVenues[0];
+  const topVenue = featuredVenues[0] ?? null;
   const enquiryVenueId = topVenue?.id != null ? String(topVenue.id) : null;
-
   const recommendedCoach = featuredCoaches[0] ?? null;
+
   let recommendedVenue: BentoVenuePreview | null = null;
   if (topVenue) {
     const subtitle = [topVenue.city, topVenue.country]
@@ -58,30 +53,26 @@ export default async function Home() {
   }
 
   const countrySet = new Set<string>();
-  for (const v of venues) {
-    const c = v.country != null ? String(v.country).trim() : "";
+  for (const row of countriesRes.data ?? []) {
+    const c = row.country != null ? String(row.country).trim() : "";
     if (c) countrySet.add(c);
   }
-  for (const c of coaches) {
-    const x = c.locationCountry?.trim();
-    if (x) countrySet.add(x);
-  }
 
-  let enquiriesCompleted: number | null = null;
-  const enquiryCountRes = await supabase.from("enquiries").select("*", { count: "exact", head: true });
-  if (!enquiryCountRes.error && typeof enquiryCountRes.count === "number") {
-    enquiriesCompleted = enquiryCountRes.count;
-  }
+  const coachCount =
+    !coachCountRes.error && typeof coachCountRes.count === "number" ? coachCountRes.count : 0;
+  const venueCount =
+    !venueCountRes.error && typeof venueCountRes.count === "number" ? venueCountRes.count : 0;
+  const enquiriesCompleted =
+    !enquiryCountRes.error && typeof enquiryCountRes.count === "number"
+      ? enquiryCountRes.count
+      : null;
 
-  const stats = buildHomeStats(coaches.length, venues.length, countrySet.size, enquiriesCompleted);
+  const stats = buildHomeStats(coachCount, venueCount, countrySet.size, enquiriesCompleted);
 
   return (
     <LandingPage
       featuredCoaches={featuredCoaches}
       featuredVenues={featuredVenues}
-      whereOptions={whereOptions}
-      coachSearchRows={coachSearchRows}
-      venueSearchRows={venueSearchRows}
       recommendedCoach={recommendedCoach}
       recommendedVenue={recommendedVenue}
       enquiryVenueId={enquiryVenueId}

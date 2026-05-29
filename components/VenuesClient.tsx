@@ -1,22 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import VenueCard from "./VenueCard";
 import FiltersModal from "./listing/FiltersModal";
-import ListingWhereSearch from "./listing/ListingWhereSearch";
+import MarketplaceSearch from "./search/MarketplaceSearch";
+import type { MarketplaceSearchValues } from "../lib/marketplaceSearch";
+import ListingPagination from "./listing/ListingPagination";
+import { useListingNavigation, useScrollToTopOnPageChange } from "./listing/useListingNavigation";
 import { addDistancesToVenues } from "../lib/distance";
-import { toCoachSearchRows, toVenueSearchRows } from "../lib/coaches";
-import type { CoachSearchRow } from "../lib/coaches";
 import { requestUserPosition } from "../lib/requestUserPosition";
 import { clearUserGeo, readUserGeo, writeUserGeo } from "../lib/userGeoSession";
 import type { UserGeolocation } from "../hooks/useUserGeolocation";
 import {
-  buildWhereOptions,
+  buildVenueListingQuery,
+  type VenueListingUrlState,
+} from "../lib/listingUrlParams";
+import {
   countVenueModalFiltersActive,
   defaultFilters,
-  filterVenues,
-  sortVenuesByUserChoice,
   type FilterState,
   type SortBy,
   type SortDirection,
@@ -25,43 +28,87 @@ import {
 
 type VenuesClientProps = {
   venues: Venue[];
-  coachSearchRows: CoachSearchRow[];
-  initialFilters?: Partial<FilterState>;
+  totalCount: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  urlState: VenueListingUrlState;
+  nearLat?: number | null;
+  nearLng?: number | null;
 };
 
 const sortSelectClass =
   "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-primary/15 bg-white pl-3 pr-9 text-sm font-medium text-primary shadow-sm outline-none transition duration-200 ease-out hover:border-primary/25 hover:shadow-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
 
-export default function VenuesClient({ venues, coachSearchRows, initialFilters }: VenuesClientProps) {
-  const [userCoords, setUserCoords] = useState<UserGeolocation>(null);
-  const [nearbyMode, setNearbyMode] = useState(false);
+export default function VenuesClient({
+  venues,
+  totalCount,
+  page,
+  totalPages,
+  pageSize,
+  urlState,
+  nearLat: nearLatProp,
+  nearLng: nearLngProp,
+}: VenuesClientProps) {
+  const router = useRouter();
+  const { pushQuery } = useListingNavigation("/venues");
+  useScrollToTopOnPageChange(page);
+
+  const [userCoords, setUserCoords] = useState<UserGeolocation>(() => {
+    if (nearLatProp != null && nearLngProp != null) {
+      return { latitude: nearLatProp, longitude: nearLngProp };
+    }
+    return readUserGeo();
+  });
+  const [nearbyMode, setNearbyMode] = useState(
+    () => urlState.sortBy === "distance" || (nearLatProp != null && nearLngProp != null)
+  );
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(() => ({
-    ...defaultFilters,
-    ...initialFilters,
-  }));
-  const [locationDraft, setLocationDraft] = useState(() => initialFilters?.locationQuery ?? "");
-  const [sortBy, setSortBy] = useState<SortBy>("best_match");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  useEffect(() => {
-    const g = readUserGeo();
-    if (g) {
-      setUserCoords(g);
-      setNearbyMode(true);
-      setSortBy("distance");
-      setSortDirection("asc");
-    }
-  }, []);
+  const filters = urlState.filters;
+  const sortBy = urlState.sortBy;
+  const sortDirection = urlState.sortDirection;
+
+  const commitUrl = useCallback(
+    (next: {
+      filters?: FilterState;
+      sortBy?: SortBy;
+      sortDirection?: SortDirection;
+      page?: number;
+      lat?: number | null;
+      lng?: number | null;
+    }) => {
+      const f = next.filters ?? filters;
+      const sb = next.sortBy ?? sortBy;
+      const sd = next.sortDirection ?? sortDirection;
+      pushQuery(() => {
+        const state = {
+          page: next.page ?? 1,
+          location: f.locationQuery,
+          venue: f.venueQuery,
+          search: [f.locationQuery, f.venueQuery].filter(Boolean).join(" ").trim(),
+          sortBy: sb,
+          sortDirection: sd,
+          filters: f,
+        };
+        const q = buildVenueListingQuery(state);
+        if (next.lat != null && next.lng != null) {
+          q.set("lat", String(next.lat));
+          q.set("lng", String(next.lng));
+        }
+        return q;
+      }, { page: next.page ?? 1 });
+    },
+    [filters, sortBy, sortDirection, pushQuery]
+  );
 
   const clearNearby = useCallback(() => {
     setUserCoords(null);
     setNearbyMode(false);
     clearUserGeo();
-    setSortBy("best_match");
-    setSortDirection("desc");
-  }, []);
+    commitUrl({ sortBy: "best_match", sortDirection: "desc", lat: null, lng: null });
+  }, [commitUrl]);
 
   const handleNearbyFromSearch = useCallback(async () => {
     setNearbyLoading(true);
@@ -71,63 +118,77 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
       setUserCoords(pos);
       writeUserGeo(pos);
       setNearbyMode(true);
-      setSortBy("distance");
-      setSortDirection("asc");
-      setFilters((prev) => ({ ...prev, locationQuery: "" }));
-      setLocationDraft("");
+      commitUrl({
+        filters: { ...filters, locationQuery: "", venueQuery: "" },
+        sortBy: "distance",
+        sortDirection: "asc",
+        lat: pos.latitude,
+        lng: pos.longitude,
+      });
     }
-  }, []);
+  }, [commitUrl, filters]);
 
-  const applyLocationSearch = useCallback(() => {
-    const next = locationDraft.trim();
-    setFilters((prev) => ({ ...prev, locationQuery: next }));
-    if (next) {
-      clearNearby();
-    }
-  }, [locationDraft, clearNearby]);
-
-  const whereOptions = useMemo(() => buildWhereOptions(venues), [venues]);
-  const venueSearchRows = useMemo(() => toVenueSearchRows(venues), [venues]);
+  const applyMarketplaceSearch = useCallback(
+    (values: MarketplaceSearchValues) => {
+      if (values.mode === "coaches") {
+        const q = new URLSearchParams();
+        if (values.location.trim()) q.set("location", values.location.trim());
+        if (values.entity.trim()) q.set("coach", values.entity.trim());
+        const qs = q.toString();
+        router.push(qs ? `/coaches?${qs}` : "/coaches");
+        return;
+      }
+      setNearbyMode(false);
+      clearUserGeo();
+      commitUrl({
+        filters: {
+          ...filters,
+          locationQuery: values.location.trim(),
+          venueQuery: values.entity.trim(),
+        },
+        sortBy: "best_match",
+        lat: null,
+        lng: null,
+      });
+    },
+    [commitUrl, filters, router]
+  );
 
   const venuesWithDistance = useMemo(
     () => addDistancesToVenues(venues, userCoords),
     [venues, userCoords]
   );
 
-  const filteredVenues = useMemo(() => {
-    const filtered = filterVenues(venuesWithDistance, filters);
-    return sortVenuesByUserChoice(filtered, sortBy, sortDirection);
-  }, [venuesWithDistance, filters, sortBy, sortDirection]);
-
   const modalFilterCount = useMemo(() => countVenueModalFiltersActive(filters), [filters]);
+
+  const buildPageHref = useCallback(
+    (p: number) => {
+      const q = buildVenueListingQuery({
+        ...urlState,
+        page: p,
+      });
+      if (userCoords && sortBy === "distance") {
+        q.set("lat", String(userCoords.latitude));
+        q.set("lng", String(userCoords.longitude));
+      }
+      const qs = q.toString();
+      return qs ? `/venues?${qs}` : "/venues";
+    },
+    [urlState, userCoords, sortBy]
+  );
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
 
     if (nearbyMode && userCoords) {
-      chips.push({
-        key: "nearby",
-        label: "Nearby",
-        onRemove: clearNearby,
-      });
-    }
-
-    if (filters.locationQuery.trim()) {
-      chips.push({
-        key: "where",
-        label: filters.locationQuery.trim(),
-        onRemove: () => {
-          setFilters((prev) => ({ ...prev, locationQuery: "" }));
-          setLocationDraft("");
-        },
-      });
+      chips.push({ key: "nearby", label: "Nearby", onRemove: clearNearby });
     }
 
     if (filters.environment !== "all") {
       chips.push({
         key: `environment-${filters.environment}`,
         label: filters.environment === "indoor" ? "Indoor" : "Outdoor",
-        onRemove: () => setFilters((prev) => ({ ...prev, environment: "all" })),
+        onRemove: () => commitUrl({ filters: { ...filters, environment: "all" } }),
       });
     }
 
@@ -135,34 +196,39 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
       chips.push({
         key: `courts-${filters.minCourts}`,
         label: `Courts: ${filters.minCourts}+`,
-        onRemove: () => setFilters((prev) => ({ ...prev, minCourts: 0 })),
+        onRemove: () => commitUrl({ filters: { ...filters, minCourts: 0 } }),
       });
     }
 
     return chips;
-  }, [filters, nearbyMode, userCoords, clearNearby]);
-
-  const hasActiveFilters = activeChips.length > 0;
+  }, [filters, nearbyMode, userCoords, clearNearby, commitUrl]);
 
   const clearAll = useCallback(() => {
-    setFilters(defaultFilters);
-    setLocationDraft("");
     clearNearby();
-  }, [clearNearby]);
+    commitUrl({
+      filters: defaultFilters,
+      sortBy: "best_match",
+      sortDirection: "desc",
+      lat: null,
+      lng: null,
+    });
+  }, [clearNearby, commitUrl]);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        <ListingWhereSearch
-          variant="venues"
-          draftValue={locationDraft}
-          onDraftChange={setLocationDraft}
-          onSearchSubmit={applyLocationSearch}
-          whereOptions={whereOptions}
-          coachSearchRows={coachSearchRows}
-          venueSearchRows={venueSearchRows}
+        <MarketplaceSearch
+          variant="listing"
+          defaultMode="venues"
+          initialValues={{
+            mode: "venues",
+            location: urlState.location,
+            entity: urlState.venue,
+          }}
+          onSubmit={applyMarketplaceSearch}
           onSelectNearby={handleNearbyFromSearch}
           nearbyLoading={nearbyLoading}
+          className="min-w-0 flex-1"
         />
 
         <button
@@ -179,7 +245,7 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
           ) : null}
         </button>
 
-        {hasActiveFilters ? (
+        {activeChips.length > 0 ? (
           <button
             type="button"
             onClick={clearAll}
@@ -196,13 +262,15 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
         onClose={() => setFiltersOpen(false)}
         environment={filters.environment}
         minCourts={filters.minCourts}
-        onApply={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        onApply={(next) =>
+          commitUrl({
+            filters: { ...filters, ...next },
+          })
+        }
         onReset={() =>
-          setFilters((prev) => ({
-            ...prev,
-            environment: "all",
-            minCourts: 0,
-          }))
+          commitUrl({
+            filters: { ...filters, environment: "all", minCourts: 0 },
+          })
         }
       />
 
@@ -227,8 +295,13 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
 
       <div className="mb-5 flex flex-col gap-4 border-b border-primary/10 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <p className="text-sm text-primary/70">
-          Showing <span className="font-semibold text-primary">{filteredVenues.length}</span> of{" "}
-          <span className="font-semibold text-primary">{venues.length}</span> venues
+          <span className="font-semibold text-primary">{totalCount}</span> venues
+          {totalPages > 1 ? (
+            <span className="text-primary/55">
+              {" "}
+              · Page {page} of {totalPages}
+            </span>
+          ) : null}
         </p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
@@ -239,9 +312,13 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
                 value={sortBy}
                 onChange={(e) => {
                   const next = e.target.value as SortBy;
-                  setSortBy(next);
-                  if (next === "best_match") setSortDirection("desc");
-                  if (next === "distance") setSortDirection("asc");
+                  commitUrl({
+                    sortBy: next,
+                    sortDirection:
+                      next === "distance" ? "asc" : next === "best_match" ? "desc" : sortDirection,
+                    lat: next === "distance" && userCoords ? userCoords.latitude : null,
+                    lng: next === "distance" && userCoords ? userCoords.longitude : null,
+                  });
                 }}
                 className={sortSelectClass}
                 aria-label="Sort venues by"
@@ -264,11 +341,11 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
               <div className="relative">
                 <select
                   value={sortDirection}
-                  onChange={(e) => setSortDirection(e.target.value as SortDirection)}
-                  className={sortSelectClass}
-                  aria-label={
-                    sortBy === "rating" ? "Rating order" : sortBy === "distance" ? "Distance order" : "Courts order"
+                  onChange={(e) =>
+                    commitUrl({ sortDirection: e.target.value as SortDirection })
                   }
+                  className={sortSelectClass}
+                  aria-label="Sort order"
                 >
                   {sortBy === "rating" ? (
                     <>
@@ -297,7 +374,7 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
         </div>
       </div>
 
-      {filteredVenues.length === 0 ? (
+      {venues.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-primary/25 bg-white px-6 py-12 text-center">
           <p className="text-base font-semibold text-primary">No venues match these filters</p>
           <p className="mt-1 text-sm text-primary/70">Try removing one or two filters to see more results.</p>
@@ -310,11 +387,21 @@ export default function VenuesClient({ venues, coachSearchRows, initialFilters }
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {filteredVenues.map((venue) => (
-            <VenueCard key={venue.id} venue={venue} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {venuesWithDistance.map((venue) => (
+              <VenueCard key={venue.id} venue={venue} />
+            ))}
+          </div>
+          <ListingPagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            buildHref={buildPageHref}
+            itemLabel="venues"
+          />
+        </>
       )}
     </div>
   );
