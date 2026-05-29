@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowLeft, Mail, MapPin, Phone, Star, User } from "lucide-react";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import type { Venue } from "../lib/venueFilters";
 import EnquiryButton from "./enquiry/EnquiryButton";
 import VenueCardsWithDistance from "./VenueCardsWithDistance";
+import CoachProfileBack from "./CoachProfileBack";
 
 type CoachProfilePageProps = {
   coach: CoachProfileView;
@@ -23,41 +25,46 @@ export default function CoachProfilePage({ coach, venues }: CoachProfilePageProp
   const hasRating = scoreLabel != null;
   const hasReviews = coach.rating.count != null && coach.rating.count > 0;
   const hasContact = Boolean(coach.contact.email?.trim()) || Boolean(coach.contact.phone?.trim());
-  const hasMetaLine =
-    Boolean(coach.location.full?.trim()) ||
-    Boolean(coach.experience?.trim()) ||
-    hasRating ||
-    coach.travel === true ||
-    Boolean(coach.pricing.displayFrom?.trim());
+  const locationFull = coach.location.full?.trim() || "";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <Link
-        href="/venues"
-        className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-primary/70 transition hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to venues
-      </Link>
-
-      <header className="flex flex-col gap-6 border-b border-primary/10 pb-10 sm:flex-row sm:items-start sm:gap-8">
-        {portraitUrl ? (
-          <img
-            src={portraitUrl}
-            alt=""
-            className="h-32 w-32 shrink-0 rounded-2xl object-cover ring-1 ring-primary/15 sm:h-40 sm:w-40"
-          />
-        ) : (
-          <div
-            className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-surface to-primary/10 ring-1 ring-primary/15 sm:h-40 sm:w-40"
-            aria-hidden
+      <Suspense
+        fallback={
+          <Link
+            href="/coaches"
+            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-primary/70 transition hover:text-primary"
           >
-            <User className="h-14 w-14 text-secondary sm:h-16 sm:w-16" strokeWidth={1.25} />
-          </div>
-        )}
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Back to coaches
+          </Link>
+        }
+      >
+        <CoachProfileBack />
+      </Suspense>
+
+      <header className="grid gap-8 border-b border-primary/10 pb-10 lg:grid-cols-[minmax(280px,400px)_1fr] lg:items-start lg:gap-10">
+        <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
+          {portraitUrl ? (
+            <img
+              src={portraitUrl}
+              alt=""
+              className="aspect-[4/5] w-full rounded-3xl object-cover shadow-[0_16px_48px_rgba(0,60,60,0.12)] ring-1 ring-primary/15 lg:aspect-[3/4] lg:min-h-[420px]"
+            />
+          ) : (
+            <div
+              className="flex aspect-[4/5] w-full items-center justify-center rounded-3xl bg-gradient-to-br from-surface to-primary/10 ring-1 ring-primary/15 lg:aspect-[3/4] lg:min-h-[420px]"
+              aria-hidden
+            >
+              <User className="h-20 w-20 text-secondary lg:h-24 lg:w-24" strokeWidth={1.25} />
+            </div>
+          )}
+        </div>
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">{displayName}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl lg:text-[2.5rem]">
+            {displayName}
+          </h1>
 
           {coach.level?.trim() ? (
             <p className="mt-2 text-base font-medium text-primary/70">{coach.level.trim()}</p>
@@ -67,6 +74,16 @@ export default function CoachProfilePage({ coach, venues }: CoachProfilePageProp
             <p className="mt-3 inline-flex max-w-full rounded-full border border-primary/20 bg-primary/[0.06] px-3 py-1.5 text-sm font-semibold text-primary">
               {coach.primaryOutcome.trim()}
             </p>
+          ) : null}
+
+          {locationFull ? (
+            <section className="mt-5 rounded-2xl border border-primary/12 bg-surface/80 px-4 py-3.5" aria-label="Location">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/50">Based at</p>
+              <p className="mt-1 flex items-start gap-2 text-base font-semibold text-primary">
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-secondary" aria-hidden />
+                <span>{locationFull}</span>
+              </p>
+            </section>
           ) : null}
 
           {coach.audience.length > 0 ? (
@@ -87,7 +104,7 @@ export default function CoachProfilePage({ coach, venues }: CoachProfilePageProp
           </div>
 
           {coach.outcomes.length > 0 ? (
-            <div className="mt-5" aria-labelledby="coach-outcomes-heading">
+            <div className="mt-6" aria-labelledby="coach-outcomes-heading">
               <h2 id="coach-outcomes-heading" className="text-xs font-semibold uppercase tracking-wide text-primary/50">
                 Helps with
               </h2>
@@ -106,51 +123,40 @@ export default function CoachProfilePage({ coach, venues }: CoachProfilePageProp
             <p className="mt-5 text-sm font-medium text-primary/65">General coaching available</p>
           )}
 
-          {hasMetaLine ? (
-            <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-primary/80">
-              {coach.location.full?.trim() ? (
-                <div className="flex min-w-0 items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
-                  <div>
-                    <dt className="sr-only">Location</dt>
-                    <dd className="font-medium text-primary">{coach.location.full.trim()}</dd>
-                  </div>
-                </div>
-              ) : null}
-              {coach.experience?.trim() ? (
-                <div>
-                  <dt className="sr-only">Experience</dt>
-                  <dd>
-                    <span className="font-medium text-primary">Experience:</span> {coach.experience.trim()}
-                  </dd>
-                </div>
-              ) : null}
-              {hasRating ? (
-                <div className="flex items-center gap-1.5">
-                  <Star className="h-4 w-4 shrink-0 fill-secondary text-secondary" aria-hidden />
-                  <dt className="sr-only">Rating</dt>
-                  <dd className="font-medium text-primary">
-                    {scoreLabel}
-                    {hasReviews ? (
-                      <span className="font-normal text-primary/60"> ({coach.rating.count!.toLocaleString()} reviews)</span>
-                    ) : null}
-                  </dd>
-                </div>
-              ) : null}
-              {coach.travel === true ? (
-                <div>
-                  <dt className="sr-only">Travel</dt>
-                  <dd className="font-medium text-primary">Travels to coach</dd>
-                </div>
-              ) : null}
-              {coach.pricing.displayFrom?.trim() ? (
-                <div>
-                  <dt className="sr-only">Pricing</dt>
-                  <dd className="font-semibold text-primary">{coach.pricing.displayFrom.trim()}</dd>
-                </div>
-              ) : null}
-            </dl>
-          ) : null}
+          <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-primary/80">
+            {coach.experience?.trim() ? (
+              <div>
+                <dt className="sr-only">Experience</dt>
+                <dd>
+                  <span className="font-medium text-primary">Experience:</span> {coach.experience.trim()}
+                </dd>
+              </div>
+            ) : null}
+            {hasRating ? (
+              <div className="flex items-center gap-1.5">
+                <Star className="h-4 w-4 shrink-0 fill-secondary text-secondary" aria-hidden />
+                <dt className="sr-only">Rating</dt>
+                <dd className="font-medium text-primary">
+                  {scoreLabel}
+                  {hasReviews ? (
+                    <span className="font-normal text-primary/60"> ({coach.rating.count!.toLocaleString()} reviews)</span>
+                  ) : null}
+                </dd>
+              </div>
+            ) : null}
+            {coach.travel === true ? (
+              <div>
+                <dt className="sr-only">Travel</dt>
+                <dd className="font-medium text-primary">Travels to coach</dd>
+              </div>
+            ) : null}
+            {coach.pricing.displayFrom?.trim() ? (
+              <div>
+                <dt className="sr-only">Pricing</dt>
+                <dd className="text-base font-semibold text-primary">{coach.pricing.displayFrom.trim()}</dd>
+              </div>
+            ) : null}
+          </dl>
 
           {hasContact ? (
             <ul className="mt-6 flex flex-wrap gap-4 text-sm">

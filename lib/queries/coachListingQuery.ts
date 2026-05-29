@@ -1,0 +1,184 @@
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import { LISTING_PAGE_SIZE } from "../constants/listings";
+import {
+  COACH_LISTING_SELECT,
+  coachesRowsToListingItems,
+  type CoachListingItem,
+  type CoachListingSort,
+} from "../coachListing";
+import type { CoachSkillLevel } from "../coaches";
+import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
+import { clampPage, listingPageCount } from "../listingUrlParams";
+import { normalizeSearchKey } from "../searchFuzzy";
+import { supabase } from "../supabase";
+import type { Coach } from "../coaches";
+import type { Venue } from "../venueFilters";
+
+export type CoachListingQueryInput = {
+  page: number;
+  pageSize?: number;
+  location?: string;
+  coach?: string;
+  /** @deprecated use location + coach */
+  search?: string;
+  level?: "all" | CoachSkillLevel;
+  audienceAdults?: boolean;
+  audienceJuniors?: boolean;
+  travelOnly?: boolean;
+  sort?: CoachListingSort;
+};
+
+export type CoachListingQueryResult = {
+  coaches: CoachListingItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+/** Coach IDs linked to venues matching a normalized location/search key. */
+async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
+  const key = normalizeSearchKey(search);
+  if (!key) return [];
+
+  const { data: venues, error } = await supabase
+    .from("venues")
+    .select("id")
+    .ilike("search_key", `%${key}%`);
+
+  if (error || !venues?.length) return [];
+
+  const venueIds = venues.map((v) => v.id);
+  const { data: links, error: linkErr } = await supabase
+    .from("coach_venues")
+    .select("coach_id")
+    .in("venue_id", venueIds);
+
+  if (linkErr || !links?.length) return [];
+
+  return [...new Set(links.map((l) => String((l as { coach_id: string }).coach_id)))];
+}
+
+function applyCoachFilters(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: PostgrestFilterBuilder<any, any, any, any, any>,
+  input: CoachListingQueryInput,
+  locationCoachIds: string[] | null
+) {
+  const coachName = (input.coach ?? "").trim();
+  const coachKey = coachName ? normalizeSearchKey(coachName) : "";
+
+  if (coachKey) {
+    query = query.ilike("search_key", `%${coachKey}%`);
+  }
+
+  if (locationCoachIds) {
+    if (locationCoachIds.length === 0) {
+      return { query, empty: true as const };
+    }
+    if (coachKey) {
+      query = query.in("id", locationCoachIds);
+    } else {
+      query = query.in("id", locationCoachIds);
+    }
+  }
+
+  if (input.level && input.level !== "all") {
+    query = query.eq("level", input.level);
+  }
+
+  if (input.travelOnly) {
+    query = query.eq("travel_available", true);
+  }
+
+  if (input.audienceAdults && input.audienceJuniors) {
+    query = query.or(
+      "coach_attributes.audience_adults.eq.true,coach_attributes.audience_juniors.eq.true"
+    );
+  } else if (input.audienceAdults) {
+    query = query.eq("coach_attributes.audience_adults", true);
+  } else if (input.audienceJuniors) {
+    query = query.eq("coach_attributes.audience_juniors", true);
+  }
+
+  return { query, empty: false as const };
+}
+
+function applyCoachSort(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: PostgrestFilterBuilder<any, any, any, any, any>,
+  sort: CoachListingSort
+) {
+  if (sort === "experience") {
+    return query
+      .order("experience_years", { ascending: false, nullsFirst: false })
+      .order("rating", { ascending: false, nullsFirst: false });
+  }
+  if (sort === "rating") {
+    return query
+      .order("rating", { ascending: false, nullsFirst: false })
+      .order("review_count", { ascending: false, nullsFirst: false });
+  }
+  return query
+    .order("rating", { ascending: false, nullsFirst: false })
+    .order("review_count", { ascending: false, nullsFirst: false })
+    .order("experience_years", { ascending: false, nullsFirst: false });
+}
+
+/** Paginated coach PLP — filters and search against full database. */
+export async function fetchCoachListingPage(
+  input: CoachListingQueryInput
+): Promise<CoachListingQueryResult> {
+  const pageSize = input.pageSize ?? LISTING_PAGE_SIZE;
+  const sort = input.sort ?? "recommended";
+
+  const location =
+    (input.location ?? "").trim() || (input.search ?? "").trim();
+  const locationCoachIds = location ? await coachIdsMatchingVenueSearch(location) : null;
+
+  let countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds);
+  if (countFiltered.empty) {
+    return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
+  }
+  const countRes = await countFiltered.query;
+  const totalCount =
+    !countRes.error && typeof countRes.count === "number" ? countRes.count : 0;
+  const totalPages = listingPageCount(totalCount, pageSize);
+  const page = clampPage(input.page, totalPages);
+
+  if (totalCount === 0) {
+    return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let dataQuery = supabase.from("coaches").select(COACH_LISTING_SELECT);
+  const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds);
+  if (dataFiltered.empty) {
+    return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
+  }
+  dataQuery = applyCoachSort(dataFiltered.query, sort);
+
+  const { data, error } = await dataQuery.range(from, to);
+
+  if (error) {
+    console.warn("[coaches] listing page failed:", error.message);
+    return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
+  }
+
+  const rows = (data ?? []) as Coach[];
+  const venuesRes = await supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  const venues = (venuesRes.data ?? []) as Venue[];
+  const hydrated = hydrateCoachVenueEmbeds(rows, venues);
+  const coaches = coachesRowsToListingItems(hydrated);
+
+  return {
+    coaches,
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+  };
+}

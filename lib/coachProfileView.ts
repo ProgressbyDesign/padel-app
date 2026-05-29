@@ -1,4 +1,10 @@
 import type { CoachAchievement } from "./coaches";
+import { formatCoachPriceDisplay } from "./formatCoachPrice";
+import {
+  pickPrimaryVenueFromCoachRow,
+  venueLocationLabels,
+  type CoachVenueLinkRow,
+} from "./coachVenueGeo";
 
 type CoachAttributesEmbed = {
   audience_adults?: boolean | null;
@@ -37,18 +43,13 @@ export type CoachPdpQueryRow = {
   rating?: number | string | null;
   review_count?: number | null;
   price_from?: string | number | null;
-  location_city?: string | null;
-  location_country?: string | null;
   travel_available?: boolean | null;
   /** Legacy column — used when `coach_outcomes` is empty */
   outcome?: string | null;
   role?: string | null;
   image_url?: string | null;
   specialty?: string | null;
-  location_lat?: number | string | null;
-  location_lng?: number | string | null;
-  city?: string | null;
-  country?: string | null;
+  coach_venues?: CoachVenueLinkRow[] | null;
   coach_attributes?: CoachAttributesEmbed | CoachAttributesEmbed[];
   coach_achievements?: CoachAchievementEmbed[] | null;
   coach_images?: CoachImageEmbed[] | null;
@@ -131,16 +132,10 @@ function parseReviewCount(raw: unknown): number | null {
 }
 
 function formatPricingDisplayFrom(raw: unknown): { from: string | null; displayFrom: string | null } {
-  if (raw == null) return { from: null, displayFrom: null };
-  const base =
-    typeof raw === "string"
-      ? raw.trim()
-      : typeof raw === "number" && Number.isFinite(raw)
-        ? String(raw)
-        : String(raw).trim();
-  if (!base) return { from: null, displayFrom: null };
-  const displayFrom = /^from\s+/i.test(base) ? base : `From ${base}`;
-  return { from: base, displayFrom };
+  const displayFrom = formatCoachPriceDisplay(raw);
+  if (!displayFrom) return { from: null, displayFrom: null };
+  const from = displayFrom.replace(/^from\s+/i, "").trim() || displayFrom;
+  return { from, displayFrom };
 }
 
 function parseExperienceYears(raw: unknown): number {
@@ -197,9 +192,9 @@ export function rawCoachRowToProfileView(coachRow: CoachPdpQueryRow): CoachProfi
   const primaryFromRelation = coachRow.coach_outcomes?.[0]?.outcome?.trim() || null;
   const primaryOutcome = primaryFromRelation || outcomes[0] || null;
 
-  const city = toTrimmedString(coachRow.location_city) ?? toTrimmedString(coachRow.city);
-  const country = toTrimmedString(coachRow.location_country) ?? toTrimmedString(coachRow.country);
-  const full = [city, country].filter(Boolean).join(", ");
+  const primaryVenue = pickPrimaryVenueFromCoachRow(coachRow);
+  const { city, country, full: fullLocation } = venueLocationLabels(primaryVenue);
+  const full = fullLocation;
 
   const expYears = parseExperienceYears(coachRow.experience_years);
   const experience = expYears > 0 ? `${expYears}+ yrs` : null;
@@ -215,7 +210,7 @@ export function rawCoachRowToProfileView(coachRow: CoachPdpQueryRow): CoachProfi
       email: toTrimmedString(coachRow.email),
       phone: toTrimmedString(coachRow.phone),
     },
-    location: { city, country, full },
+    location: { city, country, full: full || "" },
     experience,
     experienceYears: expYears,
     level: toTrimmedString(coachRow.level),

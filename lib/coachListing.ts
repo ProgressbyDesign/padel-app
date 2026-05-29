@@ -1,6 +1,16 @@
 import type { Coach, CoachSkillLevel } from "./coaches";
 import type { CoachPdpQueryRow } from "./coachProfileView";
 import { rawCoachRowToProfileView } from "./coachProfileView";
+import { formatCoachPriceDisplay } from "./formatCoachPrice";
+import {
+  COACH_VENUES_WITH_VENUE_SELECT,
+  listingLocationFromCoachRow,
+  pickPrimaryVenueFromCoachRow,
+  type CoachVenueLinkRow,
+  venueCoordPair,
+} from "./coachVenueGeo";
+import { hydrateCoachVenueEmbeds } from "./hydrateCoachVenues";
+import { searchMatchScore } from "./searchFuzzy";
 import { supabase } from "./supabase.js";
 import type { Venue } from "./venueFilters";
 
@@ -20,8 +30,9 @@ export type CoachListingItem = {
   audience: ("Adults" | "Juniors")[];
   travelAvailable: boolean;
   outcomes: string;
+  outcomeTags?: string[];
   priceFrom: string | null;
-  /** Supabase `location_lat` / `location_lng` for distance sorting */
+  /** Primary linked venue coordinates (for distance sorting) */
   locationLat?: number | string | null;
   locationLng?: number | string | null;
   /** Miles from user; set by addDistancesToCoaches */
@@ -50,7 +61,8 @@ export function countCoachModalFiltersActive(
 
 export type CoachListingSort = "recommended" | "rating" | "experience" | "distance";
 
-export const COACH_LIST_PAGE_SIZE = 9;
+/** Coaches shown initially and per “Load more” on PLP. */
+export const COACH_LIST_PAGE_SIZE = 50;
 
 const LEVEL_ORDER: Record<CoachSkillLevel, number> = {
   Beginner: 0,
@@ -124,10 +136,13 @@ export function filterCoachListing(items: CoachListingItem[], filters: CoachList
     }
 
     if (q) {
-      const city = norm(c.locationCity);
-      const country = norm(c.locationCountry);
-      const hay = `${city} ${country}`;
-      if (!hay.includes(q) && !city.startsWith(q) && !country.startsWith(q)) return false;
+      const locScore = searchMatchScore(
+        filters.locationQuery,
+        c.locationCity,
+        c.locationCountry
+      );
+      const nameScore = searchMatchScore(filters.locationQuery, c.name);
+      if (Math.max(locScore, nameScore) <= 0) return false;
     }
 
     return true;
@@ -436,12 +451,14 @@ function shortOutcomeLine(text: string, max = 72): string {
 }
 
 function formatListingPriceFrom(raw: Coach["price_from"]): string | null {
-  if (raw == null) return null;
-  if (typeof raw === "string") {
-    const t = raw.trim();
-    return t.length > 0 ? t : null;
-  }
-  return String(raw).trim() || null;
+  return formatCoachPriceDisplay(raw);
+}
+
+function extractOutcomeLines(row: Coach, profile: ReturnType<typeof rawCoachRowToProfileView>): string[] {
+  const fromTable =
+    row.coach_outcomes?.map((o) => o.outcome?.trim()).filter((s): s is string => Boolean(s)) ?? [];
+  if (fromTable.length > 0) return fromTable;
+  return profile.outcomes.length > 0 ? profile.outcomes : [];
 }
 
 function parseListingAudience(raw: unknown): ("Adults" | "Juniors")[] {
@@ -457,22 +474,24 @@ function parseListingAudience(raw: unknown): ("Adults" | "Juniors")[] {
   return ["Adults"];
 }
 
-/** Map Supabase `coaches` row to PLP item (uses `location_lat` / `location_lng` for distance). */
+/** Map Supabase `coaches` row (+ `coach_venues` / `venues`) to PLP item. */
 export function coachRowToListingItem(row: Coach): CoachListingItem | null {
   const profile = rawCoachRowToProfileView(row as unknown as CoachPdpQueryRow);
   const id = profile.id.trim();
   if (!id) return null;
 
-  const city = profile.location.city?.trim() || (row.city ?? "").trim() || "Unknown";
-  const country = profile.location.country?.trim() || (row.country ?? "").trim() || "—";
+  const primaryVenue = pickPrimaryVenueFromCoachRow(row);
+  const { city: cityLabel, country: countryLabel } = listingLocationFromCoachRow(row);
+  const coords = venueCoordPair(primaryVenue);
   const name = profile.name?.trim() || "Coach";
 
   const audienceLabels = profile.audience.filter((x): x is "Adults" | "Juniors" => x === "Adults" || x === "Juniors");
   const audience =
     audienceLabels.length > 0 ? audienceLabels : parseListingAudience(row.audience);
 
+  const outcomeLines = extractOutcomeLines(row, profile);
   const rawOutcomeLine =
-    profile.outcomes[0] ||
+    outcomeLines[0] ||
     profile.primaryOutcome ||
     profile.description?.trim() ||
     row.specialty?.trim() ||
@@ -485,27 +504,155 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     rating: parseListingRating(profile.rating.score),
     reviewCount: parseListingReviewCount(profile.rating.count),
     level: parseListingSkillLevel(profile.level ?? row.role),
-    locationCity: city,
-    locationCountry: country,
-    citySlug: slugifyCity(city),
+    locationCity: cityLabel,
+    locationCountry: countryLabel,
+    citySlug: slugifyCity(cityLabel || "unknown"),
     experienceYears: profile.experienceYears,
     audience,
     travelAvailable: profile.travel === true,
     outcomes: shortOutcomeLine(rawOutcomeLine),
+    outcomeTags: outcomeLines.slice(0, 4),
     priceFrom: formatListingPriceFrom(profile.pricing.from),
-    locationLat: row.location_lat,
-    locationLng: row.location_lng,
+    locationLat: coords.lat,
+    locationLng: coords.lng,
   };
 }
+
+/** Shared nested select for coach listing / explorer queries. */
+export const COACH_LISTING_SELECT = `
+  *,
+  coach_outcomes (
+    outcome
+  ),
+  coach_attributes (
+    audience_adults,
+    audience_juniors
+  ),
+  ${COACH_VENUES_WITH_VENUE_SELECT}
+`;
 
 export function coachesRowsToListingItems(rows: Coach[]): CoachListingItem[] {
   return rows.map(coachRowToListingItem).filter((x): x is CoachListingItem => x != null);
 }
 
+const COACH_LISTING_SELECT_OUTCOMES_VENUES = `
+  *,
+  coach_outcomes (
+    outcome
+  ),
+  ${COACH_VENUES_WITH_VENUE_SELECT}
+`;
+
+const COACH_LISTING_SELECT_VENUES_ONLY = `
+  *,
+  ${COACH_VENUES_WITH_VENUE_SELECT}
+`;
+
+async function attachCoachVenueAndOutcomeEmbeds(rows: Coach[]): Promise<Coach[]> {
+  const ids = rows.map((r) => r.id).filter((id) => id != null && String(id).trim());
+  if (ids.length === 0) return rows;
+
+  const [linksRes, outcomesRes] = await Promise.all([
+    supabase
+      .from("coach_venues")
+      .select(
+        `
+        coach_id,
+        is_primary,
+        venue_id,
+        venues (
+          id,
+          name,
+          city,
+          country,
+          lat,
+          lng
+        )
+      `
+      )
+      .in("coach_id", ids),
+    supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
+  ]);
+
+  const venuesByCoach = new Map<string, CoachVenueLinkRow[]>();
+  for (const link of linksRes.data ?? []) {
+    const coachId = String((link as { coach_id?: string }).coach_id ?? "");
+    if (!coachId) continue;
+    const entry: CoachVenueLinkRow = {
+      is_primary: (link as { is_primary?: boolean }).is_primary,
+      venue_id: (link as { venue_id?: string }).venue_id,
+      venues: (link as { venues?: CoachVenueLinkRow["venues"] }).venues,
+    };
+    const list = venuesByCoach.get(coachId) ?? [];
+    list.push(entry);
+    venuesByCoach.set(coachId, list);
+  }
+
+  const outcomesByCoach = new Map<string, { outcome?: string | null }[]>();
+  for (const row of outcomesRes.data ?? []) {
+    const coachId = String((row as { coach_id?: string }).coach_id ?? "");
+    if (!coachId) continue;
+    const list = outcomesByCoach.get(coachId) ?? [];
+    list.push({ outcome: (row as { outcome?: string | null }).outcome });
+    outcomesByCoach.set(coachId, list);
+  }
+
+  return rows.map((row) => {
+    const id = String(row.id);
+    return {
+      ...row,
+      coach_venues: venuesByCoach.get(id) ?? row.coach_venues ?? null,
+      coach_outcomes: outcomesByCoach.get(id) ?? row.coach_outcomes ?? null,
+    };
+  });
+}
+
+/**
+ * Loads coach rows with nested embeds; degrades select shape on PostgREST errors
+ * (e.g. missing optional tables/columns) so listing/home never return empty silently.
+ */
+export async function fetchCoachRowsFromSupabase(limit = 200): Promise<{
+  rows: Coach[];
+  error: string | null;
+}> {
+  const selects = [
+    COACH_LISTING_SELECT,
+    COACH_LISTING_SELECT_OUTCOMES_VENUES,
+    COACH_LISTING_SELECT_VENUES_ONLY,
+    "*",
+  ];
+
+  let lastError: string | null = null;
+
+  for (const select of selects) {
+    const res = await supabase.from("coaches").select(select).limit(limit);
+    if (res.error) {
+      lastError = res.error.message;
+      continue;
+    }
+    if (!res.data?.length) {
+      return { rows: [], error: null };
+    }
+
+    let rows = res.data as unknown as Coach[];
+    if (select === "*") {
+      rows = await attachCoachVenueAndOutcomeEmbeds(rows);
+    }
+    return { rows, error: null };
+  }
+
+  return { rows: [], error: lastError };
+}
+
 /** Target for coach cards: real DB ids open PDP; mock PLP rows stay on the listing. */
-export function coachListingProfileHref(coachId: string): string {
+export function coachListingProfileHref(
+  coachId: string,
+  from: "coaches" | "venues" = "coaches"
+): string {
   if (coachId.startsWith("mock-coach-")) return "/coaches";
-  return `/coach/${encodeURIComponent(coachId)}`;
+  const base = `/coach/${encodeURIComponent(coachId)}`;
+  const q = from === "venues" ? "from=venues" : "from=coaches";
+  return `${base}?${q}`;
 }
 
 /** Server: venues + coach listing + raw coach rows for PLP / SEO routes */
@@ -514,39 +661,18 @@ export async function loadCoachesExplorerData(): Promise<{
   coaches: CoachListingItem[];
   coachEntities: Coach[];
 }> {
-  const [venuesRes, coachesRes] = await Promise.all([
-    supabase.from("venues").select("*").limit(100),
-    supabase
-      .from("coaches")
-      .select(
-        `
-        *,
-        coach_outcomes (
-          outcome
-        ),
-        coach_attributes (
-          audience_adults,
-          audience_juniors
-        )
-      `
-      )
-      .limit(200),
+  const [venuesRes, coachResult] = await Promise.all([
+    supabase.from("venues").select("*").limit(500),
+    fetchCoachRowsFromSupabase(200),
   ]);
 
   const venues = (venuesRes.data ?? []) as Venue[];
+  const coachEntities = hydrateCoachVenueEmbeds(coachResult.rows, venues);
+  const mapped = coachesRowsToListingItems(coachEntities);
 
-  let coachRows = !coachesRes.error && coachesRes.data?.length ? (coachesRes.data as Coach[]) : null;
-  if (!coachRows && coachesRes.error) {
-    const fallback = await supabase.from("coaches").select("*").limit(200);
-    if (!fallback.error && fallback.data?.length) {
-      coachRows = fallback.data as Coach[];
-    }
+  if (coachResult.error && coachEntities.length === 0) {
+    console.warn("[coaches] Supabase listing fetch failed:", coachResult.error);
   }
 
-  const coachEntities = (coachRows ?? []) as Coach[];
-
-  const coaches =
-    coachEntities.length > 0 ? coachesRowsToListingItems(coachEntities) : MOCK_COACH_LISTING;
-
-  return { venues, coaches, coachEntities };
+  return { venues, coaches: mapped, coachEntities };
 }

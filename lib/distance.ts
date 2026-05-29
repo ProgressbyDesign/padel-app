@@ -22,9 +22,20 @@ export function getDistanceInMiles(lat1: number, lng1: number, lat2: number, lng
   return Math.round(miles);
 }
 
-function toFiniteCoord(value: Venue["lat"] | Venue["lng"]): number | null {
+function toFiniteCoord(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
   return null;
+}
+
+function venueLatLng(v: Venue): { lat: number; lng: number } | null {
+  const lat = toFiniteCoord(v.lat ?? v.latitude);
+  const lng = toFiniteCoord(v.lng ?? v.longitude);
+  if (lat == null || lng == null) return null;
+  return { lat, lng };
 }
 
 /** Enriches venues with `distance` (miles, rounded) when user coordinates are known. */
@@ -39,12 +50,11 @@ export function addDistancesToVenues(
   const { latitude: lat1, longitude: lng1 } = user;
 
   return venues.map((v) => {
-    const lat2 = toFiniteCoord(v.lat);
-    const lng2 = toFiniteCoord(v.lng);
-    if (lat2 == null || lng2 == null) {
+    const coords = venueLatLng(v);
+    if (!coords) {
       return { ...v };
     }
-    return { ...v, distance: getDistanceInMiles(lat1, lng1, lat2, lng2) };
+    return { ...v, distance: getDistanceInMiles(lat1, lng1, coords.lat, coords.lng) };
   });
 }
 
@@ -60,7 +70,7 @@ function coachCoord(lat: CoachListingItem["locationLat"], lng: CoachListingItem[
   return { lat: la, lng: ln };
 }
 
-/** Uses `location_lat` / `location_lng` from coach profile (Supabase). */
+/** Uses primary linked venue coordinates on each coach listing item. */
 export function addDistancesToCoaches(
   coaches: CoachListingItem[],
   user: { latitude: number; longitude: number } | null

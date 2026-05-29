@@ -3,6 +3,10 @@
 import { Resend } from "resend";
 import { supabase } from "@/lib/supabase";
 import { buildTeamEnquiryEmailHtml, buildUserConfirmationEmailHtml } from "@/lib/enquiryEmail";
+import {
+  pickPrimaryVenueFromCoachRow,
+  venueLocationLabels,
+} from "@/lib/coachVenueGeo";
 import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiryPayload";
 
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
@@ -37,7 +41,19 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
   if (coachId) {
     const { data: coach, error: coachFetchError } = await supabase
       .from("coaches")
-      .select("name, slug, location_city, location_country")
+      .select(
+        `
+        name,
+        slug,
+        coach_venues (
+          is_primary,
+          venues (
+            city,
+            country
+          )
+        )
+      `
+      )
       .eq("id", coachId)
       .maybeSingle();
 
@@ -48,10 +64,9 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
     subjectType = "coach";
     subjectName = coach?.name?.trim() ?? null;
     subjectSlug = coach?.slug?.trim() ?? null;
-    subjectLocation =
-      [coach?.location_city, coach?.location_country]
-        .filter((x): x is string => Boolean(x && String(x).trim()))
-        .join(", ") || null;
+    const primaryVenue = coach ? pickPrimaryVenueFromCoachRow(coach) : null;
+    const loc = venueLocationLabels(primaryVenue);
+    subjectLocation = loc.full || null;
   } else if (venueId) {
     const { data: venue, error: venueFetchError } = await supabase
       .from("venues")

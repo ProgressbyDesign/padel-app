@@ -1,38 +1,29 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import CoachCard from "../CoachCard";
-import CoachCardSkeleton from "./CoachCardSkeleton";
 import FiltersModal from "../listing/FiltersModal";
-import ListingWhereSearch from "../listing/ListingWhereSearch";
-import type { CoachSearchRow, CoachSkillLevel, VenueSearchRow } from "../../lib/coaches";
-import type { CoachListingFilters, CoachListingItem, CoachListingSort } from "../../lib/coachListing";
-import {
-  COACH_LIST_PAGE_SIZE,
-  coachListingProfileHref,
-  countCoachModalFiltersActive,
-  filterCoachListing,
-  initialLocationQueryForCitySlug,
-  sortCoachListing,
-  suggestCitiesForEmptyState,
-} from "../../lib/coachListing";
+import MarketplaceSearch from "../search/MarketplaceSearch";
+import ListingPagination from "../listing/ListingPagination";
+import { useListingNavigation, useScrollToTopOnPageChange } from "../listing/useListingNavigation";
+import type { CoachListingItem, CoachListingSort } from "../../lib/coachListing";
+import { coachListingProfileHref, countCoachModalFiltersActive } from "../../lib/coachListing";
 import { addDistancesToCoaches } from "../../lib/distance";
+import { buildCoachListingQuery, type CoachListingUrlState } from "../../lib/listingUrlParams";
+import type { MarketplaceSearchValues } from "../../lib/marketplaceSearch";
 import { requestUserPosition } from "../../lib/requestUserPosition";
 import { clearUserGeo, readUserGeo, writeUserGeo } from "../../lib/userGeoSession";
 import type { UserGeolocation } from "../../hooks/useUserGeolocation";
-import type { WhereOption } from "../../lib/venueFilters";
 
 type CoachesListingClientProps = {
   coaches: CoachListingItem[];
-  whereOptions: WhereOption[];
-  coachSearchRows: CoachSearchRow[];
-  venueSearchRows: VenueSearchRow[];
-  initialCitySlug?: string | null;
-  loading?: boolean;
-  initialSkeletonMs?: number;
+  totalCount: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  urlState: CoachListingUrlState;
 };
 
 const SORT_OPTIONS: { value: CoachListingSort; label: string }[] = [
@@ -42,86 +33,63 @@ const SORT_OPTIONS: { value: CoachListingSort; label: string }[] = [
   { value: "distance", label: "Nearest" },
 ];
 
-function defaultFilters(): CoachListingFilters {
-  return {
-    locationQuery: "",
-    level: "all",
-    audienceAdults: false,
-    audienceJuniors: false,
-    travelOnly: false,
-  };
-}
-
 export default function CoachesListingClient({
   coaches,
-  whereOptions,
-  coachSearchRows,
-  venueSearchRows,
-  initialCitySlug = null,
-  loading = false,
-  initialSkeletonMs = 0,
+  totalCount,
+  page,
+  totalPages,
+  pageSize,
+  urlState,
 }: CoachesListingClientProps) {
-  const [userCoords, setUserCoords] = useState<UserGeolocation>(null);
-  const [nearbyMode, setNearbyMode] = useState(false);
+  const router = useRouter();
+  const { pushQuery } = useListingNavigation("/coaches");
+  useScrollToTopOnPageChange(page);
+
+  const [userCoords, setUserCoords] = useState<UserGeolocation>(() => readUserGeo());
+  const [nearbyMode, setNearbyMode] = useState(() => urlState.sort === "distance");
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [filters, setFilters] = useState<CoachListingFilters>(() => defaultFilters());
-  const [locationDraft, setLocationDraft] = useState("");
-  const [sort, setSort] = useState<CoachListingSort>("recommended");
-  const [visibleCount, setVisibleCount] = useState(COACH_LIST_PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [bootSkeleton, setBootSkeleton] = useState(initialSkeletonMs > 0);
-  const searchParams = useSearchParams();
-  const urlFiltersApplied = useRef(false);
 
-  useEffect(() => {
-    if (initialSkeletonMs <= 0) return;
-    const t = window.setTimeout(() => setBootSkeleton(false), initialSkeletonMs);
-    return () => window.clearTimeout(t);
-  }, [initialSkeletonMs]);
+  const sort = urlState.sort;
+  const level = urlState.level;
+  const audienceAdults = urlState.audienceAdults;
+  const audienceJuniors = urlState.audienceJuniors;
+  const travelOnly = urlState.travelOnly;
 
-  const showSkeleton = loading || bootSkeleton;
-
-  useEffect(() => {
-    const g = readUserGeo();
-    if (g) {
-      setUserCoords(g);
-      setNearbyMode(true);
-      setSort("distance");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!initialCitySlug?.trim()) return;
-    const q = initialLocationQueryForCitySlug(coaches, initialCitySlug.trim());
-    setFilters((prev) => ({ ...prev, locationQuery: q }));
-    setLocationDraft(q);
-  }, [initialCitySlug, coaches]);
-
-  useEffect(() => {
-    if (urlFiltersApplied.current) return;
-    if (initialCitySlug?.trim()) {
-      urlFiltersApplied.current = true;
-      return;
-    }
-    const loc = searchParams.get("location")?.trim();
-    const level = searchParams.get("level")?.trim();
-    if (!loc && !level) return;
-    urlFiltersApplied.current = true;
-    if (loc) {
-      setFilters((prev) => ({ ...prev, locationQuery: loc }));
-      setLocationDraft(loc);
-    }
-    if (level === "Beginner" || level === "Intermediate" || level === "Advanced" || level === "Pro") {
-      setFilters((prev) => ({ ...prev, level: level as CoachSkillLevel }));
-    }
-  }, [searchParams, initialCitySlug]);
+  const commitUrl = useCallback(
+    (next: Partial<CoachListingUrlState> & { page?: number }) => {
+      const state: CoachListingUrlState = {
+        page: next.page ?? 1,
+        location: next.location ?? urlState.location,
+        coach: next.coach ?? urlState.coach,
+        search: "",
+        level: next.level ?? level,
+        audienceAdults: next.audienceAdults ?? audienceAdults,
+        audienceJuniors: next.audienceJuniors ?? audienceJuniors,
+        travelOnly: next.travelOnly ?? travelOnly,
+        sort: next.sort ?? sort,
+      };
+      state.search = [state.location, state.coach].filter(Boolean).join(" ").trim();
+      pushQuery(() => buildCoachListingQuery(state), { page: state.page });
+    },
+    [
+      pushQuery,
+      urlState.location,
+      urlState.coach,
+      level,
+      audienceAdults,
+      audienceJuniors,
+      travelOnly,
+      sort,
+    ]
+  );
 
   const clearNearby = useCallback(() => {
     setUserCoords(null);
     setNearbyMode(false);
     clearUserGeo();
-    if (sort === "distance") setSort("recommended");
-  }, [sort]);
+    if (sort === "distance") commitUrl({ sort: "recommended" });
+  }, [sort, commitUrl]);
 
   const handleNearbyFromSearch = useCallback(async () => {
     setNearbyLoading(true);
@@ -131,140 +99,140 @@ export default function CoachesListingClient({
       setUserCoords(pos);
       writeUserGeo(pos);
       setNearbyMode(true);
-      setSort("distance");
-      setFilters((prev) => ({ ...prev, locationQuery: "" }));
-      setLocationDraft("");
+      commitUrl({ location: "", coach: "", sort: "distance" });
     }
-  }, []);
+  }, [commitUrl]);
 
-  const applyLocationSearch = useCallback(() => {
-    const next = locationDraft.trim();
-    setFilters((prev) => ({ ...prev, locationQuery: next }));
-    if (next) {
-      clearNearby();
-    }
-  }, [locationDraft, clearNearby]);
+  const applyMarketplaceSearch = useCallback(
+    (values: MarketplaceSearchValues) => {
+      if (values.mode === "venues") {
+        const q = new URLSearchParams();
+        if (values.location.trim()) q.set("location", values.location.trim());
+        if (values.entity.trim()) q.set("venue", values.entity.trim());
+        const qs = q.toString();
+        router.push(qs ? `/venues?${qs}` : "/venues");
+        return;
+      }
+      commitUrl({
+        location: values.location.trim(),
+        coach: values.entity.trim(),
+        sort: nearbyMode ? "distance" : sort,
+      });
+    },
+    [commitUrl, router, nearbyMode, sort]
+  );
 
   const coachesWithDistance = useMemo(
     () => addDistancesToCoaches(coaches, userCoords),
     [coaches, userCoords]
   );
 
-  const filteredSorted = useMemo(() => {
-    const f = filterCoachListing(coachesWithDistance, filters);
-    return sortCoachListing(f, sort);
-  }, [coachesWithDistance, filters, sort]);
-
-  useEffect(() => {
-    setVisibleCount(COACH_LIST_PAGE_SIZE);
-  }, [filters, sort]);
-
-  const visible = useMemo(
-    () => filteredSorted.slice(0, visibleCount),
-    [filteredSorted, visibleCount]
+  const modalFilterCount = useMemo(
+    () =>
+      countCoachModalFiltersActive({
+        level,
+        audienceAdults,
+        audienceJuniors,
+        travelOnly,
+      }),
+    [level, audienceAdults, audienceJuniors, travelOnly]
   );
 
-  const hasMore = visibleCount < filteredSorted.length;
-
-  const modalFilterCount = useMemo(() => countCoachModalFiltersActive(filters), [filters]);
-
-  const suggestions = useMemo(() => {
-    if (filteredSorted.length > 0) return [];
-    const guessCountry = coaches.find(
-      (c) =>
-        c.locationCity.toLowerCase() === filters.locationQuery.trim().toLowerCase() ||
-        c.citySlug === filters.locationQuery.trim().toLowerCase().replace(/\s+/g, "-")
-    )?.locationCountry;
-    return suggestCitiesForEmptyState(coaches, {
-      preferredCountry: guessCountry ?? null,
-    });
-  }, [filteredSorted.length, coaches, filters.locationQuery]);
-
-  const clearAll = useCallback(() => {
-    setFilters(defaultFilters());
-    setLocationDraft("");
-    clearNearby();
-  }, [clearNearby]);
+  const buildPageHref = useCallback(
+    (p: number) => {
+      const q = buildCoachListingQuery({ ...urlState, page: p });
+      const qs = q.toString();
+      return qs ? `/coaches?${qs}` : "/coaches";
+    },
+    [urlState]
+  );
 
   const activeChips = useMemo(() => {
     const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
 
     if (nearbyMode && userCoords) {
-      chips.push({
-        key: "nearby",
-        label: "Nearby",
-        onRemove: clearNearby,
-      });
+      chips.push({ key: "nearby", label: "Nearby", onRemove: clearNearby });
     }
 
-    if (filters.locationQuery.trim()) {
-      chips.push({
-        key: "where",
-        label: filters.locationQuery.trim(),
-        onRemove: () => {
-          setFilters((prev) => ({ ...prev, locationQuery: "" }));
-          setLocationDraft("");
-        },
-      });
-    }
-
-    if (filters.level !== "all") {
+    if (level !== "all") {
       chips.push({
         key: "level",
-        label: filters.level,
-        onRemove: () => setFilters((prev) => ({ ...prev, level: "all" })),
+        label: level,
+        onRemove: () => commitUrl({ level: "all" }),
       });
     }
 
-    if (filters.audienceAdults) {
+    if (audienceAdults) {
       chips.push({
         key: "adults",
         label: "Adults",
-        onRemove: () => setFilters((prev) => ({ ...prev, audienceAdults: false })),
+        onRemove: () => commitUrl({ audienceAdults: false }),
       });
     }
 
-    if (filters.audienceJuniors) {
+    if (audienceJuniors) {
       chips.push({
         key: "juniors",
         label: "Juniors",
-        onRemove: () => setFilters((prev) => ({ ...prev, audienceJuniors: false })),
+        onRemove: () => commitUrl({ audienceJuniors: false }),
       });
     }
 
-    if (filters.travelOnly) {
+    if (travelOnly) {
       chips.push({
         key: "travel",
         label: "Travel available",
-        onRemove: () => setFilters((prev) => ({ ...prev, travelOnly: false })),
+        onRemove: () => commitUrl({ travelOnly: false }),
       });
     }
 
     return chips;
-  }, [filters, nearbyMode, userCoords, clearNearby]);
+  }, [
+    urlState.location,
+    urlState.coach,
+    level,
+    audienceAdults,
+    audienceJuniors,
+    travelOnly,
+    nearbyMode,
+    userCoords,
+    clearNearby,
+    commitUrl,
+  ]);
 
-  const hasActiveFilters = activeChips.length > 0;
+  const clearAll = useCallback(() => {
+    clearNearby();
+    commitUrl({
+      location: "",
+      coach: "",
+      level: "all",
+      audienceAdults: false,
+      audienceJuniors: false,
+      travelOnly: false,
+      sort: "recommended",
+    });
+  }, [clearNearby, commitUrl]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
       <header className="max-w-2xl">
-        <h1>
-          Find a Padel Coach
-        </h1>
+        <h1>Find a Padel Coach</h1>
         <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
       </header>
 
       <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        <ListingWhereSearch
-          variant="coaches"
-          draftValue={locationDraft}
-          onDraftChange={setLocationDraft}
-          onSearchSubmit={applyLocationSearch}
-          whereOptions={whereOptions}
-          coachSearchRows={coachSearchRows}
-          venueSearchRows={venueSearchRows}
+        <MarketplaceSearch
+          variant="listing"
+          defaultMode="coaches"
+          initialValues={{
+            mode: "coaches",
+            location: urlState.location,
+            entity: urlState.coach,
+          }}
+          onSubmit={applyMarketplaceSearch}
           onSelectNearby={handleNearbyFromSearch}
           nearbyLoading={nearbyLoading}
+          className="min-w-0 flex-1"
         />
 
         <button
@@ -281,7 +249,7 @@ export default function CoachesListingClient({
           ) : null}
         </button>
 
-        {hasActiveFilters ? (
+        {activeChips.length > 0 ? (
           <button
             type="button"
             onClick={clearAll}
@@ -297,20 +265,26 @@ export default function CoachesListingClient({
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
         filters={{
-          level: filters.level,
-          audienceAdults: filters.audienceAdults,
-          audienceJuniors: filters.audienceJuniors,
-          travelOnly: filters.travelOnly,
+          level,
+          audienceAdults,
+          audienceJuniors,
+          travelOnly,
         }}
-        onApply={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+        onApply={(next) =>
+          commitUrl({
+            level: next.level,
+            audienceAdults: next.audienceAdults,
+            audienceJuniors: next.audienceJuniors,
+            travelOnly: next.travelOnly,
+          })
+        }
         onReset={() =>
-          setFilters((prev) => ({
-            ...prev,
+          commitUrl({
             level: "all",
             audienceAdults: false,
             audienceJuniors: false,
             travelOnly: false,
-          }))
+          })
         }
       />
 
@@ -335,14 +309,14 @@ export default function CoachesListingClient({
 
       <div className="mt-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-primary/70">
-          {showSkeleton ? (
-            <span className="inline-block h-4 w-40 animate-pulse rounded bg-primary/15" />
-          ) : (
-            <>
-              <span className="font-semibold text-primary">{filteredSorted.length}</span> coach
-              {filteredSorted.length === 1 ? "" : "es"}
-            </>
-          )}
+          <span className="font-semibold text-primary">{totalCount}</span> coach
+          {totalCount === 1 ? "" : "es"}
+          {totalPages > 1 ? (
+            <span className="text-primary/55">
+              {" "}
+              · Page {page} of {totalPages}
+            </span>
+          ) : null}
         </p>
         <div className="relative w-full sm:w-56">
           <label htmlFor="coach-sort" className="sr-only">
@@ -351,7 +325,7 @@ export default function CoachesListingClient({
           <select
             id="coach-sort"
             value={sort}
-            onChange={(e) => setSort(e.target.value as CoachListingSort)}
+            onChange={(e) => commitUrl({ sort: e.target.value as CoachListingSort })}
             className="w-full appearance-none rounded-xl border border-primary/15 bg-white py-2.5 pl-3 pr-10 text-sm font-medium text-primary outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/10"
           >
             {SORT_OPTIONS.map((o) => (
@@ -360,42 +334,19 @@ export default function CoachesListingClient({
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/60" aria-hidden />
+          <ChevronDown
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/60"
+            aria-hidden
+          />
         </div>
       </div>
 
-      {showSkeleton ? (
-        <ul className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <li key={i}>
-              <CoachCardSkeleton />
-            </li>
-          ))}
-        </ul>
-      ) : filteredSorted.length === 0 ? (
+      {coaches.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-primary/15 bg-white px-6 py-12 text-center">
           <p className="text-lg font-semibold text-primary">No coaches match your filters</p>
           <p className="mt-2 text-sm text-primary/70">
-            Try clearing audience or level, or explore coaches in nearby cities.
+            Try clearing audience or level, or search a different city.
           </p>
-          {suggestions.length > 0 ? (
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary/60">Popular locations</p>
-              <ul className="mt-3 flex flex-wrap justify-center gap-2">
-                {suggestions.map((s) => (
-                  <li key={s.slug}>
-                    <Link
-                      href={`/coaches/${encodeURIComponent(s.slug)}`}
-                      className="inline-flex items-center rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/15 transition hover:ring-primary/25"
-                    >
-                      {s.label}
-                      <span className="ml-1.5 text-primary/45">({s.count})</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
           <button
             type="button"
             onClick={clearAll}
@@ -407,7 +358,7 @@ export default function CoachesListingClient({
       ) : (
         <>
           <ul className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {visible.map((c) => (
+            {coachesWithDistance.map((c) => (
               <li key={c.id}>
                 <CoachCard
                   name={c.name}
@@ -421,24 +372,21 @@ export default function CoachesListingClient({
                   audience={c.audience}
                   travelAvailable={c.travelAvailable}
                   outcomes={c.outcomes}
+                  outcomeTags={c.outcomeTags}
                   priceFrom={c.priceFrom}
                   href={coachListingProfileHref(c.id)}
                 />
               </li>
             ))}
           </ul>
-
-          {hasMore ? (
-            <div className="mt-10 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setVisibleCount((n) => n + COACH_LIST_PAGE_SIZE)}
-                className="rounded-xl border border-primary/15 bg-white px-6 py-3 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/25 hover:bg-surface"
-              >
-                Load more
-              </button>
-            </div>
-          ) : null}
+          <ListingPagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            buildHref={buildPageHref}
+            itemLabel="coaches"
+          />
         </>
       )}
     </div>
