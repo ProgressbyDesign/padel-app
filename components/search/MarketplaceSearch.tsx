@@ -72,6 +72,7 @@ export default function MarketplaceSearch({
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [nearbyLoadingLocal, setNearbyLoadingLocal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modeOpen, setModeOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const debouncedFieldQuery = useDebounced(
@@ -204,15 +205,31 @@ export default function MarketplaceSearch({
     }
   }, [mode, onSelectNearby, closeDropdown, router]);
 
+  const anyActive = activeField !== null || modeOpen;
+
+  const shellBg = isHero
+    ? anyActive
+      ? "bg-surface/95"
+      : "bg-white/95"
+    : anyActive
+      ? "bg-surface"
+      : "bg-white";
+
   const shellClass = isHero
-    ? "rounded-2xl border border-white/20 bg-white/95 p-2 shadow-xl shadow-black/25 backdrop-blur-md sm:rounded-full sm:p-1.5"
+    ? `rounded-2xl border border-white/20 p-2 shadow-xl shadow-black/25 backdrop-blur-md transition-colors duration-200 sm:rounded-full sm:p-1.5 ${shellBg}`
     : isCompact
-      ? "rounded-xl border border-primary/15 bg-white p-1.5 shadow-md"
-      : "rounded-xl border border-primary/15 bg-white p-2 shadow-sm sm:rounded-2xl sm:p-1.5";
+      ? `rounded-xl border border-primary/15 p-1.5 shadow-md transition-colors duration-200 ${shellBg}`
+      : `rounded-xl border border-primary/15 p-2 shadow-sm transition-colors duration-200 sm:rounded-2xl sm:p-1.5 ${shellBg}`;
 
   const fieldShell = isHero
-    ? "flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-primary/10"
-    : "flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-0 lg:divide-x lg:divide-primary/10";
+    ? "flex flex-col gap-1.5 sm:flex-row sm:items-stretch sm:gap-1"
+    : "flex flex-col gap-1.5 lg:flex-row lg:items-stretch lg:gap-1";
+
+  /** Airbnb-style segment: white + shadow when active, light grey on hover otherwise. */
+  const segmentClass = (active: boolean) =>
+    active
+      ? "rounded-xl bg-white shadow-sm transition-colors duration-150 sm:rounded-full"
+      : "rounded-xl transition-colors duration-150 hover:bg-black/[0.04] sm:rounded-full";
 
   const inputClass = isHero
     ? "w-full bg-transparent py-3 pl-1 text-[15px] text-primary placeholder:text-primary/45 focus:outline-none"
@@ -313,7 +330,7 @@ export default function MarketplaceSearch({
         <div ref={wrapRef} className={`relative ${shellClass}`}>
         <div className={fieldShell}>
           {/* Mode */}
-          <div className={`relative min-w-0 ${isHero ? "sm:shrink-0" : "lg:shrink-0"}`}>
+          <div className={`relative min-w-0 ${isHero ? "sm:shrink-0" : "lg:shrink-0"} ${segmentClass(modeOpen)}`}>
             <SearchModeSelect
               mode={mode}
               onChange={(m) => {
@@ -323,11 +340,12 @@ export default function MarketplaceSearch({
               venueCount={venueCount}
               coachCount={coachCount}
               variant={variant}
+              onOpenChange={setModeOpen}
             />
           </div>
 
           {/* Where */}
-          <div className="relative min-w-0 flex-1 px-2 sm:px-3">
+          <div className={`relative min-w-0 flex-1 px-3 py-0.5 ${segmentClass(activeField === "where")}`}>
             <span className={`mb-0.5 block ${labelClass}`}>Where</span>
             <div className="relative flex items-center gap-1">
               <MapPin
@@ -359,7 +377,7 @@ export default function MarketplaceSearch({
           </div>
 
           {/* Coach / Venue */}
-          <div className="relative min-w-0 flex-1 px-2 sm:px-3">
+          <div className={`relative min-w-0 flex-1 px-3 py-0.5 ${segmentClass(activeField === "entity")}`}>
             <span className={`mb-0.5 block ${labelClass}`}>{entityFieldLabel(mode)}</span>
             <div className="relative flex items-center gap-1">
               <input
@@ -396,7 +414,7 @@ export default function MarketplaceSearch({
 
         {activeField ? (
           <div
-            className={`absolute left-0 right-0 z-50 max-h-[min(20rem,55vh)] overflow-y-auto rounded-2xl border border-primary/15 bg-white py-1 shadow-lg ring-1 ring-black/5 ${
+            className={`pp-pop-in absolute left-0 right-0 z-[60] max-h-[min(20rem,55vh)] overflow-y-auto rounded-2xl border border-primary/15 bg-white py-1 shadow-lg ring-1 ring-black/5 ${
               isHero ? "top-[calc(100%+10px)]" : "top-[calc(100%+8px)]"
             }`}
             role="listbox"

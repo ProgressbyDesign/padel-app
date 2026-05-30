@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import VenueCard from "./VenueCard";
 import FiltersModal from "./listing/FiltersModal";
 import MarketplaceSearch from "./search/MarketplaceSearch";
+import StickySearchBar from "./search/StickySearchBar";
 import type { MarketplaceSearchValues } from "../lib/marketplaceSearch";
 import ListingPagination from "./listing/ListingPagination";
 import { useListingNavigation, useScrollToTopOnPageChange } from "./listing/useListingNavigation";
@@ -53,6 +54,7 @@ export default function VenuesClient({
   const router = useRouter();
   const { pushQuery } = useListingNavigation("/venues");
   useScrollToTopOnPageChange(page);
+  const searchRowRef = useRef<HTMLDivElement>(null);
 
   const [userCoords, setUserCoords] = useState<UserGeolocation>(() => {
     if (nearLatProp != null && nearLngProp != null) {
@@ -214,17 +216,33 @@ export default function VenuesClient({
     });
   }, [clearNearby, commitUrl]);
 
+  const searchInitialValues = {
+    mode: "venues" as const,
+    location: urlState.location,
+    entity: urlState.venue,
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto max-w-[1600px]">
+        <MarketplaceSearch
+          variant="compact"
+          defaultMode="venues"
+          initialValues={searchInitialValues}
+          onSubmit={applyMarketplaceSearch}
+          onSelectNearby={handleNearbyFromSearch}
+          nearbyLoading={nearbyLoading}
+        />
+      </StickySearchBar>
+
+      <div
+        ref={searchRowRef}
+        className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+      >
         <MarketplaceSearch
           variant="listing"
           defaultMode="venues"
-          initialValues={{
-            mode: "venues",
-            location: urlState.location,
-            entity: urlState.venue,
-          }}
+          initialValues={searchInitialValues}
           onSubmit={applyMarketplaceSearch}
           onSelectNearby={handleNearbyFromSearch}
           nearbyLoading={nearbyLoading}
