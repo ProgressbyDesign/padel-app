@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import CoachCard from "../CoachCard";
 import FiltersModal from "../listing/FiltersModal";
 import MarketplaceSearch from "../search/MarketplaceSearch";
+import StickySearchBar from "../search/StickySearchBar";
 import ListingPagination from "../listing/ListingPagination";
 import { useListingNavigation, useScrollToTopOnPageChange } from "../listing/useListingNavigation";
 import type { CoachListingItem, CoachListingSort } from "../../lib/coachListing";
@@ -44,6 +45,7 @@ export default function CoachesListingClient({
   const router = useRouter();
   const { pushQuery } = useListingNavigation("/coaches");
   useScrollToTopOnPageChange(page);
+  const searchRowRef = useRef<HTMLDivElement>(null);
 
   const [userCoords, setUserCoords] = useState<UserGeolocation>(() => readUserGeo());
   const [nearbyMode, setNearbyMode] = useState(() => urlState.sort === "distance");
@@ -213,6 +215,12 @@ export default function CoachesListingClient({
     });
   }, [clearNearby, commitUrl]);
 
+  const searchInitialValues = {
+    mode: "coaches" as const,
+    location: urlState.location,
+    entity: urlState.coach,
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
       <header className="max-w-2xl">
@@ -220,15 +228,25 @@ export default function CoachesListingClient({
         <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
       </header>
 
-      <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto max-w-7xl">
+        <MarketplaceSearch
+          variant="compact"
+          defaultMode="coaches"
+          initialValues={searchInitialValues}
+          onSubmit={applyMarketplaceSearch}
+          onSelectNearby={handleNearbyFromSearch}
+          nearbyLoading={nearbyLoading}
+        />
+      </StickySearchBar>
+
+      <div
+        ref={searchRowRef}
+        className="mt-8 mb-2 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+      >
         <MarketplaceSearch
           variant="listing"
           defaultMode="coaches"
-          initialValues={{
-            mode: "coaches",
-            location: urlState.location,
-            entity: urlState.coach,
-          }}
+          initialValues={searchInitialValues}
           onSubmit={applyMarketplaceSearch}
           onSelectNearby={handleNearbyFromSearch}
           nearbyLoading={nearbyLoading}

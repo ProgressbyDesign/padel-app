@@ -15,6 +15,7 @@ type SearchModeSelectProps = {
   venueCount: number | null;
   coachCount: number | null;
   variant?: "hero" | "listing" | "compact";
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 };
 
@@ -34,6 +35,7 @@ export default function SearchModeSelect({
   venueCount,
   coachCount,
   variant = "listing",
+  onOpenChange,
   className = "",
 }: SearchModeSelectProps) {
   const [open, setOpen] = useState(false);
@@ -43,6 +45,12 @@ export default function SearchModeSelect({
 
   const isCompact = variant === "compact";
   const countFor = (m: SearchMode) => (m === "venues" ? venueCount : coachCount);
+
+  // Notify parent in an effect — never during render (avoids cross-component setState).
+  useEffect(() => {
+    onOpenChange?.(open);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,10 +88,10 @@ export default function SearchModeSelect({
   };
 
   const triggerClass = isCompact
-    ? "flex h-11 w-full items-center justify-between gap-2 rounded-lg bg-surface px-3 text-sm font-semibold text-primary transition hover:bg-surface/80 lg:h-full lg:min-w-[8rem] lg:rounded-none lg:bg-transparent lg:hover:bg-surface/60"
+    ? "flex h-11 w-full items-center justify-between gap-2 rounded-xl px-3 text-sm font-semibold text-primary lg:h-full lg:min-w-[8rem] lg:px-3"
     : variant === "hero"
-      ? "flex h-12 w-full items-center justify-between gap-2 rounded-xl bg-surface/80 px-3 text-sm font-semibold text-primary transition hover:bg-surface sm:h-full sm:w-auto sm:min-w-[11rem] sm:rounded-full sm:bg-transparent sm:px-4 sm:hover:bg-surface/60"
-      : "flex h-11 w-full items-center justify-between gap-2 rounded-lg bg-surface px-3 text-sm font-semibold text-primary transition hover:bg-surface/80 lg:h-full lg:min-w-[10.5rem] lg:rounded-none lg:bg-transparent lg:hover:bg-surface/60";
+      ? "flex h-12 w-full items-center justify-between gap-2 rounded-xl px-3 text-sm font-semibold text-primary sm:h-full sm:w-auto sm:min-w-[11rem] sm:rounded-full sm:px-4"
+      : "flex h-11 w-full items-center justify-between gap-2 rounded-xl px-3 text-sm font-semibold text-primary lg:h-full lg:min-w-[10.5rem] lg:px-3";
 
   return (
     <div ref={wrapRef} className={`relative min-w-0 ${className}`}>
@@ -120,7 +128,7 @@ export default function SearchModeSelect({
           id={listId}
           role="listbox"
           aria-label="Search mode"
-          className="absolute left-0 top-[calc(100%+8px)] z-50 w-[16rem] max-w-[80vw] overflow-hidden rounded-2xl border border-primary/15 bg-white p-1.5 shadow-xl ring-1 ring-black/5"
+          className="pp-pop-in absolute left-0 top-[calc(100%+8px)] z-[60] w-[16rem] max-w-[80vw] overflow-hidden rounded-2xl border border-primary/15 bg-white p-1.5 shadow-xl ring-1 ring-black/5"
         >
           {MODES.map((m, i) => {
             const selected = m === mode;

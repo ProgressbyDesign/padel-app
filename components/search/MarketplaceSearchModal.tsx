@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Building2, MapPin, Search, UserRound, X } from "lucide-react";
 import {
   entityFieldLabel,
@@ -87,6 +88,9 @@ export default function MarketplaceSearchModal({
   onSubmit,
 }: MarketplaceSearchModalProps) {
   const [shown, setShown] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (open) {
@@ -123,10 +127,10 @@ export default function MarketplaceSearchModal({
         type="button"
         onClick={() => onChangeMode(m)}
         aria-pressed={selected}
-        className={`flex flex-col gap-2 rounded-2xl border p-3 text-left transition ${
+        className={`flex flex-col gap-2 rounded-2xl border p-3 text-left transition-colors duration-150 ${
           selected
-            ? "border-accent bg-accent/15 ring-2 ring-accent/40"
-            : "border-primary/15 bg-white hover:border-primary/30"
+            ? "border-accent bg-white shadow-sm ring-2 ring-accent/30"
+            : "border-transparent bg-black/[0.03] hover:bg-black/[0.06]"
         }`}
       >
         <span
@@ -147,7 +151,7 @@ export default function MarketplaceSearchModal({
   };
 
   const suggestionPanel = (
-    <div className="mt-2 max-h-[42vh] overflow-y-auto rounded-2xl border border-primary/15 bg-white py-1 shadow-sm">
+    <div className="pp-pop-in mt-2 max-h-[42vh] overflow-y-auto rounded-2xl border border-primary/15 bg-white py-1 shadow-sm">
       <MarketplaceSearchSuggestions
         mode={mode}
         field={activeField === "entity" ? "entity" : "where"}
@@ -167,9 +171,11 @@ export default function MarketplaceSearchModal({
     </div>
   );
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className={`fixed inset-0 z-[60] flex flex-col bg-surface transition-transform duration-300 ease-out md:hidden ${
+      className={`fixed inset-0 z-[70] flex flex-col bg-surface transition-transform duration-300 ease-out md:hidden ${
         shown ? "translate-y-0" : "translate-y-full"
       } ${open ? "" : "pointer-events-none"}`}
       role="dialog"
@@ -278,6 +284,7 @@ export default function MarketplaceSearchModal({
           Search
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
