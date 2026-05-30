@@ -10,16 +10,33 @@ export type MarketplaceSearchValues = {
 };
 
 export function searchModeLabel(mode: SearchMode): string {
+  return mode === "venues" ? "Venue" : "Coach";
+}
+
+/** Dropdown / card option title (plural). */
+export function searchModeOptionTitle(mode: SearchMode): string {
   return mode === "venues" ? "Venues" : "Coaches";
 }
 
 export function entityFieldLabel(mode: SearchMode): string {
-  return mode === "venues" ? "Venue" : "Coach";
+  return mode === "venues" ? "Name or keyword" : "Level or goal";
 }
 
 export function entityPlaceholder(mode: SearchMode): string {
-  return mode === "venues" ? "Venue name" : "Coach name";
+  return mode === "venues"
+    ? "Venue name, academy, city"
+    : "Tournament prep, juniors, beginner";
 }
+
+/** Example goals shown when the coach field is empty (also used server-side). */
+export const COACH_GOAL_SUGGESTION_EXAMPLES = [
+  "Tournament preparation",
+  "Junior development",
+  "Beginner progression",
+  "Private lessons",
+  "Match improvement",
+  "Advanced coaching",
+] as const;
 
 export function listingPath(mode: SearchMode): string {
   return mode === "venues" ? "/venues" : "/coaches";

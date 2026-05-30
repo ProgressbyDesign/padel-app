@@ -92,12 +92,34 @@ export function venueLocationLabels(v: VenueGeoRow | null): {
   return { city, country, full };
 }
 
-/** PLP location line: primary venue, or "Multiple locations" when cities differ. */
+/** Concise location line for cards and search suggestions. */
+export function conciseCoachLocationSummary(row: CoachWithVenueLinks): string {
+  const links = row.coach_venues ?? [];
+  if (!links.length) return "Location not confirmed";
+
+  const cities: string[] = [];
+  for (const link of links) {
+    const v = normalizeEmbeddedVenue(link.venues);
+    const city = v?.city?.trim();
+    if (city && !cities.includes(city)) cities.push(city);
+  }
+
+  if (cities.length === 0) return "Location not confirmed";
+  if (cities.length === 1) return cities[0];
+  if (cities.length === 2) return `${cities[0]}, ${cities[1]}`;
+  return `${cities[0]} + ${cities.length - 1} locations`;
+}
+
+/** PLP location line: primary venue city/country, or concise multi-venue summary. */
 export function listingLocationFromCoachRow(row: CoachWithVenueLinks): {
   city: string;
   country: string;
 } {
   const links = row.coach_venues ?? [];
+  if (!links.length) {
+    return { city: "Location not confirmed", country: "" };
+  }
+
   const cities = new Set<string>();
   const countries = new Set<string>();
 
@@ -110,10 +132,13 @@ export function listingLocationFromCoachRow(row: CoachWithVenueLinks): {
   }
 
   if (cities.size > 1) {
-    return { city: "Multiple locations", country: "" };
+    return { city: conciseCoachLocationSummary(row), country: "" };
   }
 
   const primary = pickPrimaryVenueFromCoachRow(row);
   const { city, country } = venueLocationLabels(primary);
+  if (!city && !country) {
+    return { city: "Location not confirmed", country: "" };
+  }
   return { city: city ?? "", country: country ?? "" };
 }

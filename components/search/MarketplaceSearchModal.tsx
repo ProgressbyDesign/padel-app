@@ -36,6 +36,7 @@ export type MarketplaceSearchModalProps = {
   onSelectCountry: (label: string) => void;
   onSelectVenue: (venue: EntityVenueSuggestion) => void;
   onSelectCoach: (coach: EntityCoachSuggestion) => void;
+  onSelectOutcome?: (label: string) => void;
   onSelectNearby?: () => void;
   nearbyLoading?: boolean;
   onClearAll: () => void;
@@ -82,6 +83,7 @@ export default function MarketplaceSearchModal({
   onSelectCountry,
   onSelectVenue,
   onSelectCoach,
+  onSelectOutcome,
   onSelectNearby,
   nearbyLoading,
   onClearAll,
@@ -158,12 +160,14 @@ export default function MarketplaceSearchModal({
         where={suggestions.where}
         venues={suggestions.venues}
         coaches={suggestions.coaches}
+        outcomes={suggestions.outcomes}
         loading={loadingSuggestions}
         emptyMessage="No matches — try another spelling"
         onSelectCity={onSelectCity}
         onSelectCountry={onSelectCountry}
         onSelectVenue={onSelectVenue}
         onSelectCoach={onSelectCoach}
+        onSelectOutcome={onSelectOutcome}
         onSelectNearby={activeField === "where" ? onSelectNearby : undefined}
         nearbyLoading={nearbyLoading}
         nearbySubline={mode === "coaches" ? "Find coaches around you" : "Find venues around you"}

@@ -6,6 +6,7 @@ import {
   modeCountLabel,
   modeOptionHelper,
   searchModeLabel,
+  searchModeOptionTitle,
   type SearchMode,
 } from "../../lib/marketplaceSearch";
 
@@ -156,7 +157,7 @@ export default function SearchModeSelect({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-primary">
-                      {searchModeLabel(m)}
+                      {searchModeOptionTitle(m)}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-primary/60">
                       {modeOptionHelper(m, countFor(m))}

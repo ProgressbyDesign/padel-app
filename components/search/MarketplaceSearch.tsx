@@ -41,6 +41,7 @@ const EMPTY_SUGGESTIONS: SuggestionsApiPayload = {
   where: { cities: [], countries: [] },
   venues: [],
   coaches: [],
+  outcomes: [],
 };
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -239,9 +240,16 @@ export default function MarketplaceSearch({
 
   const labelClass = "text-[10px] font-semibold uppercase tracking-wide text-primary/50 sm:text-[11px]";
 
+  const searchBtnExpanded =
+    anyActive || Boolean(location.trim()) || Boolean(entity.trim());
+
   const searchBtnClass = isHero
-    ? "flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-primary transition hover:bg-accent/90 sm:h-12 sm:w-auto sm:rounded-full"
-    : "flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-primary transition hover:bg-accent/90 lg:h-11 lg:w-auto lg:rounded-r-xl";
+    ? `flex h-12 shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-primary transition-all duration-200 ease-out hover:bg-accent/90 sm:h-12 sm:rounded-full ${
+        searchBtnExpanded ? "w-auto gap-2 px-5 sm:px-6" : "w-12 gap-0 px-0 sm:w-12"
+      }`
+    : `flex h-11 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-primary transition-all duration-200 ease-out hover:bg-accent/90 lg:h-11 lg:rounded-r-xl ${
+        searchBtnExpanded ? "w-auto gap-2 px-5" : "w-11 gap-0 px-0"
+      }`;
 
   const openModal = useCallback(() => {
     setModalOpen(true);
@@ -306,6 +314,10 @@ export default function MarketplaceSearch({
           changeEntity(c.name);
           setActiveField(null);
         }}
+        onSelectOutcome={(label) => {
+          changeEntity(label);
+          setActiveField(null);
+        }}
         onSelectNearby={handleNearby}
         nearbyLoading={nearbyLoading}
         onClearAll={() => {
@@ -329,8 +341,11 @@ export default function MarketplaceSearch({
       >
         <div ref={wrapRef} className={`relative ${shellClass}`}>
         <div className={fieldShell}>
-          {/* Mode */}
-          <div className={`relative min-w-0 ${isHero ? "sm:shrink-0" : "lg:shrink-0"} ${segmentClass(modeOpen)}`}>
+          {/* Search for */}
+          <div
+            className={`relative min-w-0 px-3 py-0.5 ${isHero ? "sm:shrink-0" : "lg:shrink-0"} ${segmentClass(modeOpen)}`}
+          >
+            <span className={`mb-0.5 block ${labelClass}`}>Search for</span>
             <SearchModeSelect
               mode={mode}
               onChange={(m) => {
@@ -404,10 +419,20 @@ export default function MarketplaceSearch({
             </div>
           </div>
 
-          <div className="px-2 pb-1 sm:px-2 sm:pb-0">
-            <button type="submit" className={searchBtnClass}>
-              <Search className="h-4 w-4" aria-hidden />
-              <span>Search</span>
+          <div className="flex items-center px-2 pb-1 sm:px-2 sm:pb-0">
+            <button
+              type="submit"
+              className={`${searchBtnClass} ${!isHero && !isCompact ? "w-full lg:w-auto" : "w-full sm:w-auto"}`}
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4 shrink-0" aria-hidden />
+              <span
+                className={`overflow-hidden whitespace-nowrap transition-all duration-200 ease-out ${
+                  searchBtnExpanded ? "max-w-[5rem] opacity-100" : "max-w-0 opacity-0"
+                }`}
+              >
+                Search
+              </span>
             </button>
           </div>
         </div>
@@ -425,7 +450,12 @@ export default function MarketplaceSearch({
               where={suggestions.where}
               venues={suggestions.venues}
               coaches={suggestions.coaches}
+              outcomes={suggestions.outcomes}
               loading={loadingSuggestions}
+              onSelectOutcome={(label) => {
+                changeEntity(label);
+                closeDropdown();
+              }}
               emptyMessage="No matches — try another spelling or press Search"
               onSelectCity={(label) => {
                 setLocation(label);
