@@ -9,7 +9,7 @@ import {
 import type { CoachSkillLevel } from "../coaches";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
 import { clampPage, listingPageCount } from "../listingUrlParams";
-import { normalizeSearchKey } from "../searchFuzzy";
+import { normalizeSearchKey, searchMatchScore } from "../searchFuzzy";
 import { supabase } from "../supabase";
 import type { Coach } from "../coaches";
 import type { Venue } from "../venueFilters";
@@ -35,6 +35,28 @@ export type CoachListingQueryResult = {
   pageSize: number;
   totalPages: number;
 };
+
+/** Coach IDs with an outcome label matching the normalized query. */
+async function coachIdsMatchingOutcomeSearch(search: string): Promise<string[]> {
+  const key = normalizeSearchKey(search);
+  if (!key) return [];
+
+  const { data, error } = await supabase.from("coach_outcomes").select("coach_id, outcome").limit(300);
+  if (error || !data?.length) return [];
+
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const row of data) {
+    const outcome = row.outcome?.trim() ?? "";
+    if (!outcome || searchMatchScore(search, outcome) <= 0) continue;
+    const id = String(row.coach_id);
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
 
 /** Coach IDs linked to venues matching a normalized location/search key. */
 async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
@@ -63,13 +85,21 @@ function applyCoachFilters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: PostgrestFilterBuilder<any, any, any, any, any>,
   input: CoachListingQueryInput,
-  locationCoachIds: string[] | null
+  locationCoachIds: string[] | null,
+  goalCoachIds: string[] | null
 ) {
   const coachName = (input.coach ?? "").trim();
   const coachKey = coachName ? normalizeSearchKey(coachName) : "";
 
   if (coachKey) {
-    query = query.ilike("search_key", `%${coachKey}%`);
+    const ids = goalCoachIds ?? [];
+    if (ids.length > 0) {
+      query = query.or(`search_key.ilike.%${coachKey}%,id.in.(${ids.join(",")})`);
+    } else {
+      query = query.ilike("search_key", `%${coachKey}%`);
+    }
+  } else if (goalCoachIds?.length) {
+    query = query.in("id", goalCoachIds);
   }
 
   if (locationCoachIds) {
@@ -134,10 +164,12 @@ export async function fetchCoachListingPage(
 
   const location =
     (input.location ?? "").trim() || (input.search ?? "").trim();
+  const coachGoal = (input.coach ?? "").trim();
   const locationCoachIds = location ? await coachIdsMatchingVenueSearch(location) : null;
+  const goalCoachIds = coachGoal ? await coachIdsMatchingOutcomeSearch(coachGoal) : null;
 
   let countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
-  const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds);
+  const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds, goalCoachIds);
   if (countFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
@@ -155,7 +187,7 @@ export async function fetchCoachListingPage(
   const to = from + pageSize - 1;
 
   let dataQuery = supabase.from("coaches").select(COACH_LISTING_SELECT);
-  const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds);
+  const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds, goalCoachIds);
   if (dataFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
