@@ -38,6 +38,7 @@ export type Coach = {
   coach_outcomes?: { outcome?: string | null }[] | null;
   /** Geography via linked venues (`is_primary` preferred) */
   coach_venues?: CoachVenueLinkRow[] | null;
+  coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] | null;
   /** Listing / PDP: who the coach trains (e.g. Adults, Juniors) */
   audience?: string[];
   achievements?: CoachAchievement[];

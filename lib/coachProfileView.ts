@@ -1,4 +1,5 @@
 import type { CoachAchievement } from "./coaches";
+import { resolveCoachImageUrl, type CoachImageEmbed } from "./coachImageResolve";
 import { formatCoachPriceDisplay } from "./formatCoachPrice";
 import {
   pickPrimaryVenueFromCoachRow,
@@ -16,11 +17,6 @@ type CoachAchievementEmbed = {
   description?: string | null;
   year?: number | null;
   is_highlight?: boolean | null;
-};
-
-type CoachImageEmbed = {
-  image_url?: string | null;
-  is_primary?: boolean | null;
 };
 
 type CoachOutcomeEmbed = {
@@ -173,12 +169,7 @@ export function rawCoachRowToProfileView(coachRow: CoachPdpQueryRow): CoachProfi
 
   const achievementsHero = achievements.slice(0, 3);
 
-  const images = coachRow.coach_images ?? [];
-  const image =
-    images.find((img) => img.is_primary)?.image_url?.trim() ||
-    images[0]?.image_url?.trim() ||
-    coachRow.image_url?.trim() ||
-    null;
+  const image = resolveCoachImageUrl(coachRow.coach_images, coachRow.image_url);
 
   const fromOutcomesTable =
     coachRow.coach_outcomes?.map((o) => o.outcome?.trim()).filter((s): s is string => Boolean(s)) ?? [];

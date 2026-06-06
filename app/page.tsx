@@ -2,6 +2,7 @@ import LandingPage from "../components/LandingPage";
 import type { HomeStats } from "../components/LandingPage";
 import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
 import { supabase } from "../lib/supabase";
+import { fetchPadelCountries } from "../lib/queries/padelCountries";
 import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
 
 export const metadata = {
@@ -24,15 +25,23 @@ function buildHomeStats(
 }
 
 export default async function Home() {
-  const [featuredCoaches, featuredVenues, coachCountRes, venueCountRes, countriesRes, enquiryCountRes] =
-    await Promise.all([
-      fetchTopRatedCoachesForHome(),
-      fetchTopRatedVenuesForHome(),
-      supabase.from("coaches").select("*", { count: "exact", head: true }),
-      supabase.from("venues").select("*", { count: "exact", head: true }),
-      supabase.from("venues").select("country").not("country", "is", null).limit(2000),
-      supabase.from("enquiries").select("*", { count: "exact", head: true }),
-    ]);
+  const [
+    featuredCoaches,
+    featuredVenues,
+    destinationCountries,
+    coachCountRes,
+    venueCountRes,
+    countriesRes,
+    enquiryCountRes,
+  ] = await Promise.all([
+    fetchTopRatedCoachesForHome(),
+    fetchTopRatedVenuesForHome(),
+    fetchPadelCountries(),
+    supabase.from("coaches").select("*", { count: "exact", head: true }),
+    supabase.from("venues").select("*", { count: "exact", head: true }),
+    supabase.from("venues").select("country").not("country", "is", null).limit(2000),
+    supabase.from("enquiries").select("*", { count: "exact", head: true }),
+  ]);
 
   const topVenue = featuredVenues[0] ?? null;
   const enquiryVenueId = topVenue?.id != null ? String(topVenue.id) : null;
@@ -77,6 +86,7 @@ export default async function Home() {
       recommendedVenue={recommendedVenue}
       enquiryVenueId={enquiryVenueId}
       stats={stats}
+      destinationCountries={destinationCountries}
     />
   );
 }

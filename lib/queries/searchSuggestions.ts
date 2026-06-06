@@ -1,5 +1,6 @@
 import { COACH_GOAL_SUGGESTION_EXAMPLES } from "../marketplaceSearch";
 import { normalizeSearchKey, rankSearchMatches } from "../searchFuzzy";
+import { resolveCoachImageUrl } from "../coachImageResolve";
 import { conciseCoachLocationSummary, type CoachWithVenueLinks } from "../coachVenueGeo";
 import { supabase } from "../supabase";
 import type { SearchMode } from "../marketplaceSearch";
@@ -354,6 +355,7 @@ export async function fetchCoachEntitySuggestions(
       role,
       search_key,
       image_url,
+      coach_images ( image_url, is_primary ),
       coach_venues (
         is_primary,
         venues ( city, country )
@@ -378,7 +380,10 @@ export async function fetchCoachEntitySuggestions(
     id: String(c.id),
     name: c.name?.trim() || "Coach",
     role: c.role?.trim() ?? null,
-    imageUrl: typeof c.image_url === "string" && c.image_url.trim() ? c.image_url.trim() : null,
+    imageUrl: resolveCoachImageUrl(
+      (c as { coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] }).coach_images,
+      c.image_url
+    ),
     locationSummary: conciseCoachLocationSummary(c as CoachWithVenueLinks),
   }));
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
-import AppFooter from "../components/AppFooter";
-import AppHeader from "../components/AppHeader";
+import SiteChrome from "../components/SiteChrome";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -25,9 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface text-primary">
-        <AppHeader />
-        <main className="flex-1">{children}</main>
-        <AppFooter />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

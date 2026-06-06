@@ -16,6 +16,8 @@ type SearchModeSelectProps = {
   venueCount: number | null;
   coachCount: number | null;
   variant?: "hero" | "listing" | "compact";
+  /** Controlled open state (optional). */
+  open?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
 };
@@ -36,10 +38,13 @@ export default function SearchModeSelect({
   venueCount,
   coachCount,
   variant = "listing",
+  open: openProp,
   onOpenChange,
   className = "",
 }: SearchModeSelectProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : uncontrolledOpen;
   const [highlight, setHighlight] = useState<number>(MODES.indexOf(mode));
   const wrapRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -47,11 +52,10 @@ export default function SearchModeSelect({
   const isCompact = variant === "compact";
   const countFor = (m: SearchMode) => (m === "venues" ? venueCount : coachCount);
 
-  // Notify parent in an effect — never during render (avoids cross-component setState).
-  useEffect(() => {
-    onOpenChange?.(open);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  const setOpen = (next: boolean) => {
+    if (!controlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +102,7 @@ export default function SearchModeSelect({
     <div ref={wrapRef} className={`relative min-w-0 ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(!open)}
         onKeyDown={onKeyDown}
         className={triggerClass}
         aria-haspopup="listbox"

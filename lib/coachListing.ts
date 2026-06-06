@@ -518,6 +518,13 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
   };
 }
 
+const COACH_IMAGES_EMBED = `
+  coach_images (
+    image_url,
+    is_primary
+  )
+`;
+
 /** Shared nested select for coach listing / explorer queries. */
 export const COACH_LISTING_SELECT = `
   *,
@@ -528,6 +535,7 @@ export const COACH_LISTING_SELECT = `
     audience_adults,
     audience_juniors
   ),
+  ${COACH_IMAGES_EMBED},
   ${COACH_VENUES_WITH_VENUE_SELECT}
 `;
 
@@ -540,11 +548,13 @@ const COACH_LISTING_SELECT_OUTCOMES_VENUES = `
   coach_outcomes (
     outcome
   ),
+  ${COACH_IMAGES_EMBED},
   ${COACH_VENUES_WITH_VENUE_SELECT}
 `;
 
 const COACH_LISTING_SELECT_VENUES_ONLY = `
   *,
+  ${COACH_IMAGES_EMBED},
   ${COACH_VENUES_WITH_VENUE_SELECT}
 `;
 
@@ -552,7 +562,7 @@ async function attachCoachVenueAndOutcomeEmbeds(rows: Coach[]): Promise<Coach[]>
   const ids = rows.map((r) => r.id).filter((id) => id != null && String(id).trim());
   if (ids.length === 0) return rows;
 
-  const [linksRes, outcomesRes] = await Promise.all([
+  const [linksRes, outcomesRes, imagesRes] = await Promise.all([
     supabase
       .from("coach_venues")
       .select(
@@ -572,6 +582,10 @@ async function attachCoachVenueAndOutcomeEmbeds(rows: Coach[]): Promise<Coach[]>
       )
       .in("coach_id", ids),
     supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
+    supabase
+      .from("coach_images")
+      .select("coach_id, image_url, is_primary")
+      .in("coach_id", ids),
   ]);
 
   const venuesByCoach = new Map<string, CoachVenueLinkRow[]>();
@@ -597,12 +611,28 @@ async function attachCoachVenueAndOutcomeEmbeds(rows: Coach[]): Promise<Coach[]>
     outcomesByCoach.set(coachId, list);
   }
 
+  const imagesByCoach = new Map<
+    string,
+    { image_url?: string | null; is_primary?: boolean | null }[]
+  >();
+  for (const row of imagesRes.data ?? []) {
+    const coachId = String((row as { coach_id?: string }).coach_id ?? "");
+    if (!coachId) continue;
+    const list = imagesByCoach.get(coachId) ?? [];
+    list.push({
+      image_url: (row as { image_url?: string | null }).image_url,
+      is_primary: (row as { is_primary?: boolean | null }).is_primary,
+    });
+    imagesByCoach.set(coachId, list);
+  }
+
   return rows.map((row) => {
     const id = String(row.id);
     return {
       ...row,
       coach_venues: venuesByCoach.get(id) ?? row.coach_venues ?? null,
       coach_outcomes: outcomesByCoach.get(id) ?? row.coach_outcomes ?? null,
+      coach_images: imagesByCoach.get(id) ?? row.coach_images ?? null,
     };
   });
 }

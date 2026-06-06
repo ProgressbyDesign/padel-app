@@ -11,7 +11,8 @@ import HomeEnquiryCta from "./home/HomeEnquiryCta";
 import HomeBentoGrid, { type BentoVenuePreview } from "./home/HomeBentoGrid";
 import HomeStatsBento from "./home/HomeStatsBento";
 import HomeValuePromo from "./home/HomeValuePromo";
-import DestinationsCarousel from "./home/DestinationsCarousel";
+import InteractiveGlobeDestinations from "./sections/InteractiveGlobeDestinations";
+import type { PadelCountry } from "../lib/padelCountries";
 import VenueCard from "./VenueCard";
 import Carousel from "./ui/Carousel";
 
@@ -49,6 +50,7 @@ type LandingPageProps = {
   recommendedVenue: BentoVenuePreview | null;
   enquiryVenueId: string | null;
   stats: HomeStats;
+  destinationCountries: PadelCountry[];
 };
 
 export default function LandingPage({
@@ -58,6 +60,7 @@ export default function LandingPage({
   recommendedVenue,
   enquiryVenueId,
   stats,
+  destinationCountries,
 }: LandingPageProps) {
   return (
     <div className="min-h-full bg-surface">
@@ -201,18 +204,7 @@ export default function LandingPage({
         )}
       </section>
 
-      {/* Destinations carousel */}
-      <section id="destinations" className="scroll-mt-24 border-b border-primary/10 bg-white pb-14 pt-14 sm:pb-16 sm:pt-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Popular training destinations</h2>
-          <p className="mt-1 max-w-xl text-sm text-primary/65">
-            Tap a country to see coaches—we&apos;ll apply location on the listing.
-          </p>
-        </div>
-        <div className="mt-10">
-          <DestinationsCarousel />
-        </div>
-      </section>
+      <InteractiveGlobeDestinations countries={destinationCountries} />
 
       <HomeValuePromo />
 

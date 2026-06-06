@@ -107,6 +107,16 @@ export default function MarketplaceSearch({
 
   const closeDropdown = useCallback(() => setActiveField(null), []);
 
+  const handleModeOpenChange = useCallback((open: boolean) => {
+    setModeOpen(open);
+    if (open) setActiveField(null);
+  }, []);
+
+  const openField = useCallback((field: "where" | "entity") => {
+    setModeOpen(false);
+    setActiveField(field);
+  }, []);
+
   const changeMode = useCallback(
     (m: SearchMode) => {
       setMode(m);
@@ -133,13 +143,14 @@ export default function MarketplaceSearch({
   );
 
   useEffect(() => {
-    if (!activeField) return;
+    // Modal suggestions render in a portal outside wrapRef — skip this listener while open.
+    if (!activeField || modalOpen) return;
     const onDoc = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) closeDropdown();
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [activeField, closeDropdown]);
+  }, [activeField, modalOpen, closeDropdown]);
 
   useEffect(() => {
     if (!activeField) {
@@ -355,7 +366,8 @@ export default function MarketplaceSearch({
               venueCount={venueCount}
               coachCount={coachCount}
               variant={variant}
-              onOpenChange={setModeOpen}
+              open={modeOpen}
+              onOpenChange={handleModeOpenChange}
             />
           </div>
 
@@ -371,7 +383,7 @@ export default function MarketplaceSearch({
                 type="text"
                 value={location}
                 onChange={(e) => changeLocation(e.target.value)}
-                onFocus={() => setActiveField("where")}
+                onFocus={() => openField("where")}
                 placeholder="City or country"
                 autoComplete="off"
                 className={inputClass}
@@ -399,7 +411,7 @@ export default function MarketplaceSearch({
                 type="text"
                 value={entity}
                 onChange={(e) => changeEntity(e.target.value)}
-                onFocus={() => setActiveField("entity")}
+                onFocus={() => openField("entity")}
                 placeholder={entityPlaceholder(mode)}
                 autoComplete="off"
                 className={inputClass}
@@ -437,7 +449,7 @@ export default function MarketplaceSearch({
           </div>
         </div>
 
-        {activeField ? (
+        {activeField && !modeOpen ? (
           <div
             className={`pp-pop-in absolute left-0 right-0 z-[60] max-h-[min(20rem,55vh)] overflow-y-auto rounded-2xl border border-primary/15 bg-white py-1 shadow-lg ring-1 ring-black/5 ${
               isHero ? "top-[calc(100%+10px)]" : "top-[calc(100%+8px)]"
