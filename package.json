@@ -10,18 +10,22 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
+    "country-flag-icons": "^1.6.17",
     "lucide-react": "^1.7.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-globe.gl": "^2.38.0",
     "resend": "^6.12.2",
-    "swiper": "^12.1.4"
+    "swiper": "^12.1.4",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.184.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",

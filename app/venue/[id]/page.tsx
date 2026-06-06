@@ -3,6 +3,7 @@ import { supabase } from "../../../lib/supabase";
 import VenueDetailPage from "../../../components/VenueDetailPage";
 import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
 import type { Coach } from "../../../lib/coaches";
+import { resolveCoachImageUrl } from "../../../lib/coachImageResolve";
 import type { Venue } from "../../../lib/venueFilters";
 
 type PageProps = {
@@ -54,9 +55,26 @@ export default async function VenuePdpPage({ params }: PageProps) {
   if (coachIds.length > 0) {
     const { data: coachRows } = await supabase
       .from("coaches")
-      .select("id, name, role, description, image_url")
+      .select(
+        `
+        id,
+        name,
+        role,
+        description,
+        image_url,
+        coach_images ( image_url, is_primary )
+      `
+      )
       .in("id", coachIds);
-    const byId = new Map((coachRows as Coach[] | null)?.map((c) => [String(c.id), c]) ?? []);
+    const byId = new Map(
+      (coachRows as Coach[] | null)?.map((c) => {
+        const resolved = resolveCoachImageUrl(c.coach_images, c.image_url);
+        return [
+          String(c.id),
+          { ...c, image_url: resolved ?? c.image_url },
+        ] as const;
+      }) ?? []
+    );
     coaches = coachIds.map((cid) => byId.get(cid)).filter((c): c is Coach => Boolean(c));
   }
 
