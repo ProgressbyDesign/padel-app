@@ -1,12 +1,13 @@
 import Link from "next/link";
-import {
-  Briefcase,
-  Car,
-  MapPin,
-  Star,
-  Users,
-} from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import type { CoachSkillLevel } from "../lib/coaches";
+import {
+  buildCoachAttributeLabels,
+  formatDistanceMiles,
+  joinDotLabels,
+  primaryCoachFocus,
+} from "../lib/listingCardLabels";
+import CardArrowButton from "./home/CardArrowButton";
 
 export type { CoachSkillLevel };
 
@@ -21,14 +22,15 @@ export type CoachCardProps = {
   experienceYears?: number | null;
   audience?: string[];
   travelAvailable?: boolean;
-  /** Single headline: pass the first structured outcome (or a short fallback line). */
   outcomes?: string | null;
-  /** Optional chips from `coach_outcomes`. */
   outcomeTags?: string[];
   priceFrom?: string | null;
-  /** Profile destination — entire card is a single interactive region */
   href: string;
   className?: string;
+  variant?: "default" | "featured";
+  badgeLabel?: string | null;
+  distanceMiles?: number | null;
+  showArrowCta?: boolean;
 };
 
 function formatRating(rating: number): string {
@@ -36,30 +38,24 @@ function formatRating(rating: number): string {
   return rating.toFixed(1);
 }
 
-function formatExperienceYears(years: number): string {
-  if (years < 1) return "<1 yr";
-  if (years === 1) return "1 yr";
-  return `${years} yrs`;
+function skipLocationPart(value?: string | null): boolean {
+  const trimmed = value?.trim();
+  return !trimmed || trimmed.toLowerCase() === "unknown" || trimmed === "—";
 }
 
 function levelBadgeClass(level: string): string {
   const key = level.toLowerCase();
-  if (key === "beginner") return "bg-primary text-white ring-white/20";
-  if (key === "intermediate") return "bg-secondary/35 text-primary ring-secondary/40";
-  if (key === "advanced") return "bg-dark text-white ring-white/20";
-  if (key === "pro") return "bg-dark text-accent ring-accent/30";
-  return "bg-primary/90 text-white ring-white/15";
+  if (key === "pro") return "bg-[#021010] text-accent";
+  return "bg-[#021010] text-accent";
 }
 
-export default function CoachCard({
+function ListingCoachCard({
   name,
   avatarImage,
   rating,
-  reviewCount,
   level,
   locationCity,
   locationCountry,
-  experienceYears,
   audience,
   travelAvailable,
   outcomes,
@@ -67,48 +63,42 @@ export default function CoachCard({
   priceFrom,
   href,
   className = "",
+  badgeLabel,
+  distanceMiles,
+  showArrowCta = true,
 }: CoachCardProps) {
-  const skipLoc = (x?: string | null) => {
-    const t = x?.trim();
-    return !t || t.toLowerCase() === "unknown" || t === "—";
-  };
-  const locationLine = [locationCity, locationCountry].filter((x) => !skipLoc(x)).join(", ");
-  const tags =
-    (outcomeTags?.length ? outcomeTags : outcomes?.trim() ? [outcomes.trim()] : [])
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 3);
+  const locationLine = [locationCity, locationCountry]
+    .filter((part) => !skipLocationPart(part))
+    .join(", ");
+  const focusLine = primaryCoachFocus({ outcomeTags, outcomes });
+  const attributeLabels = buildCoachAttributeLabels({ audience, travelAvailable, max: 2 });
+  const attributesLine = joinDotLabels(attributeLabels);
   const levelLabel = level?.trim();
-  const audienceClean = (audience ?? []).map((a) => a.trim()).filter(Boolean);
-  const outcomesText = outcomes?.trim() ?? null;
   const showRating = typeof rating === "number" && !Number.isNaN(rating);
-  const showMeta =
-    (typeof experienceYears === "number" && !Number.isNaN(experienceYears)) ||
-    audienceClean.length > 0 ||
-    Boolean(travelAvailable);
-  const reviewNote =
-    typeof reviewCount === "number" && reviewCount > 0 ? `(${reviewCount.toLocaleString()})` : null;
-  const ariaLabel = `View profile for ${name}`;
+  const distanceNote =
+    typeof distanceMiles === "number" && distanceMiles > 0
+      ? formatDistanceMiles(distanceMiles)
+      : null;
+  const priceText = priceFrom?.trim() ?? null;
 
   return (
     <Link
       href={href}
-      aria-label={ariaLabel}
+      aria-label={`View profile for ${name}`}
       className={[
-        "group/coach block cursor-pointer rounded-2xl bg-white p-4 shadow-[0_2px_12px_rgba(0,60,60,0.08)] ring-1 ring-primary/12",
-        "transition duration-300 ease-out",
-        "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(0,60,60,0.12)] hover:ring-primary/20",
+        "group/coach block h-full overflow-hidden rounded-[20px] bg-white transition duration-200",
+        "hover:shadow-[0_8px_24px_rgba(3,19,34,0.08)]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2",
         className,
       ].join(" ")}
     >
-      <article className="flex flex-col">
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-gradient-to-br from-surface to-primary/8">
+      <article className="flex h-full flex-col">
+        <div className="relative aspect-[285/298] w-full overflow-hidden rounded-t-[12px] bg-surface">
           {avatarImage?.trim() ? (
             <img
               src={avatarImage.trim()}
               alt={`${name}, padel coach`}
-              className="absolute inset-0 h-full w-full object-cover transition duration-500 ease-out group-hover/coach:scale-[1.03]"
+              className="absolute inset-0 h-full w-full object-cover object-[center_20%] transition duration-300 group-hover/coach:scale-[1.02]"
             />
           ) : (
             <div
@@ -121,96 +111,185 @@ export default function CoachCard({
             </div>
           )}
 
-          {levelLabel ? (
-            <div className="absolute left-2.5 top-2.5 z-10">
-              <span
-                className={[
-                  "inline-flex max-w-[min(100%,12rem)] truncate rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ring-1 backdrop-blur-sm",
-                  levelBadgeClass(levelLabel),
-                ].join(" ")}
-              >
-                {levelLabel}
-              </span>
-            </div>
+          {badgeLabel ? (
+            <span className="absolute left-4 top-4 z-10 rounded-full bg-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-surface">
+              {badgeLabel}
+            </span>
           ) : null}
 
           {showRating ? (
-            <div className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-sm font-semibold text-primary shadow-sm ring-1 ring-black/5 backdrop-blur-sm">
-              <Star className="h-3.5 w-3.5 fill-secondary text-secondary" aria-hidden />
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-base font-medium text-primary shadow-sm">
+              <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden />
               <span>{formatRating(rating)}</span>
-              {reviewNote ? (
-                <span className="text-xs font-normal text-primary/60">{reviewNote}</span>
-              ) : null}
             </div>
           ) : null}
         </div>
 
-        <div className="mt-4 flex min-w-0 flex-col gap-3">
-          <header className="min-w-0 space-y-1">
-            <h3 className="text-lg font-bold leading-snug tracking-tight text-primary">{name}</h3>
-            {locationLine ? (
-              <p className="flex items-start gap-1.5 text-sm text-primary/70">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
-                <span>{locationLine}</span>
-              </p>
-            ) : null}
-          </header>
-
-          {tags.length > 0 ? (
-            <ul className="flex flex-wrap gap-1.5" aria-label="Coaching focus">
-              {tags.map((tag) => (
-                <li
-                  key={tag}
-                  className="max-w-full truncate rounded-full border border-secondary/25 bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
-                  title={tag}
-                >
-                  {tag}
-                </li>
-              ))}
-            </ul>
-          ) : outcomesText ? (
-            <p
-              className="line-clamp-1 text-sm font-medium leading-snug text-primary/75"
-              title={outcomesText}
-            >
-              {outcomesText}
-            </p>
-          ) : null}
-
-          {showMeta ? (
-            <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-primary/10 pt-3 text-xs text-primary/70">
-              {typeof experienceYears === "number" && !Number.isNaN(experienceYears) ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
-                  <span className="font-medium text-primary">{formatExperienceYears(experienceYears)}</span>
-                </span>
-              ) : null}
-              {audienceClean.length > 0 ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
-                  <span className="font-medium text-primary">{audienceClean.join(" / ")}</span>
-                </span>
-              ) : null}
-              {travelAvailable ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Car className="h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
-                  <span className="font-medium text-primary">Travels</span>
+        <div className="flex flex-1 flex-col gap-4 px-4 pb-5 pt-4">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-bold leading-tight text-primary">{name}</h3>
+              {levelLabel ? (
+                <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
+                  {levelLabel}
                 </span>
               ) : null}
             </div>
-          ) : null}
 
-          {priceFrom?.trim() ? (
-            <p className="text-sm font-semibold text-primary">{priceFrom.trim()}</p>
-          ) : null}
+            {locationLine || distanceNote ? (
+              <p className="flex items-start gap-1.5 text-[15px] leading-normal">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-icon" aria-hidden />
+                <span>
+                  {locationLine ? <span className="text-primary">{locationLine}</span> : null}
+                  {locationLine && distanceNote ? (
+                    <span className="text-icon"> · </span>
+                  ) : null}
+                  {distanceNote ? <span className="text-icon">{distanceNote}</span> : null}
+                </span>
+              </p>
+            ) : null}
 
-          <div className="flex pt-1 sm:justify-end">
-            <span className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition group-hover/coach:bg-primary/90 sm:w-auto">
-              View Profile
-            </span>
+            {focusLine ? (
+              <p className="text-[15px] font-medium leading-4 text-primary">{focusLine}</p>
+            ) : null}
+
+            {attributesLine ? (
+              <p className="text-sm leading-[14px] text-icon">{attributesLine}</p>
+            ) : null}
           </div>
+
+          {priceText || showArrowCta ? (
+            <div className="relative mt-auto flex items-center justify-between gap-3 pt-1">
+              {priceText ? (
+                <p className="text-[13px] text-icon">
+                  From <span className="text-base font-semibold text-primary">{priceText}</span>
+                </p>
+              ) : (
+                <span />
+              )}
+              {showArrowCta ? <CardArrowButton className="shrink-0" /> : null}
+            </div>
+          ) : null}
         </div>
       </article>
     </Link>
   );
+}
+
+function FeaturedCoachCard({
+  name,
+  avatarImage,
+  rating,
+  level,
+  locationCity,
+  locationCountry,
+  outcomes,
+  outcomeTags,
+  priceFrom,
+  href,
+  className = "",
+  badgeLabel,
+  distanceMiles,
+}: CoachCardProps) {
+  const locationLine = [locationCity, locationCountry]
+    .filter((part) => !skipLocationPart(part))
+    .join(", ");
+  const focusLine = primaryCoachFocus({ outcomeTags, outcomes });
+  const levelLabel = level?.trim();
+  const showRating = typeof rating === "number" && !Number.isNaN(rating);
+  const distanceNote =
+    typeof distanceMiles === "number" && distanceMiles > 0
+      ? formatDistanceMiles(distanceMiles)
+      : null;
+
+  return (
+    <Link
+      href={href}
+      aria-label={`View profile for ${name}`}
+      className={[
+        "group/coach relative flex min-h-[331px] flex-col justify-end overflow-hidden rounded-[20px] p-4 sm:min-h-[377px]",
+        "transition duration-300 ease-out hover:scale-[1.01] hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2",
+        className,
+      ].join(" ")}
+    >
+      {avatarImage?.trim() ? (
+        <img
+          src={avatarImage.trim()}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover/coach:scale-[1.03]"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-dark" aria-hidden />
+      )}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-[rgba(2,16,16,0)] via-[rgba(2,16,16,0.7)] via-[72%] to-[rgba(2,16,16,0.85)]"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-[179px] bg-gradient-to-b from-transparent via-[rgba(2,16,16,0.01)] to-[rgba(2,16,16,0.01)] backdrop-blur-[6.5px]"
+        aria-hidden
+      />
+
+      {badgeLabel ? (
+        <span className="absolute left-4 top-4 z-10 rounded-full bg-[#021010] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-surface">
+          {badgeLabel}
+        </span>
+      ) : null}
+
+      {showRating ? (
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-sm font-medium text-primary shadow-sm">
+          <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden />
+          <span>{formatRating(rating)}</span>
+        </div>
+      ) : null}
+
+      <div className="relative z-10 flex flex-col gap-4">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-white">{name}</h3>
+            {levelLabel ? (
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${levelBadgeClass(levelLabel)}`}
+              >
+                {levelLabel}
+              </span>
+            ) : null}
+          </div>
+          {locationLine ? (
+            <p className="flex items-center gap-1 text-[15px] text-white">
+              <MapPin className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              <span className="font-medium">{locationLine}</span>
+              {distanceNote ? (
+                <>
+                  <span className="text-white/80">·</span>
+                  <span className="text-[#d0d0d0]">{distanceNote}</span>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          {focusLine ? (
+            <p className="text-sm font-semibold text-accent">{focusLine}</p>
+          ) : null}
+        </div>
+
+        <div className="flex items-end justify-between gap-3">
+          {priceFrom?.trim() ? (
+            <p className="text-[15px] text-[#ddd]">
+              From <span className="text-base font-semibold text-white">{priceFrom.trim()}</span>
+            </p>
+          ) : (
+            <span />
+          )}
+          <CardArrowButton />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default function CoachCard(props: CoachCardProps) {
+  if (props.variant === "featured") {
+    return <FeaturedCoachCard {...props} />;
+  }
+  return <ListingCoachCard {...props} />;
 }

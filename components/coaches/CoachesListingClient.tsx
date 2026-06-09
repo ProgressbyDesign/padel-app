@@ -222,13 +222,13 @@ export default function CoachesListingClient({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
+    <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:py-10">
       <header className="max-w-2xl">
         <h1>Find a Padel Coach</h1>
         <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
       </header>
 
-      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto max-w-7xl">
+      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto">
         <MarketplaceSearch
           variant="compact"
           defaultMode="coaches"
@@ -382,16 +382,15 @@ export default function CoachesListingClient({
                   name={c.name}
                   avatarImage={c.avatarImage}
                   rating={c.rating}
-                  reviewCount={c.reviewCount}
                   level={c.level}
                   locationCity={c.locationCity}
                   locationCountry={c.locationCountry}
-                  experienceYears={c.experienceYears}
                   audience={c.audience}
                   travelAvailable={c.travelAvailable}
                   outcomes={c.outcomes}
                   outcomeTags={c.outcomeTags}
                   priceFrom={c.priceFrom}
+                  distanceMiles={c.distance}
                   href={coachListingProfileHref(c.id)}
                 />
               </li>

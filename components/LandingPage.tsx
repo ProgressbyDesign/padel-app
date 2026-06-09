@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Quote } from "lucide-react";
 import type { CoachListingItem } from "../lib/coachListing";
 import { coachListingProfileHref } from "../lib/coachListing";
 import CoachCard from "./CoachCard";
@@ -9,32 +8,39 @@ import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 import HomeStickySearch from "./search/HomeStickySearch";
 import HomeEnquiryCta from "./home/HomeEnquiryCta";
 import HomeBentoGrid, { type BentoVenuePreview } from "./home/HomeBentoGrid";
-import HomeStatsBento from "./home/HomeStatsBento";
+import HomeMilestones from "./home/HomeMilestones";
 import HomeValuePromo from "./home/HomeValuePromo";
+import HomeTestimonials, { type HomeTestimonial } from "./home/HomeTestimonials";
 import InteractiveGlobeDestinations from "./sections/InteractiveGlobeDestinations";
 import type { PadelCountry } from "../lib/padelCountries";
 import VenueCard from "./VenueCard";
 import Carousel from "./ui/Carousel";
 
-const HERO_IMAGE = "/images/Depositphotos_850818406_XL.jpg";
+const HERO_IMAGE = "/images/hero-padel-overlay.jpg";
 
-const TESTIMONIALS = [
+const TESTIMONIALS: HomeTestimonial[] = [
   {
-    quote: "Finally found a coach who matched my level before I booked flights. The whole flow felt premium.",
+    quote:
+      "I found a coach who matched my level before I booked. The whole process felt clear, fast and premium.",
     name: "Alex M.",
     location: "London, UK",
+    image: "/images/testimonial-1.jpg",
   },
   {
-    quote: "We used Padel Pathways to shortlist academies in Spain—saved hours of DMs and guesswork.",
+    quote:
+      "We used Padel Pathways to shortlist academies in Spain—saved hours of DMs and guesswork.",
     name: "Sofia R.",
     location: "Madrid, Spain",
+    image: "/images/testimonial-2.jpg",
   },
   {
-    quote: "Clear profiles and honest locations. Exactly what I wanted when planning a training week abroad.",
+    quote:
+      "Clear profiles and honest locations. Exactly what I wanted when planning a training week abroad.",
     name: "Jonas K.",
     location: "Stockholm, Sweden",
+    image: "/images/testimonial-3.jpg",
   },
-] as const;
+];
 
 export type HomeStats = {
   coachesListed: number;
@@ -64,8 +70,7 @@ export default function LandingPage({
 }: LandingPageProps) {
   return (
     <div className="min-h-full bg-surface">
-      {/* Hero — full bleed under fixed transparent nav */}
-      <section className="relative -mt-14 min-h-[min(88vh,780px)] sm:-mt-16">
+      <section className="relative -mt-16 min-h-[min(88vh,815px)]">
         <Image
           src={HERO_IMAGE}
           alt=""
@@ -74,17 +79,23 @@ export default function LandingPage({
           className="object-cover object-center"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-transparent" aria-hidden />
-        <div className="relative mx-auto flex min-h-[min(88vh,780px)] max-w-6xl flex-col justify-center px-4 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28">
-          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-            Train anywhere
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(119.61deg, rgba(0, 36, 54, 0.8) 39.53%, rgba(0, 36, 54, 0.3) 76.64%)",
+          }}
+          aria-hidden
+        />
+        <div className="relative mx-auto flex min-h-[min(88vh,815px)] max-w-[1680px] flex-col justify-center px-4 pb-20 pt-28 sm:px-6 lg:px-[120px] sm:pb-24">
+          <p className="mb-2 text-center text-2xl font-bold uppercase tracking-tight text-white/90 sm:text-[32px]">
+            Find the Best
           </p>
-          <h1 className="mx-auto max-w-3xl text-center text-4xl font-semibold tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl">
-            Find the Best Padel Coaching & Training Camps Worldwide
+          <h1 className="mx-auto max-w-4xl text-center font-heading text-4xl font-bold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl lg:text-[64px] lg:leading-[64px]">
+            Padel Coaching &amp; Training Camps Worldwide
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-center text-lg text-white/90 sm:text-xl">
-            Compare academies, book trips, and train like a pro
+          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-white/90 sm:text-xl">
+            Compare coaches, venues and training camps, then book with confidence.
           </p>
           <div className="mt-10 sm:mt-12">
             <HomeStickySearch />
@@ -92,13 +103,13 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* Bento */}
-      <section className="border-b border-primary/10 bg-white py-14 sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-primary/50">Start here</h2>
-          <p className="mx-auto mt-2 max-w-lg text-center text-lg font-semibold text-primary">Choose your path</p>
+      <section className="border-b border-primary/10 bg-white py-14 sm:py-24">
+        <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
+          <h2 className="text-center font-heading text-3xl font-bold uppercase tracking-tight text-primary sm:text-4xl">
+            Choose your path
+          </h2>
         </div>
-        <div className="mt-10">
+        <div className="mt-10 sm:mt-12">
           <HomeBentoGrid
             recommendedCoach={recommendedCoach}
             recommendedVenue={recommendedVenue}
@@ -107,28 +118,28 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* Top-rated coaches */}
-      <section className="border-b border-primary/10 bg-surface py-14 sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Top-rated coaches</h2>
-              <p className="mt-1 max-w-xl text-primary/70">
+      <section className="border-b border-primary/10 bg-surface py-14 sm:py-24">
+        <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+                Top-rated coaches
+              </h2>
+              <p className="mt-2 text-lg text-primary/70">
                 Hand-picked from our directory—compare levels, locations, and coaching focus.
               </p>
             </div>
             <Link
               href="/coaches"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-primary px-6 text-sm font-medium text-accent transition hover:bg-primary/90"
             >
               View all coaches
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
 
         {featuredCoaches.length === 0 ? (
-          <div className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto mt-10 max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
             <p className="rounded-2xl border border-dashed border-primary/20 bg-white px-6 py-12 text-center text-primary/70">
               No coaches listed yet—check back soon.
             </p>
@@ -139,20 +150,19 @@ export default function LandingPage({
               {featuredCoaches.map((c) => (
                 <CoachCard
                   key={c.id}
+                  variant="featured"
+                  badgeLabel="Best choice"
                   name={c.name}
                   avatarImage={c.avatarImage}
                   rating={c.rating}
-                  reviewCount={c.reviewCount}
                   level={c.level}
                   locationCity={c.locationCity}
                   locationCountry={c.locationCountry}
-                  experienceYears={c.experienceYears}
-                  audience={c.audience}
-                  travelAvailable={c.travelAvailable}
                   outcomes={c.outcomes}
                   outcomeTags={c.outcomeTags}
                   priceFrom={c.priceFrom}
                   href={coachListingProfileHref(c.id, "coaches")}
+                  distanceMiles={c.distance}
                   className="h-full w-full"
                 />
               ))}
@@ -161,28 +171,30 @@ export default function LandingPage({
         )}
       </section>
 
-      {/* Player favourite courts */}
-      <section className="border-b border-primary/10 bg-white py-14 sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">Player favourite courts</h2>
-              <p className="mt-1 max-w-xl text-primary/70">
+      <HomeValuePromo />
+
+      <section className="border-b border-primary/10 bg-white py-14 sm:py-24">
+        <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+                Player favourite courts
+              </h2>
+              <p className="mt-2 text-lg text-primary/70">
                 Venues players return to—courts, coaching, and locations worth the trip.
               </p>
             </div>
             <Link
               href="/venues"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline decoration-primary/25 underline-offset-4 transition hover:decoration-primary"
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-primary px-6 text-sm font-medium text-accent transition hover:bg-primary/90"
             >
               View all venues
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
 
         {featuredVenues.length === 0 ? (
-          <div className="mx-auto mt-10 max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto mt-10 max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
             <p className="rounded-2xl border border-dashed border-primary/20 bg-surface px-6 py-12 text-center text-primary/70">
               No venues listed yet—check back soon.
             </p>
@@ -193,6 +205,7 @@ export default function LandingPage({
               {featuredVenues.map((v) => (
                 <VenueCard
                   key={String(v.id)}
+                  badgeLabel="Best choice"
                   venue={{
                     ...v,
                     image_url: getVenueMainImageUrl(v) ?? v.image_url ?? null,
@@ -204,33 +217,11 @@ export default function LandingPage({
         )}
       </section>
 
+      <HomeMilestones stats={stats} />
+
       <InteractiveGlobeDestinations countries={destinationCountries} />
 
-      <HomeValuePromo />
-
-      <HomeStatsBento stats={stats} />
-
-      {/* Reviews */}
-      <section className="border-b border-primary/10 bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
-          <h2 className="text-center text-xl font-semibold tracking-tight text-primary sm:text-2xl">What players say</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => (
-              <figure
-                key={t.name}
-                className="flex flex-col rounded-2xl border border-primary/10 bg-white p-6 shadow-sm"
-              >
-                <Quote className="h-8 w-8 text-secondary/80" aria-hidden />
-                <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-primary/85">&ldquo;{t.quote}&rdquo;</blockquote>
-                <figcaption className="mt-4 border-t border-primary/10 pt-4 text-sm">
-                  <span className="font-semibold text-primary">{t.name}</span>
-                  <span className="block text-xs text-primary/55">{t.location}</span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeTestimonials items={TESTIMONIALS} />
 
       <HomeEnquiryCta venueId={enquiryVenueId} />
     </div>

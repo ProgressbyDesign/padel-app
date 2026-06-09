@@ -7,11 +7,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#003C3C",
-        accent: "#E6FA50",
-        secondary: "#2ED8AB",
-        surface: "#F0F1F7",
-        dark: "#02053C",
+        primary: "#031322",
+        accent: "#CDE736",
+        "accent-soft": "#C5F758",
+        secondary: "#AED4E8",
+        surface: "#F4F4F5",
+        dark: "#021010",
+        card: "#171C1C",
+        muted: "#C5C5C5",
+        icon: "#60636E",
+      },
+      maxWidth: {
+        content: "1680px",
       },
     },
   },

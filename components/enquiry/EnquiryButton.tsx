@@ -10,6 +10,7 @@ export type EnquiryButtonProps = {
   /** Button label (default: Send enquiry) */
   label?: string;
   className?: string;
+  showIcon?: boolean;
 };
 
 export default function EnquiryButton({
@@ -17,6 +18,7 @@ export default function EnquiryButton({
   venueId,
   label = "Send enquiry",
   className = "",
+  showIcon = true,
 }: EnquiryButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export default function EnquiryButton({
           className,
         ].join(" ")}
       >
-        <MessageSquarePlus className="h-4 w-4 shrink-0" aria-hidden />
+        {showIcon ? <MessageSquarePlus className="h-4 w-4 shrink-0" aria-hidden /> : null}
         {label}
       </button>
       <EnquiryModal

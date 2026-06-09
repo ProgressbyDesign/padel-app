@@ -1,37 +1,69 @@
 import Link from "next/link";
+import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
+
+const links = [
+  { href: "/coaches", label: "Find a coach" },
+  { href: "/venues", label: "Find a venue" },
+  { href: "/venues", label: "Training camps" },
+  { href: "/join", label: "List your venue" },
+  { href: "/join", label: "Become a coach" },
+] as const;
+
+function SocialIcon({ label }: { label: string }) {
+  return (
+    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold transition hover:bg-primary/15">
+      {label}
+    </span>
+  );
+}
 
 export default function AppFooter() {
   return (
-    <footer className="mt-auto border-t border-white/10 bg-dark">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+    <footer className="relative mt-auto overflow-hidden bg-accent text-primary">
+      <div className="relative mx-auto max-w-[1680px] px-4 pb-10 pt-12 sm:px-6 lg:px-[120px] lg:pb-12 lg:pt-16">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.6fr] lg:gap-16">
+          <div className="max-w-md space-y-4">
+            <PadelPathwaysLogo variant="black" />
+            <p className="max-w-sm text-base leading-6 text-primary">
+              Your worldwide padel destination. Book courts, join events, and experience the
+              fastest-growing sport in the UK.
+            </p>
+          </div>
+
           <div>
-            <p className="text-base font-semibold text-white">Padel</p>
-            <p className="mt-1 max-w-xs text-sm text-white/70">Find courts and coaching abroad.</p>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Links</h2>
+            <nav className="mt-7 flex flex-col gap-4 text-base" aria-label="Footer">
+              {links.map((item) => (
+                <Link key={item.label} href={item.href} className="transition hover:opacity-70">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </div>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Footer">
-            <Link href="/venues" className="text-white/75 transition hover:text-white">
-              Venues
-            </Link>
-            <Link href="/contact" className="text-white/75 transition hover:text-white">
-              Contact
-            </Link>
-          </nav>
-        </div>
-        <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/55">
-            <a href="#" className="transition hover:text-white/80">
-              Privacy
-            </a>
-            <a href="#" className="transition hover:text-white/80">
-              Terms
-            </a>
-            <a href="#" className="transition hover:text-white/80">
-              Cookies
-            </a>
+
+          <div>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Social</h2>
+            <div className="mt-7 flex items-center gap-3">
+              <a href="#" aria-label="Facebook" className="transition hover:opacity-70">
+                <SocialIcon label="f" />
+              </a>
+              <a href="#" aria-label="Instagram" className="transition hover:opacity-70">
+                <SocialIcon label="ig" />
+              </a>
+            </div>
           </div>
-          <p className="text-xs text-white/55">© {new Date().getFullYear()} Padel. All rights reserved.</p>
         </div>
+
+        <p
+          className="pointer-events-none mt-16 select-none font-heading text-[clamp(3.5rem,14vw,10rem)] font-bold leading-[0.9] tracking-[-0.03em] text-primary lg:mt-20"
+          aria-hidden
+        >
+          PADEL PATHWAYS
+        </p>
+
+        <p className="relative z-10 mt-8 text-lg text-primary/70">
+          © {new Date().getFullYear()} Padel Pathways | All rights reserved
+        </p>
       </div>
     </footer>
   );

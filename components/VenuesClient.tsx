@@ -224,7 +224,13 @@ export default function VenuesClient({
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
-      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto max-w-[1600px]">
+
+            <header className="max-w-2xl">
+        <h1>Find your next Padel Destination</h1>
+        <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
+      </header>
+
+      <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto">
         <MarketplaceSearch
           variant="compact"
           defaultMode="venues"
@@ -237,7 +243,7 @@ export default function VenuesClient({
 
       <div
         ref={searchRowRef}
-        className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+        className="mt-8 mb-2 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
       >
         <MarketplaceSearch
           variant="listing"

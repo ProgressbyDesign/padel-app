@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -40,9 +41,7 @@ export default function AppHeader() {
 
   const headerSurface = overlay
     ? "border-b border-transparent bg-transparent"
-    : isHome
-      ? "border-b border-primary/15 bg-white/95 backdrop-blur-md shadow-sm"
-      : "border-b border-primary/15 bg-white/95 backdrop-blur-md shadow-sm";
+    : "border-b border-primary/10 bg-white/95 backdrop-blur-md shadow-sm";
 
   const linkIdle = overlay
     ? "text-white/85 hover:bg-white/10 hover:text-white"
@@ -52,15 +51,9 @@ export default function AppHeader() {
 
   return (
     <header className={`${headerPosition} z-50 transition-colors duration-300 ${headerSurface}`}>
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
-        <Link
-          href="/"
-          className={`text-lg font-semibold tracking-tight sm:text-xl ${
-            overlay ? "text-white drop-shadow-sm" : "text-primary"
-          }`}
-        >
-          Padel
-        </Link>
+      <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-[120px]">
+        <PadelPathwaysLogo variant={overlay ? "white" : "black"} />
+
         <nav className="hidden items-center justify-end gap-1 md:flex md:gap-2" aria-label="Main">
           {nav.map((item) => {
             const active = isNavActive(item.href, pathname);
@@ -81,7 +74,7 @@ export default function AppHeader() {
             className={`rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${
               overlay
                 ? "bg-white text-primary shadow-md hover:bg-white/95"
-                : "bg-primary text-white shadow-sm hover:bg-primary/90"
+                : "bg-primary text-accent shadow-sm hover:bg-primary/90"
             }`}
           >
             Join PadelPathways
@@ -94,9 +87,7 @@ export default function AppHeader() {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           className={`flex h-10 w-10 items-center justify-center rounded-full transition md:hidden ${
-            overlay
-              ? "text-white hover:bg-white/10"
-              : "text-primary hover:bg-surface"
+            overlay ? "text-white hover:bg-white/10" : "text-primary hover:bg-surface"
           }`}
         >
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -106,7 +97,7 @@ export default function AppHeader() {
       {menuOpen ? (
         <div className="border-t border-primary/10 bg-white shadow-lg md:hidden">
           <nav
-            className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6"
+            className="mx-auto flex max-w-[1680px] flex-col gap-1 px-4 py-3 sm:px-6 lg:px-[120px]"
             aria-label="Mobile"
           >
             {nav.map((item) => {
@@ -127,7 +118,7 @@ export default function AppHeader() {
             <Link
               href="/join"
               onClick={() => setMenuOpen(false)}
-              className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:bg-primary/90"
+              className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-accent shadow-sm transition hover:bg-primary/90"
             >
               Join PadelPathways
             </Link>

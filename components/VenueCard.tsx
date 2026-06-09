@@ -1,10 +1,17 @@
-import { Building2, Dumbbell, MapPin, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { VenueWithDistance } from "../lib/distance";
+import {
+  buildVenueSecondaryAttributes,
+  formatDistanceMiles,
+  formatVenueCourtsLabel,
+  joinDotLabels,
+} from "../lib/listingCardLabels";
 
 type VenueCardProps = {
   venue: VenueWithDistance;
+  badgeLabel?: string | null;
 };
 
 function formatRating(raw: VenueCardProps["venue"]["rating"]) {
@@ -13,86 +20,77 @@ function formatRating(raw: VenueCardProps["venue"]["rating"]) {
   return n.toFixed(1);
 }
 
-function getSurfaceType(raw?: string | null) {
-  if (!raw) return "Unknown";
-  const value = raw.toLowerCase();
-  if (value.includes("indoor")) return "Indoor";
-  if (value.includes("outdoor")) return "Outdoor";
-  return raw;
-}
-
-function distanceLabel(miles: number) {
-  if (miles === 1) return "1 mile away";
-  return `${miles} miles away`;
-}
-
-export default function VenueCard({ venue }: VenueCardProps) {
+export default function VenueCard({ venue, badgeLabel }: VenueCardProps) {
   const imageSrc = venue.image_url || "/images/venue-default.png";
   const location = [venue.city, venue.country].filter(Boolean).join(", ");
   const distanceMiles = typeof venue.distance === "number" ? venue.distance : null;
   const rating = formatRating(venue.rating);
-  const surfaceType = getSurfaceType(venue.court_type);
-  const hasCoaching = Boolean(venue.coaching_available);
-
-  const iconMuted = "h-4 w-4 shrink-0 text-secondary";
+  const primaryValue = formatVenueCourtsLabel(venue.courts);
+  const secondaryAttributes = joinDotLabels(
+    buildVenueSecondaryAttributes({
+      coachingAvailable: venue.coaching_available,
+      courtType: venue.court_type,
+      max: 2,
+    })
+  );
 
   return (
     <Link
       href={`/venue/${encodeURIComponent(String(venue.id))}`}
-      className="group/card block rounded-[20px] bg-white pt-2 pr-2 pb-4 pl-2 shadow-[0_2px_8px_rgba(0,60,60,0.06)] ring-1 ring-primary/12 transition duration-200 hover:shadow-[0_8px_24px_rgba(0,60,60,0.08)] hover:ring-primary/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
+      className="group/card block h-full overflow-hidden rounded-[20px] bg-white transition duration-200 hover:shadow-[0_8px_24px_rgba(3,19,34,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2"
     >
-      <article className="flex flex-col gap-5">
-        <div className="relative aspect-[313/181] w-full shrink-0 overflow-hidden rounded-xl bg-surface">
+      <article className="flex h-full flex-col">
+        <div className="relative h-[247px] w-full overflow-hidden rounded-t-[12px] bg-surface">
           <Image
             src={imageSrc}
             alt={venue.name ? `${venue.name} venue` : "Padel venue"}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            sizes="(max-width: 768px) 88vw, 344px"
             className="object-cover transition duration-300 ease-out group-hover/card:scale-[1.02]"
           />
-        </div>
 
-        <div className="flex w-full flex-col gap-3 px-2">
-          <div className="flex items-start justify-between gap-3">
-            <p className="line-clamp-2 min-w-0 flex-1 text-[20px] leading-tight tracking-[-0.2px] text-primary">
-              {venue.name || "Venue"}
-            </p>
-            {rating ? (
-              <div className="flex shrink-0 items-center gap-[9px] pt-0.5">
-                <Star className="h-[14px] w-[14px] fill-secondary text-secondary" aria-hidden />
-                <span className="text-[16px] font-normal leading-normal tracking-[-0.16px] text-primary/50">
-                  {rating}
-                </span>
-              </div>
-            ) : null}
-          </div>
-
-          {location ? (
-            <div className="flex w-full items-center gap-2">
-              <MapPin className={iconMuted} aria-hidden />
-              <p className="min-w-0 flex-1 text-[14px] leading-normal tracking-[-0.14px] text-primary/65 line-clamp-2">
-                <span>{location}</span>
-                {distanceMiles != null ? (
-                  <>
-                    <span> · </span>
-                    <span className="font-semibold text-primary">{distanceLabel(distanceMiles)}</span>
-                  </>
-                ) : null}
-              </p>
-            </div>
+          {badgeLabel ? (
+            <span className="absolute left-4 top-4 z-10 rounded-full bg-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-surface">
+              {badgeLabel}
+            </span>
           ) : null}
 
-          <div className="flex min-w-0 flex-wrap items-center gap-4">
-            {hasCoaching ? (
-              <div className="flex items-center gap-2">
-                <Dumbbell className={iconMuted} aria-hidden />
-                <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-primary/65">Coaching</span>
-              </div>
-            ) : null}
-            <div className="flex items-center gap-2">
-              <Building2 className={iconMuted} aria-hidden />
-              <span className="text-[14px] leading-[14px] tracking-[-0.14px] text-primary/65">{surfaceType}</span>
+          {rating ? (
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-base font-medium text-primary shadow-sm">
+              <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden />
+              <span>{rating}</span>
             </div>
+          ) : null}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-4 px-4 pb-5 pt-4">
+          <div className="space-y-3">
+            <p className="line-clamp-2 text-lg font-semibold tracking-[-0.18px] text-primary">
+              {venue.name || "Venue"}
+            </p>
+
+            {location || distanceMiles != null ? (
+              <p className="flex items-start gap-1.5 text-[15px] leading-normal">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-icon" aria-hidden />
+                <span>
+                  {location ? <span className="text-primary">{location}</span> : null}
+                  {location && distanceMiles != null ? (
+                    <span className="text-icon"> · </span>
+                  ) : null}
+                  {distanceMiles != null ? (
+                    <span className="text-icon">{formatDistanceMiles(distanceMiles)}</span>
+                  ) : null}
+                </span>
+              </p>
+            ) : null}
+
+            {primaryValue ? (
+              <p className="text-[15px] font-medium leading-4 text-primary">{primaryValue}</p>
+            ) : null}
+
+            {secondaryAttributes ? (
+              <p className="text-sm leading-[14px] text-icon">{secondaryAttributes}</p>
+            ) : null}
           </div>
         </div>
       </article>
