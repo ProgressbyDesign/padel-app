@@ -2,27 +2,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Compass, MapPin, MessageSquarePlus } from "lucide-react";
+import { useState } from "react";
 import type { CoachListingItem } from "@/lib/coachListing";
 import { coachListingProfileHref } from "@/lib/coachListing";
-import EnquiryButton from "@/components/enquiry/EnquiryButton";
+import EnquiryModal from "@/components/enquiry/EnquiryModal";
+import CoachCard from "@/components/CoachCard";
+import HomeFeaturedVenueCard from "@/components/home/HomeFeaturedVenueCard";
+import CardArrowButton from "@/components/home/CardArrowButton";
 
-/** Minimal venue preview for the bento tile (same ranking as enquiry venue). */
 export type BentoVenuePreview = {
   id: string;
   name: string;
   subtitle: string;
+  city?: string | null;
+  country?: string | null;
   imageUrl: string | null;
+  rating?: number | string | null;
+  courts?: number | null;
+  coachingAvailable?: boolean | null;
+  courtType?: string | null;
 };
 
-const GENERIC_COACH_BG =
-  "https://images.unsplash.com/photo-1626228290616-844bc768965e?auto=format&fit=crop&w=1400&q=80";
-
-const GENERIC_COACH_CARD =
-  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80";
-
-const GENERIC_VENUE_CARD =
-  "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80";
+const BENTO_COACH_CUTOUT = "/images/bento-coach-cutout.jpg";
 
 type HomeBentoGridProps = {
   recommendedCoach: CoachListingItem | null;
@@ -30,154 +31,154 @@ type HomeBentoGridProps = {
   enquiryVenueId: string | null;
 };
 
-function RecommendedBadge() {
+function OpenDirectoryButton() {
   return (
-    <span className="absolute left-3 top-3 z-10 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary shadow-md ring-1 ring-black/5 backdrop-blur-sm">
-      Recommended
+    <span className="relative inline-flex h-11 items-center">
+      <span className="inline-flex h-11 items-center rounded-full bg-[#031322] pl-4 pr-14 text-sm font-medium text-accent">
+        Open Directory
+      </span>
+      <span className="absolute right-0 top-1/2 -translate-y-1/2">
+        <CardArrowButton accent="lime" />
+      </span>
     </span>
   );
 }
 
-export default function HomeBentoGrid({ recommendedCoach, recommendedVenue, enquiryVenueId }: HomeBentoGridProps) {
+export default function HomeBentoGrid({
+  recommendedCoach,
+  recommendedVenue,
+  enquiryVenueId,
+}: HomeBentoGridProps) {
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
   const coachHref = recommendedCoach ? coachListingProfileHref(recommendedCoach.id) : "/coaches";
-  const coachImage =
-    recommendedCoach?.avatarImage?.trim() || GENERIC_COACH_CARD;
-  const coachLocation = [recommendedCoach?.locationCity, recommendedCoach?.locationCountry]
-    .filter((x) => x?.trim())
-    .join(", ");
-
-  const venueHref = recommendedVenue ? `/venue/${encodeURIComponent(recommendedVenue.id)}` : "/venues";
-  const venueImage = recommendedVenue?.imageUrl?.trim() || GENERIC_VENUE_CARD;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:gap-5">
-        {/* 1 — Find a coach (large, generic coach imagery) */}
-        <Link
-          href="/coaches"
-          className="group relative flex min-h-[260px] flex-col justify-end overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10 transition hover:shadow-xl sm:min-h-[300px] lg:col-span-6 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:min-h-[340px]"
-        >
-          <Image
-            src={GENERIC_COACH_BG}
-            alt=""
-            fill
-            className="object-cover transition duration-500 group-hover:scale-[1.03]"
-            sizes="(max-width:1024px) 100vw, 58vw"
-            priority={false}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/25" aria-hidden />
-          <div className="relative z-10 p-6 text-white">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/75">Discover</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Find a coach</h3>
-            <p className="mt-2 max-w-md text-sm text-white/90">
-              Browse profiles by location, level, and coaching focus—then book with confidence.
-            </p>
-            <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold">
-              Open directory
-              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
-            </span>
-          </div>
-        </Link>
+    <>
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+          <div className="flex min-w-0 flex-1 flex-col gap-6">
+            <Link
+              href="/coaches"
+              className="group relative flex min-h-[360px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[420px] lg:min-h-[490px]"
+            >
+              <div className="relative z-10 flex max-w-md flex-col justify-center p-8 sm:p-[52px]">
+                <p className="text-2xl font-bold uppercase tracking-tight text-primary/50">Discover</p>
+                <h3 className="mt-1 font-heading text-4xl font-bold uppercase leading-none text-primary sm:text-5xl lg:text-[56px] lg:leading-[56px]">
+                  Find a coach
+                </h3>
+                <p className="mt-3 max-w-sm text-lg text-primary">
+                  Browse profiles by location, level, and coaching focus—then book with confidence.
+                </p>
+                <span className="mt-8 inline-flex">
+                  <OpenDirectoryButton />
+                </span>
+              </div>
+              <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-[55%] min-w-[220px] max-w-[540px]">
+                <Image
+                  src={BENTO_COACH_CUTOUT}
+                  alt=""
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 1024px) 50vw, 540px"
+                />
+              </div>
+            </Link>
 
-        {/* 2 & 3 — Get matched + Train abroad (stacked) */}
-        <div className="flex flex-col gap-4 lg:col-span-6 lg:col-start-7 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:justify-between lg:gap-4">
-          <div className="flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-white p-5 shadow-sm lg:flex-1">
-            <div>
-              <MessageSquarePlus className="h-7 w-7 text-secondary" aria-hidden />
-              <h3 className="mt-3 text-lg font-semibold text-primary">Get matched</h3>
-              <p className="mt-1 text-sm text-primary/65">Tell us your goals—we&apos;ll help narrow options.</p>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <Link
+                href="/venues"
+                className="group flex min-h-[172px] flex-col justify-center rounded-[20px] bg-[#aed4e8] px-8 py-7 transition hover:brightness-[0.98]"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-primary">
+                      Explore training camps
+                    </h3>
+                    <p className="mt-2 text-lg text-primary">
+                      Explore countries &amp; cities players love.
+                    </p>
+                  </div>
+                  <CardArrowButton accent="dark" className="h-11 w-11 shrink-0" />
+                </div>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setEnquiryOpen(true)}
+                className="group flex min-h-[172px] flex-col justify-center rounded-[20px] bg-[#171c1c] px-8 py-7 text-left transition hover:bg-[#1f2626]"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-accent">
+                      Get matched
+                    </h3>
+                    <p className="mt-2 text-lg text-[#f0f1f7]">
+                      Answer a few questions and we&apos;ll suggest the right coach or venue.
+                    </p>
+                  </div>
+                  <CardArrowButton accent="lime" className="h-11 w-11 shrink-0" />
+                </div>
+              </button>
             </div>
-            {enquiryVenueId ? (
-              <EnquiryButton
-                venueId={enquiryVenueId}
-                label="Start enquiry"
-                className="mt-4 w-full !rounded-xl py-2.5 text-sm"
+          </div>
+
+          <div className="flex w-full flex-col gap-6 lg:w-[min(401px,100%)] lg:shrink-0">
+            {recommendedCoach ? (
+              <CoachCard
+                variant="featured"
+                badgeLabel="Top choice"
+                name={recommendedCoach.name}
+                avatarImage={recommendedCoach.avatarImage}
+                rating={recommendedCoach.rating}
+                level={recommendedCoach.level}
+                locationCity={recommendedCoach.locationCity}
+                locationCountry={recommendedCoach.locationCountry}
+                outcomes={recommendedCoach.outcomes}
+                outcomeTags={recommendedCoach.outcomeTags}
+                priceFrom={recommendedCoach.priceFrom}
+                href={coachHref}
+                distanceMiles={recommendedCoach.distance}
+                className="min-h-[331px] flex-1"
+              />
+            ) : (
+              <Link
+                href="/coaches"
+                className="flex min-h-[331px] flex-1 items-end rounded-[20px] bg-primary/10 p-6"
+              >
+                <p className="text-lg font-semibold text-primary">Browse coaches</p>
+              </Link>
+            )}
+
+            {recommendedVenue ? (
+              <HomeFeaturedVenueCard
+                id={recommendedVenue.id}
+                name={recommendedVenue.name}
+                city={recommendedVenue.city}
+                country={recommendedVenue.country}
+                imageUrl={recommendedVenue.imageUrl}
+                rating={recommendedVenue.rating}
+                courts={recommendedVenue.courts}
+                coachingAvailable={recommendedVenue.coachingAvailable}
+                courtType={recommendedVenue.courtType}
+                className="min-h-[331px] flex-1"
               />
             ) : (
               <Link
                 href="/venues"
-                className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-primary/15 bg-surface py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+                className="flex min-h-[331px] flex-1 items-end rounded-[20px] bg-primary/10 p-6"
               >
-                Browse venues first
+                <p className="text-lg font-semibold text-primary">Explore venues</p>
               </Link>
             )}
           </div>
-
-          <Link
-            href="#destinations"
-            className="group flex min-h-[140px] flex-col justify-between rounded-3xl border border-primary/12 bg-gradient-to-br from-surface to-white p-5 shadow-sm transition hover:border-primary/25 hover:shadow-md lg:flex-1"
-          >
-            <Compass className="h-7 w-7 text-secondary" aria-hidden />
-            <div>
-              <h3 className="text-lg font-semibold text-primary">Train abroad</h3>
-              <p className="mt-1 text-sm text-primary/65">Explore countries & cities players love.</p>
-              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                View destinations
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
-              </span>
-            </div>
-          </Link>
         </div>
-
-        {/* 4 — Recommended coach (destination-style card) */}
-        <Link
-          href={coachHref}
-          className="group relative aspect-[5/6] min-h-[200px] w-full overflow-hidden rounded-3xl ring-1 ring-black/5 transition hover:ring-primary/25 sm:aspect-[16/10] sm:min-h-[220px] lg:col-span-3 lg:col-start-7 lg:row-start-3 lg:aspect-[5/6] lg:min-h-[240px]"
-        >
-          <Image
-            src={coachImage}
-            alt=""
-            fill
-            className="object-cover transition duration-500 group-hover:scale-105"
-            sizes="(max-width:1024px) 100vw, 50vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
-          <RecommendedBadge />
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <p className="text-lg font-semibold text-white">
-              {recommendedCoach?.name?.trim() || "Find a coach"}
-            </p>
-            {coachLocation ? (
-              <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
-                <MapPin className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                {coachLocation}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-white/80">Browse the directory</p>
-            )}
-            {recommendedCoach?.level ? (
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-white/75">{recommendedCoach.level}</p>
-            ) : null}
-          </div>
-        </Link>
-
-        {/* 5 — Recommended venue (destination-style card) */}
-        <Link
-          href={venueHref}
-          className="group relative aspect-[5/6] min-h-[200px] w-full overflow-hidden rounded-3xl ring-1 ring-black/5 transition hover:ring-primary/25 sm:aspect-[16/10] sm:min-h-[220px] lg:col-span-3 lg:col-start-10 lg:row-start-3 lg:aspect-[5/6] lg:min-h-[240px]"
-        >
-          <Image
-            src={venueImage}
-            alt=""
-            fill
-            className="object-cover transition duration-500 group-hover:scale-105"
-            sizes="(max-width:1024px) 100vw, 50vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" aria-hidden />
-          <RecommendedBadge />
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <p className="text-lg font-semibold text-white">{recommendedVenue?.name?.trim() || "Explore venues"}</p>
-            {recommendedVenue?.subtitle ? (
-              <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
-                <MapPin className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                {recommendedVenue.subtitle}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-white/80">Courts & coaching worldwide</p>
-            )}
-          </div>
-        </Link>
       </div>
-    </div>
+
+      <EnquiryModal
+        open={enquiryOpen}
+        onClose={() => setEnquiryOpen(false)}
+        venueId={enquiryVenueId ?? undefined}
+      />
+    </>
   );
 }

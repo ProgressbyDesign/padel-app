@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
+import { Geist_Mono, Sora } from "next/font/google";
 import SiteChrome from "../components/SiteChrome";
 import "./globals.css";
+
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -10,8 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Padel — Find venues abroad",
-    template: "%s | Padel",
+    default: "Padel Pathways — Find venues abroad",
+    template: "%s | Padel Pathways",
   },
   description: "Discover curated padel venues, coaching, and high-quality courts worldwide.",
 };
@@ -22,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistMono.variable} h-full`}>
+    <html lang="en" className={`${sora.variable} ${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface text-primary">
         <SiteChrome>{children}</SiteChrome>
       </body>

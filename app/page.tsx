@@ -57,7 +57,13 @@ export default async function Home() {
       id: String(topVenue.id),
       name: topVenue.name?.trim() || "Venue",
       subtitle,
+      city: topVenue.city ?? null,
+      country: topVenue.country ?? null,
       imageUrl: topVenue.main_image?.trim() || topVenue.image_url?.trim() || null,
+      rating: topVenue.rating ?? null,
+      courts: topVenue.courts ?? null,
+      coachingAvailable: topVenue.coaching_available ?? null,
+      courtType: topVenue.court_type ?? null,
     };
   }
 
