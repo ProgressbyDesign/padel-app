@@ -8,6 +8,7 @@ import type {
   WhereSuggestionsResult,
 } from "../../lib/queries/searchSuggestions";
 import type { SearchMode } from "../../lib/marketplaceSearch";
+import { coachDisplayImageUrl } from "../../lib/coachImage";
 
 type MarketplaceSearchSuggestionsProps = {
   mode: SearchMode;
@@ -208,12 +209,16 @@ export default function MarketplaceSearchSuggestions({
               className={optionRowClass}
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
-                {c.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-                ) : (
-                  <UserRound className="h-4 w-4" aria-hidden />
-                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coachDisplayImageUrl(c.imageUrl)}
+                  alt=""
+                  className="h-full w-full object-cover object-[center_20%]"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.src = coachDisplayImageUrl(null);
+                  }}
+                />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-primary">{c.name}</span>

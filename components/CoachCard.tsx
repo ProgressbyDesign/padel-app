@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { MapPin, Star } from "lucide-react";
+import CoachImage from "./CoachImage";
 import type { CoachSkillLevel } from "../lib/coaches";
 import {
   buildCoachAttributeLabels,
@@ -94,22 +97,11 @@ function ListingCoachCard({
     >
       <article className="flex h-full flex-col">
         <div className="relative aspect-[285/298] w-full overflow-hidden rounded-t-[12px] bg-surface">
-          {avatarImage?.trim() ? (
-            <img
-              src={avatarImage.trim()}
-              alt={`${name}, padel coach`}
-              className="absolute inset-0 h-full w-full object-cover object-[center_20%] transition duration-300 group-hover/coach:scale-[1.02]"
-            />
-          ) : (
-            <div
-              className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-surface to-primary/10"
-              aria-hidden
-            >
-              <span className="text-4xl font-semibold tracking-tight text-primary/35">
-                {name.slice(0, 1).toUpperCase() || "?"}
-              </span>
-            </div>
-          )}
+          <CoachImage
+            src={avatarImage}
+            alt={`${name}, padel coach`}
+            className="absolute inset-0 h-full w-full object-cover object-[center_20%] transition duration-300 group-hover/coach:scale-[1.02]"
+          />
 
           {badgeLabel ? (
             <span className="absolute left-4 top-4 z-10 rounded-full bg-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-surface">
@@ -212,15 +204,11 @@ function FeaturedCoachCard({
         className,
       ].join(" ")}
     >
-      {avatarImage?.trim() ? (
-        <img
-          src={avatarImage.trim()}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover/coach:scale-[1.03]"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-dark" aria-hidden />
-      )}
+      <CoachImage
+        src={avatarImage}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-[center_20%] transition duration-500 group-hover/coach:scale-[1.03]"
+      />
       <div
         className="absolute inset-0 bg-gradient-to-b from-[rgba(2,16,16,0)] via-[rgba(2,16,16,0.7)] via-[72%] to-[rgba(2,16,16,0.85)]"
         aria-hidden

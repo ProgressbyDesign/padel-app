@@ -50,6 +50,7 @@ export default function CoachesListingClient({
   const [userCoords, setUserCoords] = useState<UserGeolocation>(() => readUserGeo());
   const [nearbyMode, setNearbyMode] = useState(() => urlState.sort === "distance");
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const sort = urlState.sort;
@@ -122,6 +123,35 @@ export default function CoachesListingClient({
       });
     },
     [commitUrl, router, nearbyMode, sort]
+  );
+
+  const handleSortChange = useCallback(
+    async (nextSort: CoachListingSort) => {
+      if (nextSort !== "distance") {
+        setLocationNotice(null);
+        commitUrl({ sort: nextSort });
+        return;
+      }
+
+      let coords = userCoords ?? readUserGeo();
+      if (!coords) {
+        setNearbyLoading(true);
+        coords = await requestUserPosition();
+        setNearbyLoading(false);
+      }
+
+      if (coords) {
+        setUserCoords(coords);
+        writeUserGeo(coords);
+        setNearbyMode(true);
+        setLocationNotice(null);
+        commitUrl({ sort: "distance" });
+        return;
+      }
+
+      setLocationNotice("We need your location to sort by nearest.");
+    },
+    [userCoords, commitUrl]
   );
 
   const coachesWithDistance = useMemo(
@@ -343,8 +373,9 @@ export default function CoachesListingClient({
           <select
             id="coach-sort"
             value={sort}
-            onChange={(e) => commitUrl({ sort: e.target.value as CoachListingSort })}
-            className="w-full appearance-none rounded-xl border border-primary/15 bg-white py-2.5 pl-3 pr-10 text-sm font-medium text-primary outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/10"
+            onChange={(e) => void handleSortChange(e.target.value as CoachListingSort)}
+            disabled={nearbyLoading}
+            className="w-full appearance-none rounded-xl border border-primary/15 bg-white py-2.5 pl-3 pr-10 text-base font-medium text-primary outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/10 disabled:cursor-wait disabled:opacity-70 sm:text-sm"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -358,6 +389,12 @@ export default function CoachesListingClient({
           />
         </div>
       </div>
+
+      {locationNotice ? (
+        <p className="mt-3 rounded-xl border border-primary/10 bg-surface px-4 py-2.5 text-sm text-primary/75" role="status">
+          {locationNotice}
+        </p>
+      ) : null}
 
       {coaches.length === 0 ? (
         <div className="mt-10 rounded-2xl border border-primary/15 bg-white px-6 py-12 text-center">
@@ -375,7 +412,7 @@ export default function CoachesListingClient({
         </div>
       ) : (
         <>
-          <ul className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {coachesWithDistance.map((c) => (
               <li key={c.id}>
                 <CoachCard

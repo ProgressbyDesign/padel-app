@@ -99,7 +99,7 @@ export default function HeroWhereSearch({ whereOptions, coachSearchRows, venueSe
               placeholder="Places, venues, or coaches"
               autoComplete="off"
               aria-autocomplete="list"
-              className={`w-full bg-transparent py-2.5 pl-1 text-[15px] text-primary placeholder:text-primary/45 focus:outline-none ${value ? "pr-10" : "pr-2"}`}
+              className={`w-full bg-transparent py-2.5 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-[15px] ${value ? "pr-10" : "pr-2"}`}
               aria-label="Search places, venues, or coaches"
             />
             {value ? (

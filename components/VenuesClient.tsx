@@ -39,7 +39,7 @@ type VenuesClientProps = {
 };
 
 const sortSelectClass =
-  "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-primary/15 bg-white pl-3 pr-9 text-sm font-medium text-primary shadow-sm outline-none transition duration-200 ease-out hover:border-primary/25 hover:shadow-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
+  "h-10 min-w-[10rem] cursor-pointer appearance-none rounded-xl border border-primary/15 bg-white pl-3 pr-9 text-base font-medium text-primary shadow-sm outline-none transition duration-200 ease-out hover:border-primary/25 hover:shadow-sm focus:border-primary/40 focus:ring-2 focus:ring-primary/10 sm:text-sm";
 
 export default function VenuesClient({
   venues,
@@ -66,6 +66,7 @@ export default function VenuesClient({
     () => urlState.sortBy === "distance" || (nearLatProp != null && nearLngProp != null)
   );
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filters = urlState.filters;
@@ -154,6 +155,43 @@ export default function VenuesClient({
       });
     },
     [commitUrl, filters, router]
+  );
+
+  const handleSortByChange = useCallback(
+    async (next: SortBy) => {
+      if (next !== "distance") {
+        setLocationNotice(null);
+        commitUrl({
+          sortBy: next,
+          sortDirection: next === "best_match" ? "desc" : sortDirection,
+        });
+        return;
+      }
+
+      let coords = userCoords ?? readUserGeo();
+      if (!coords) {
+        setNearbyLoading(true);
+        coords = await requestUserPosition();
+        setNearbyLoading(false);
+      }
+
+      if (coords) {
+        setUserCoords(coords);
+        writeUserGeo(coords);
+        setNearbyMode(true);
+        setLocationNotice(null);
+        commitUrl({
+          sortBy: "distance",
+          sortDirection: "asc",
+          lat: coords.latitude,
+          lng: coords.longitude,
+        });
+        return;
+      }
+
+      setLocationNotice("We need your location to sort by nearest.");
+    },
+    [userCoords, sortDirection, commitUrl]
   );
 
   const venuesWithDistance = useMemo(
@@ -334,16 +372,8 @@ export default function VenuesClient({
             <div className="relative">
               <select
                 value={sortBy}
-                onChange={(e) => {
-                  const next = e.target.value as SortBy;
-                  commitUrl({
-                    sortBy: next,
-                    sortDirection:
-                      next === "distance" ? "asc" : next === "best_match" ? "desc" : sortDirection,
-                    lat: next === "distance" && userCoords ? userCoords.latitude : null,
-                    lng: next === "distance" && userCoords ? userCoords.longitude : null,
-                  });
-                }}
+                onChange={(e) => void handleSortByChange(e.target.value as SortBy)}
+                disabled={nearbyLoading}
                 className={sortSelectClass}
                 aria-label="Sort venues by"
               >
@@ -398,6 +428,12 @@ export default function VenuesClient({
         </div>
       </div>
 
+      {locationNotice ? (
+        <p className="mb-4 rounded-xl border border-primary/10 bg-surface px-4 py-2.5 text-sm text-primary/75" role="status">
+          {locationNotice}
+        </p>
+      ) : null}
+
       {venues.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-primary/25 bg-white px-6 py-12 text-center">
           <p className="text-base font-semibold text-primary">No venues match these filters</p>
@@ -412,7 +448,7 @@ export default function VenuesClient({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {venuesWithDistance.map((venue) => (
               <VenueCard key={venue.id} venue={venue} />
             ))}

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, Mail, MapPin, Phone, Star, User } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone, Star } from "lucide-react";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import type { Venue } from "../lib/venueFilters";
 import EnquiryButton from "./enquiry/EnquiryButton";
 import VenueCardsWithDistance from "./VenueCardsWithDistance";
 import CoachProfileBack from "./CoachProfileBack";
+import CoachImage from "./CoachImage";
 
 type CoachProfilePageProps = {
   coach: CoachProfileView;
@@ -20,7 +21,6 @@ function formatRatingScore(score: number | null): string | null {
 
 export default function CoachProfilePage({ coach, venues }: CoachProfilePageProps) {
   const displayName = coach.name?.trim() || "Coach";
-  const portraitUrl = coach.image?.trim() || null;
   const scoreLabel = formatRatingScore(coach.rating.score);
   const hasRating = scoreLabel != null;
   const hasReviews = coach.rating.count != null && coach.rating.count > 0;
@@ -45,20 +45,11 @@ export default function CoachProfilePage({ coach, venues }: CoachProfilePageProp
 
       <header className="grid gap-8 border-b border-primary/10 pb-10 lg:grid-cols-[minmax(280px,400px)_1fr] lg:items-start lg:gap-10">
         <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-          {portraitUrl ? (
-            <img
-              src={portraitUrl}
-              alt=""
-              className="aspect-[4/5] w-full rounded-3xl object-cover shadow-[0_16px_48px_rgba(0,60,60,0.12)] ring-1 ring-primary/15 lg:aspect-[3/4] lg:min-h-[420px]"
-            />
-          ) : (
-            <div
-              className="flex aspect-[4/5] w-full items-center justify-center rounded-3xl bg-gradient-to-br from-surface to-primary/10 ring-1 ring-primary/15 lg:aspect-[3/4] lg:min-h-[420px]"
-              aria-hidden
-            >
-              <User className="h-20 w-20 text-secondary lg:h-24 lg:w-24" strokeWidth={1.25} />
-            </div>
-          )}
+          <CoachImage
+            src={coach.image}
+            alt={`${displayName}, padel coach`}
+            className="aspect-[4/5] w-full rounded-3xl object-cover object-[center_20%] shadow-[0_16px_48px_rgba(0,60,60,0.12)] ring-1 ring-primary/15 lg:aspect-[3/4] lg:min-h-[420px]"
+          />
         </div>
 
         <div className="min-w-0 flex-1">

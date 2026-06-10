@@ -244,23 +244,28 @@ export default function MarketplaceSearch({
       : "rounded-xl transition-colors duration-150 hover:bg-black/[0.04] sm:rounded-full";
 
   const inputClass = isHero
-    ? "w-full bg-transparent py-3 pl-1 text-[15px] text-primary placeholder:text-primary/45 focus:outline-none"
+    ? "w-full bg-transparent py-3 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-[15px]"
     : isCompact
-      ? "w-full bg-transparent py-2 pl-1 text-sm text-primary placeholder:text-primary/45 focus:outline-none"
-      : "w-full bg-transparent py-2.5 pl-1 text-sm text-primary placeholder:text-primary/45 focus:outline-none";
+      ? "w-full bg-transparent py-2 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-sm"
+      : "w-full bg-transparent py-2.5 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-sm";
 
   const labelClass = "text-[10px] font-semibold uppercase tracking-wide text-primary/50 sm:text-[11px]";
 
   const searchBtnExpanded =
     anyActive || Boolean(location.trim()) || Boolean(entity.trim());
 
-  const searchBtnClass = isHero
-    ? `flex h-12 shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-primary transition-all duration-200 ease-out hover:bg-accent/90 sm:h-12 sm:rounded-full ${
-        searchBtnExpanded ? "w-auto gap-2 px-5 sm:px-6" : "w-12 gap-0 px-0 sm:w-12"
-      }`
-    : `flex h-11 shrink-0 items-center justify-center rounded-lg bg-accent text-sm font-semibold text-primary transition-all duration-200 ease-out hover:bg-accent/90 lg:h-11 lg:rounded-r-xl ${
-        searchBtnExpanded ? "w-auto gap-2 px-5" : "w-11 gap-0 px-0"
-      }`;
+  const searchBtnSize = isHero ? "h-12 w-12 min-h-12 min-w-12" : "h-10 w-10 min-h-10 min-w-10";
+  const searchBtnExpandedClass = searchBtnExpanded
+    ? isHero
+      ? "sm:w-auto sm:min-w-[8.5rem] sm:px-6"
+      : "lg:w-auto lg:min-w-[8rem] lg:px-5"
+    : "";
+  const searchBtnClass = [
+    "inline-flex shrink-0 items-center justify-center self-center rounded-full bg-accent text-sm font-semibold text-primary transition-all duration-200 ease-out hover:bg-accent/90",
+    searchBtnSize,
+    searchBtnExpanded ? "gap-2" : "gap-0 px-0",
+    searchBtnExpandedClass,
+  ].join(" ");
 
   const openModal = useCallback(() => {
     setModalOpen(true);
@@ -275,8 +280,8 @@ export default function MarketplaceSearch({
   const tagline = modeTagline(mode, mode === "venues" ? venueCount : coachCount);
 
   const modalButtonClass = isHero
-    ? "flex h-14 w-full items-center gap-3 rounded-full bg-white px-5 text-left text-[15px] font-semibold text-primary shadow-xl shadow-black/25"
-    : "flex h-12 w-full items-center gap-3 rounded-full border border-primary/15 bg-white px-5 text-left text-sm font-semibold text-primary shadow-sm";
+    ? "flex h-14 w-full items-center gap-3 rounded-full bg-white px-5 text-left text-base font-semibold text-primary shadow-xl shadow-black/25 sm:text-[15px]"
+    : "flex h-12 w-full items-center gap-3 rounded-full border border-primary/15 bg-white px-5 text-left text-base font-semibold text-primary shadow-sm sm:text-sm";
 
   return (
     <>
@@ -431,10 +436,10 @@ export default function MarketplaceSearch({
             </div>
           </div>
 
-          <div className="flex items-center px-2 pb-1 sm:px-2 sm:pb-0">
+          <div className="flex shrink-0 items-center justify-center px-2 pb-1 sm:px-2 sm:pb-0">
             <button
               type="submit"
-              className={`${searchBtnClass} ${!isHero && !isCompact ? "w-full lg:w-auto" : "w-full sm:w-auto"}`}
+              className={searchBtnClass}
               aria-label="Search"
             >
               <Search className="h-4 w-4 shrink-0" aria-hidden />

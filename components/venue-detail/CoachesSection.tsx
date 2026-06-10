@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { User } from "lucide-react";
+import CoachImage from "../CoachImage";
 import type { Coach } from "../../lib/coaches";
 import { coachListingProfileHref } from "../../lib/coachListing";
 
@@ -28,20 +28,11 @@ export default function CoachesSection({ coaches }: CoachesSectionProps) {
                 href={coachListingProfileHref(String(coach.id), "venues")}
                 className="flex gap-4 rounded-2xl border border-primary/15 bg-white p-4 transition hover:border-primary/25 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
               >
-                {coach.image_url?.trim() ? (
-                  <img
-                    src={coach.image_url}
-                    alt=""
-                    className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div
-                    className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-xl bg-surface"
-                    aria-hidden
-                  >
-                    <User className="h-8 w-8 text-secondary" strokeWidth={1.25} />
-                  </div>
-                )}
+                <CoachImage
+                  src={coach.image_url}
+                  alt=""
+                  className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl object-cover object-[center_20%]"
+                />
                 <div className="min-w-0 flex-1 py-0.5">
                   <p className="font-semibold text-primary">{name}</p>
                   {level ? (

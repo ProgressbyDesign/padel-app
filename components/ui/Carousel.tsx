@@ -62,7 +62,7 @@ export default function Carousel({
               1280: { spaceBetween: 24 },
             }
       }
-      className="home-swiper pb-10"
+      className="home-swiper overflow-hidden"
     >
       {slides.map((slide, i) => {
         const key = isValidElement(slide) && slide.key != null ? slide.key : i;
@@ -71,8 +71,8 @@ export default function Carousel({
             ? "!box-border !h-auto !w-[min(344px,88vw)] shrink-0"
             : FIXED_SLIDE_CLASS;
         return (
-          <SwiperSlide key={key} className={slideCls}>
-            <div className={variant === "fullBleed" ? "h-full w-full" : undefined}>
+          <SwiperSlide key={key} className={`${slideCls} !overflow-visible`}>
+            <div className={variant === "fullBleed" ? "h-full w-full overflow-visible" : "overflow-visible"}>
               {slide}
             </div>
           </SwiperSlide>
