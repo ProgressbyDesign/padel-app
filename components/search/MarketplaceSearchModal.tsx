@@ -44,7 +44,7 @@ export type MarketplaceSearchModalProps = {
 };
 
 const fieldInputClass =
-  "w-full bg-transparent py-3 text-[15px] text-primary placeholder:text-primary/45 focus:outline-none";
+  "w-full bg-transparent py-3 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-[15px]";
 
 function FieldShell({
   active,

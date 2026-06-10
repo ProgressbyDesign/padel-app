@@ -109,7 +109,7 @@ export default function ListingWhereSearch({
               autoComplete="off"
               aria-autocomplete="list"
               aria-label="Search by city or country"
-              className={`w-full bg-transparent py-2.5 pl-1 text-sm text-primary placeholder:text-primary/45 focus:outline-none ${
+              className={`w-full bg-transparent py-2.5 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-sm ${
                 draftValue ? "pr-10" : "pr-2"
               }`}
             />

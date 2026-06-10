@@ -149,7 +149,7 @@ export default function FiltersModal(props: FiltersModalProps) {
                         level: e.target.value as CoachListingFilters["level"],
                       }))
                     }
-                    className="w-full appearance-none rounded-xl border border-primary/15 bg-white py-2.5 pl-3 pr-10 text-sm font-medium text-primary outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/10"
+                    className="w-full appearance-none rounded-xl border border-primary/15 bg-white py-2.5 pl-3 pr-10 text-base font-medium text-primary outline-none focus:border-primary/25 focus:ring-2 focus:ring-primary/10 sm:text-sm"
                   >
                     {LEVEL_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>

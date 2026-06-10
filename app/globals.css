@@ -27,6 +27,22 @@
 }
 
 @layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  textarea,
+  select {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  @media (min-width: 640px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+    textarea,
+    select {
+      font-size: inherit;
+      line-height: inherit;
+    }
+  }
+
   body {
     @apply font-body antialiased;
   }
@@ -116,4 +132,30 @@
 
 .pp-home-carousel .swiper-pagination-bullet-active {
   opacity: 1;
+}
+
+.pp-home-carousel {
+  overflow: visible;
+}
+
+.pp-home-carousel .home-swiper {
+  padding-bottom: 3rem;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.pp-home-carousel .swiper-wrapper {
+  align-items: stretch;
+}
+
+.pp-home-carousel .swiper-slide {
+  height: auto;
+  overflow: visible;
+}
+
+.pp-home-carousel .swiper-pagination {
+  position: relative !important;
+  bottom: auto !important;
+  margin-top: 1.25rem;
+  line-height: 0;
 }

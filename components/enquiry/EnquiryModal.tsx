@@ -62,7 +62,7 @@ const ACCOMMODATION_OPTS = ["Yes", "No", "Maybe"] as const;
 const YES_NO = ["Yes", "No"] as const;
 
 const inputBase =
-  "mt-1.5 w-full rounded-xl border border-primary/10 bg-white px-3 py-2.5 text-sm text-primary outline-none transition focus:border-primary/25 focus:ring-1 focus:ring-primary/20";
+  "mt-1.5 w-full rounded-xl border border-primary/10 bg-white px-3 py-2.5 text-base text-primary outline-none transition focus:border-primary/25 focus:ring-1 focus:ring-primary/20 sm:text-sm";
 
 const sectionTitle = "text-lg font-semibold text-primary";
 const helperText = "mt-1 text-xs text-primary/60";

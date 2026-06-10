@@ -26,7 +26,7 @@ import {
 } from "@/lib/coachApplication";
 
 const inputBase =
-  "mt-1.5 w-full rounded-xl border border-primary/10 bg-white px-3 py-2.5 text-sm text-primary outline-none transition focus:border-primary/25 focus:ring-1 focus:ring-primary/20";
+  "mt-1.5 w-full rounded-xl border border-primary/10 bg-white px-3 py-2.5 text-base text-primary outline-none transition focus:border-primary/25 focus:ring-1 focus:ring-primary/20 sm:text-sm";
 
 const labelClass = "block text-sm font-medium text-primary";
 
