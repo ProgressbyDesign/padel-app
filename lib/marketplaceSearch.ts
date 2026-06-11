@@ -99,7 +99,7 @@ export function buildVenuesSearchUrl(
   const loc = values.location.trim();
   const venue = values.entity.trim();
   if (loc) q.set("location", loc);
-  if (venue) q.set("venue", toSearchParamSlug(venue) || venue);
+  if (venue) q.set("venue", venue);
   if (extra) {
     for (const [k, v] of Object.entries(extra)) {
       if (v) q.set(k, v);

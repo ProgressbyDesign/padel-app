@@ -1,5 +1,5 @@
 export function joinDotLabels(labels: string[]): string {
-  return labels.filter((label) => label.trim()).join(" · ");
+  return labels.filter((label) => label.trim()).join(" \u00b7 ");
 }
 
 export function formatCoachAudienceLabel(audience: string[]): string | null {
@@ -28,14 +28,24 @@ export function buildCoachAttributeLabels(options: {
   return labels.slice(0, max);
 }
 
+function looksLikeOutcomeDescription(text: string): boolean {
+  if (text.length > 48) return true;
+  if (/[.!?]/.test(text) && text.split(/\s+/).length > 6) return true;
+  return false;
+}
+
+/** Short outcome label for listing cards — never a long description. */
 export function primaryCoachFocus(options: {
   outcomeTags?: string[];
-  outcomes?: string | null;
-}): string | null {
-  const fromTags = options.outcomeTags?.map((tag) => tag.trim()).find(Boolean);
-  if (fromTags) return fromTags;
-  const fromOutcome = options.outcomes?.trim();
-  return fromOutcome || null;
+  primaryOutcome?: string | null;
+}): string {
+  const fromTag = options.outcomeTags?.map((tag) => tag.trim()).find(Boolean);
+  if (fromTag && !looksLikeOutcomeDescription(fromTag)) return fromTag;
+
+  const primary = options.primaryOutcome?.trim();
+  if (primary && !looksLikeOutcomeDescription(primary)) return primary;
+
+  return "Padel coaching";
 }
 
 export function formatDistanceMiles(miles: number): string {

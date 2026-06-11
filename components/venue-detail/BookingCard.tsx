@@ -8,7 +8,7 @@ export default function BookingCard({ venueName }: BookingCardProps) {
   const name = venueName?.trim();
 
   return (
-    <div className="rounded-2xl border border-primary/15 bg-white p-6 shadow-sm ring-1 ring-primary/8">
+    <div className="rounded-2xl border border-primary/15 bg-white p-6 shadow-sm ring-1 ring-primary/8 hidden">
       <div className="mb-4 border-b border-primary/10 pb-4">
         <p className="text-sm text-primary/60">From</p>
         <p className="mt-1 text-2xl font-semibold text-primary">

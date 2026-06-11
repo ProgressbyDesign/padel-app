@@ -261,7 +261,7 @@ export default function VenuesClient({
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto max-w-[1680px] px-4 py-6 sm:px-6 sm:py-8">
 
             <header className="max-w-2xl">
         <h1>Find your next Padel Destination</h1>
@@ -448,7 +448,7 @@ export default function VenuesClient({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 xl:grid-cols-4">
             {venuesWithDistance.map((venue) => (
               <VenueCard key={venue.id} venue={venue} />
             ))}

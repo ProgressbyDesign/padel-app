@@ -49,11 +49,10 @@ export default function Carousel({
       breakpoints={
         variant === "fullBleed"
           ? {
-              640: { slidesPerView: 1.15, spaceBetween: 16 },
-              768: { slidesPerView: 2.2, spaceBetween: 18 },
-              1024: { slidesPerView: 3.2, spaceBetween: 20 },
-              1280: { slidesPerView: 4.2, spaceBetween: 22 },
-              1536: { slidesPerView: 4.5, spaceBetween: 24 },
+              640: { slidesPerView: 1, spaceBetween: 16 },
+              768: { slidesPerView: 2, spaceBetween: 18 },
+              1024: { slidesPerView: 3, spaceBetween: 20 },
+              1366: { slidesPerView: 4, spaceBetween: 20 },
             }
           : {
               640: { spaceBetween: 18 },
@@ -68,7 +67,7 @@ export default function Carousel({
         const key = isValidElement(slide) && slide.key != null ? slide.key : i;
         const slideCls =
           variant === "fullBleed"
-            ? "!box-border !h-auto !w-[min(344px,88vw)] shrink-0"
+            ? "!box-border"
             : FIXED_SLIDE_CLASS;
         return (
           <SwiperSlide key={key} className={`${slideCls} !overflow-visible`}>
@@ -84,7 +83,7 @@ export default function Carousel({
   if (variant === "fullBleed") {
     return (
       <div
-        className={`pp-home-carousel relative mx-auto w-full max-w-[1680px] px-4 sm:px-6 lg:px-[120px] ${className}`.trim()}
+        className={`pp-home-carousel relative mx-auto w-full max-w-[1680px] px-4 sm:px-6 ${className}`.trim()}
       >
         {swiper}
       </div>

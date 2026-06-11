@@ -2,7 +2,7 @@
 import ES from "country-flag-icons/react/3x2/ES";
 import PT from "country-flag-icons/react/3x2/PT";
 import IT from "country-flag-icons/react/3x2/IT";
-import GB from "country-flag-icons/react/3x2/GB";
+import UK from "country-flag-icons/react/3x2/GB";
 import BE from "country-flag-icons/react/3x2/BE";
 import FR from "country-flag-icons/react/3x2/FR";
 import SE from "country-flag-icons/react/3x2/SE";
@@ -29,7 +29,7 @@ const flagComponents = {
   ES,
   PT,
   IT,
-  GB,
+  UK,
   BE,
   FR,
   SE,

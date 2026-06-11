@@ -97,6 +97,7 @@
 .pp-home-carousel .swiper-button-prev {
   width: 2.75rem;
   height: 2.75rem;
+  padding: 0.75rem;
   margin-top: 0;
   top: 42%;
   color: #031322;
@@ -108,16 +109,8 @@
 
 .pp-home-carousel .swiper-button-next::after,
 .pp-home-carousel .swiper-button-prev::after {
-  font-size: 0.85rem;
+  font-size: 0.45rem;
   font-weight: 700;
-}
-
-.pp-home-carousel .swiper-button-prev {
-  left: 0;
-}
-
-.pp-home-carousel .swiper-button-next {
-  right: 0;
 }
 
 .pp-home-carousel .swiper-button-disabled {

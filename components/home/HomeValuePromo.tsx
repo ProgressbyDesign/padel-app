@@ -37,7 +37,7 @@ const BLOCKS = [
 export default function HomeValuePromo() {
   return (
     <section className="bg-dark py-16 sm:py-24">
-      <div className="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 sm:px-6 lg:flex-row lg:px-[120px]">
+      <div className="mx-auto flex max-w-[1366px] flex-col gap-6 px-4 sm:px-6 lg:flex-row">
         {BLOCKS.map((block) => {
           const Icon = block.icon;
           return (

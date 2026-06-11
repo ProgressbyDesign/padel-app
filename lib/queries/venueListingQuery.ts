@@ -1,7 +1,7 @@
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { LISTING_PAGE_SIZE } from "../constants/listings";
 import { clampPage, listingPageCount } from "../listingUrlParams";
-import { normalizeSearchKey } from "../searchFuzzy";
+import { applyVenueLocationFilter, applyVenueNameFilter } from "../venueSearchFilters";
 import { supabase } from "../supabase";
 import type { FilterState, SortBy, SortDirection, Venue } from "../venueFilters";
 
@@ -31,18 +31,12 @@ function applyVenueFilters(
 ) {
   const location = filters.locationQuery.trim();
   if (location) {
-    const key = normalizeSearchKey(location);
-    if (key) {
-      query = query.ilike("search_key", `%${key}%`);
-    }
+    query = applyVenueLocationFilter(query, location);
   }
 
   const venue = filters.venueQuery.trim();
   if (venue) {
-    const vKey = normalizeSearchKey(venue);
-    if (vKey) {
-      query = query.ilike("search_key", `%${vKey}%`);
-    }
+    query = applyVenueNameFilter(query, venue);
   }
 
   if (filters.environment === "indoor") {

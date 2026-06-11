@@ -151,7 +151,10 @@ export function buildVenueListingQuery(
   return q;
 }
 
-export function buildCoachListingQuery(state: CoachListingUrlState): URLSearchParams {
+export function buildCoachListingQuery(
+  state: CoachListingUrlState,
+  extra?: { lat?: string; lng?: string }
+): URLSearchParams {
   const q = new URLSearchParams();
   if (state.page > 1) q.set("page", String(state.page));
   if (state.location.trim()) q.set("location", state.location.trim());
@@ -161,6 +164,8 @@ export function buildCoachListingQuery(state: CoachListingUrlState): URLSearchPa
   if (state.audienceJuniors) q.set("juniors", "1");
   if (state.travelOnly) q.set("travel", "1");
   if (state.sort !== "recommended") q.set("sort", state.sort);
+  if (extra?.lat) q.set("lat", extra.lat);
+  if (extra?.lng) q.set("lng", extra.lng);
   return q;
 }
 

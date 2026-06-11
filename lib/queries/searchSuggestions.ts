@@ -1,5 +1,10 @@
 import { COACH_GOAL_SUGGESTION_EXAMPLES } from "../marketplaceSearch";
 import { normalizeSearchKey, rankSearchMatches } from "../searchFuzzy";
+import {
+  applyVenueLocationFilter,
+  applyVenueNameFilter,
+  parseLocationHint,
+} from "../venueSearchFilters";
 import { resolveCoachImageUrl } from "../coachImageResolve";
 import { conciseCoachLocationSummary, type CoachWithVenueLinks } from "../coachVenueGeo";
 import { supabase } from "../supabase";
@@ -64,42 +69,6 @@ function mapVenueSuggestRows(data: VenueSuggestRow[]): EntityVenueSuggestion[] {
     country: v.country?.trim() ?? null,
     imageUrl: typeof v.image_url === "string" && v.image_url.trim() ? v.image_url.trim() : null,
   }));
-}
-
-/** Parse "City, Country" or country-only hints from the Where field. */
-function parseLocationHint(hint: string): { city?: string; country: string } | null {
-  const trimmed = hint.trim();
-  if (!trimmed) return null;
-  const comma = trimmed.indexOf(",");
-  if (comma > 0) {
-    const city = trimmed.slice(0, comma).trim();
-    const country = trimmed.slice(comma + 1).trim();
-    if (city && country) return { city, country };
-  }
-  return { country: trimmed };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyVenueLocationFilter(query: any, locationHint: string) {
-  const parsed = parseLocationHint(locationHint);
-  if (!parsed) return query;
-
-  if (parsed.city) {
-    return query.ilike("city", `%${parsed.city}%`).ilike("country", `%${parsed.country}%`);
-  }
-
-  const countryKey = normalizeSearchKey(parsed.country);
-  if (countryKey) {
-    return query.or(`country.ilike.%${parsed.country}%,search_key.ilike.%${countryKey}%`);
-  }
-  return query.ilike("country", `%${parsed.country}%`);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyVenueKeywordFilter(query: any, queryText: string) {
-  const key = normalizeSearchKey(queryText);
-  if (!key) return query;
-  return query.ilike("search_key", `%${key}%`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,7 +174,7 @@ export async function fetchVenueNameSuggestions(
     let dbQuery = supabase.from("venues").select(select).limit(SUGGESTION_FETCH_CAP);
 
     if (q) {
-      dbQuery = useSearchKey ? applyVenueKeywordFilter(dbQuery, q) : applyVenueKeywordFilterFallback(dbQuery, q);
+      dbQuery = useSearchKey ? applyVenueNameFilter(dbQuery, q) : applyVenueKeywordFilterFallback(dbQuery, q);
     }
     if (loc) {
       dbQuery = applyVenueLocationFilter(dbQuery, loc);

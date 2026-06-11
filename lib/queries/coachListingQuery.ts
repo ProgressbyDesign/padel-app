@@ -3,6 +3,7 @@ import { LISTING_PAGE_SIZE } from "../constants/listings";
 import {
   COACH_LISTING_SELECT,
   coachesRowsToListingItems,
+  sortCoachListing,
   type CoachListingItem,
   type CoachListingSort,
 } from "../coachListing";
@@ -26,6 +27,8 @@ export type CoachListingQueryInput = {
   audienceJuniors?: boolean;
   travelOnly?: boolean;
   sort?: CoachListingSort;
+  nearLat?: number | null;
+  nearLng?: number | null;
 };
 
 export type CoachListingQueryResult = {
@@ -186,14 +189,28 @@ export async function fetchCoachListingPage(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  const useDistanceSort =
+    sort === "distance" &&
+    input.nearLat != null &&
+    input.nearLng != null &&
+    Number.isFinite(input.nearLat) &&
+    Number.isFinite(input.nearLng);
+
   let dataQuery = supabase.from("coaches").select(COACH_LISTING_SELECT);
   const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds, goalCoachIds);
   if (dataFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
-  dataQuery = applyCoachSort(dataFiltered.query, sort);
 
-  const { data, error } = await dataQuery.range(from, to);
+  if (!useDistanceSort) {
+    dataQuery = applyCoachSort(dataFiltered.query, sort);
+  } else {
+    dataQuery = dataFiltered.query;
+  }
+
+  const { data, error } = useDistanceSort
+    ? await dataQuery
+    : await dataQuery.range(from, to);
 
   if (error) {
     console.warn("[coaches] listing page failed:", error.message);
@@ -204,7 +221,18 @@ export async function fetchCoachListingPage(
   const venuesRes = await supabase.from("venues").select("id, city, country, lat, lng").limit(500);
   const venues = (venuesRes.data ?? []) as Venue[];
   const hydrated = hydrateCoachVenueEmbeds(rows, venues);
-  const coaches = coachesRowsToListingItems(hydrated);
+  let coaches = coachesRowsToListingItems(hydrated);
+
+  if (useDistanceSort) {
+    coaches = sortCoachListing(
+      coaches.map((c) => ({
+        ...c,
+        distance: coachDistanceMiles(c, input.nearLat!, input.nearLng!),
+      })),
+      "distance"
+    );
+    coaches = coaches.slice(from, to + 1);
+  }
 
   return {
     coaches,
@@ -213,4 +241,19 @@ export async function fetchCoachListingPage(
     pageSize,
     totalPages,
   };
+}
+
+function coachDistanceMiles(c: CoachListingItem, lat0: number, lng0: number): number | undefined {
+  const lat = typeof c.locationLat === "number" ? c.locationLat : Number(c.locationLat);
+  const lng = typeof c.locationLng === "number" ? c.locationLng : Number(c.locationLng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return undefined;
+  const R = 6371;
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(lat - lat0);
+  const dLng = toRad(lng - lng0);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat0)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) ** 2;
+  const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(km * 0.621371);
 }

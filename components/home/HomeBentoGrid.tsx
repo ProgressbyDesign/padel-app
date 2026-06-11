@@ -37,7 +37,7 @@ function OpenDirectoryButton() {
       <span className="inline-flex h-11 items-center rounded-full bg-[#031322] pl-4 pr-14 text-sm font-medium text-accent">
         Open Directory
       </span>
-      <span className="absolute right-0 top-1/2 -translate-y-1/2">
+      <span className="absolute right-1 top-1/2 -translate-y-1/2">
         <CardArrowButton accent="lime" />
       </span>
     </span>
@@ -54,7 +54,7 @@ export default function HomeBentoGrid({
 
   return (
     <>
-      <div className="mx-auto max-w-[1680px] px-4 sm:px-6 lg:px-[120px]">
+      <div className="mx-auto max-w-[1366px] px-4 sm:px-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
           <div className="flex min-w-0 flex-1 flex-col gap-6">
             <Link
@@ -84,7 +84,7 @@ export default function HomeBentoGrid({
               </div>
             </Link>
 
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-2 h-full">
               <Link
                 href="/venues"
                 className="group flex min-h-[172px] flex-col justify-center rounded-[20px] bg-[#aed4e8] px-8 py-7 transition hover:brightness-[0.98]"
@@ -122,7 +122,7 @@ export default function HomeBentoGrid({
             </div>
           </div>
 
-          <div className="flex w-full flex-col gap-6 lg:w-[min(401px,100%)] lg:shrink-0">
+          <div className="flex sm:min-w-[376px] flex-col gap-6 !aspect-3/2 lg:shrink-0">
             {recommendedCoach ? (
               <CoachCard
                 variant="featured"
@@ -133,12 +133,12 @@ export default function HomeBentoGrid({
                 level={recommendedCoach.level}
                 locationCity={recommendedCoach.locationCity}
                 locationCountry={recommendedCoach.locationCountry}
-                outcomes={recommendedCoach.outcomes}
                 outcomeTags={recommendedCoach.outcomeTags}
+                primaryOutcome={recommendedCoach.primaryOutcome}
                 priceFrom={recommendedCoach.priceFrom}
                 href={coachHref}
                 distanceMiles={recommendedCoach.distance}
-                className="min-h-[331px] flex-1"
+                className="flex-1"
               />
             ) : (
               <Link
