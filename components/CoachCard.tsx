@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin, Star } from "lucide-react";
 import CoachImage from "./CoachImage";
 import type { CoachSkillLevel } from "../lib/coaches";
+import { formatCoachCardPrice } from "../lib/formatCoachPrice";
 import {
   buildCoachAttributeLabels,
   formatDistanceMiles,
@@ -27,6 +28,7 @@ export type CoachCardProps = {
   travelAvailable?: boolean;
   outcomes?: string | null;
   outcomeTags?: string[];
+  primaryOutcome?: string | null;
   priceFrom?: string | null;
   href: string;
   className?: string;
@@ -52,6 +54,42 @@ function levelBadgeClass(level: string): string {
   return "bg-[#021010] text-accent";
 }
 
+function CoachPriceRow({ priceFrom }: { priceFrom?: string | null }) {
+  const price = formatCoachCardPrice(priceFrom);
+
+  if (price.isContact) {
+    return (
+      <p className="text-[13px] text-icon">
+       {price.value} <span className="text-base font-semibold text-primary"></span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-[13px] text-icon">
+      From <span className="text-base font-semibold text-primary">{price.value}</span>
+    </p>
+  );
+}
+
+function FeaturedCoachPriceRow({ priceFrom }: { priceFrom?: string | null }) {
+  const price = formatCoachCardPrice(priceFrom);
+
+  if (price.isContact) {
+    return (
+      <p className="text-[15px] text-[#ddd]">
+       {price.value} <span className="text-base font-semibold text-white"></span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-[15px] text-[#ddd]">
+      From <span className="text-base font-semibold text-white">{price.value}</span>
+    </p>
+  );
+}
+
 function ListingCoachCard({
   name,
   avatarImage,
@@ -61,8 +99,8 @@ function ListingCoachCard({
   locationCountry,
   audience,
   travelAvailable,
-  outcomes,
   outcomeTags,
+  primaryOutcome,
   priceFrom,
   href,
   className = "",
@@ -73,7 +111,7 @@ function ListingCoachCard({
   const locationLine = [locationCity, locationCountry]
     .filter((part) => !skipLocationPart(part))
     .join(", ");
-  const focusLine = primaryCoachFocus({ outcomeTags, outcomes });
+  const focusLine = primaryCoachFocus({ outcomeTags, primaryOutcome });
   const attributeLabels = buildCoachAttributeLabels({ audience, travelAvailable, max: 2 });
   const attributesLine = joinDotLabels(attributeLabels);
   const levelLabel = level?.trim();
@@ -82,7 +120,6 @@ function ListingCoachCard({
     typeof distanceMiles === "number" && distanceMiles > 0
       ? formatDistanceMiles(distanceMiles)
       : null;
-  const priceText = priceFrom?.trim() ?? null;
 
   return (
     <Link
@@ -141,27 +178,17 @@ function ListingCoachCard({
               </p>
             ) : null}
 
-            {focusLine ? (
-              <p className="text-[15px] font-medium leading-4 text-primary">{focusLine}</p>
-            ) : null}
+            <p className="line-clamp-2 text-[15px] font-medium leading-4 text-primary">{focusLine}</p>
 
             {attributesLine ? (
               <p className="text-sm leading-[14px] text-icon">{attributesLine}</p>
             ) : null}
           </div>
 
-          {priceText || showArrowCta ? (
-            <div className="relative mt-auto flex items-center justify-between gap-3 pt-1">
-              {priceText ? (
-                <p className="text-[13px] text-icon">
-                  From <span className="text-base font-semibold text-primary">{priceText}</span>
-                </p>
-              ) : (
-                <span />
-              )}
-              {showArrowCta ? <CardArrowButton className="shrink-0" /> : null}
-            </div>
-          ) : null}
+          <div className="relative mt-auto flex items-center justify-between gap-3 pt-1">
+            <CoachPriceRow priceFrom={priceFrom} />
+            {showArrowCta ? <CardArrowButton className="shrink-0" /> : null}
+          </div>
         </div>
       </article>
     </Link>
@@ -175,8 +202,8 @@ function FeaturedCoachCard({
   level,
   locationCity,
   locationCountry,
-  outcomes,
   outcomeTags,
+  primaryOutcome,
   priceFrom,
   href,
   className = "",
@@ -186,7 +213,7 @@ function FeaturedCoachCard({
   const locationLine = [locationCity, locationCountry]
     .filter((part) => !skipLocationPart(part))
     .join(", ");
-  const focusLine = primaryCoachFocus({ outcomeTags, outcomes });
+  const focusLine = primaryCoachFocus({ outcomeTags, primaryOutcome });
   const levelLabel = level?.trim();
   const showRating = typeof rating === "number" && !Number.isNaN(rating);
   const distanceNote =
@@ -199,7 +226,7 @@ function FeaturedCoachCard({
       href={href}
       aria-label={`View profile for ${name}`}
       className={[
-        "group/coach relative flex min-h-[331px] flex-col justify-end overflow-hidden rounded-[20px] p-4 sm:min-h-[377px]",
+        "group/coach relative flex aspect-[1/1.23] w-full flex-col justify-end overflow-hidden rounded-[20px] p-4",
         "transition duration-300 ease-out hover:scale-[1.01] hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2",
         className,
       ].join(" ")}
@@ -255,19 +282,11 @@ function FeaturedCoachCard({
               ) : null}
             </p>
           ) : null}
-          {focusLine ? (
-            <p className="text-sm font-semibold text-accent">{focusLine}</p>
-          ) : null}
+          <p className="line-clamp-2 text-sm font-semibold text-accent">{focusLine}</p>
         </div>
 
         <div className="flex items-end justify-between gap-3">
-          {priceFrom?.trim() ? (
-            <p className="text-[15px] text-[#ddd]">
-              From <span className="text-base font-semibold text-white">{priceFrom.trim()}</span>
-            </p>
-          ) : (
-            <span />
-          )}
+          <FeaturedCoachPriceRow priceFrom={priceFrom} />
           <CardArrowButton />
         </div>
       </div>

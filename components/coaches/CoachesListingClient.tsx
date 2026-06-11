@@ -10,6 +10,7 @@ import StickySearchBar from "../search/StickySearchBar";
 import ListingPagination from "../listing/ListingPagination";
 import { useListingNavigation, useScrollToTopOnPageChange } from "../listing/useListingNavigation";
 import type { CoachListingItem, CoachListingSort } from "../../lib/coachListing";
+import { sortCoachListing } from "../../lib/coachListing";
 import { coachListingProfileHref, countCoachModalFiltersActive } from "../../lib/coachListing";
 import { addDistancesToCoaches } from "../../lib/distance";
 import { buildCoachListingQuery, type CoachListingUrlState } from "../../lib/listingUrlParams";
@@ -25,6 +26,8 @@ type CoachesListingClientProps = {
   totalPages: number;
   pageSize: number;
   urlState: CoachListingUrlState;
+  nearLat?: number | null;
+  nearLng?: number | null;
 };
 
 const SORT_OPTIONS: { value: CoachListingSort; label: string }[] = [
@@ -41,13 +44,20 @@ export default function CoachesListingClient({
   totalPages,
   pageSize,
   urlState,
+  nearLat: nearLatProp,
+  nearLng: nearLngProp,
 }: CoachesListingClientProps) {
   const router = useRouter();
   const { pushQuery } = useListingNavigation("/coaches");
   useScrollToTopOnPageChange(page);
   const searchRowRef = useRef<HTMLDivElement>(null);
 
-  const [userCoords, setUserCoords] = useState<UserGeolocation>(() => readUserGeo());
+  const [userCoords, setUserCoords] = useState<UserGeolocation>(() => {
+    if (nearLatProp != null && nearLngProp != null) {
+      return { latitude: nearLatProp, longitude: nearLngProp };
+    }
+    return readUserGeo();
+  });
   const [nearbyMode, setNearbyMode] = useState(() => urlState.sort === "distance");
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
@@ -60,7 +70,7 @@ export default function CoachesListingClient({
   const travelOnly = urlState.travelOnly;
 
   const commitUrl = useCallback(
-    (next: Partial<CoachListingUrlState> & { page?: number }) => {
+    (next: Partial<CoachListingUrlState> & { page?: number; lat?: number | null; lng?: number | null }) => {
       const state: CoachListingUrlState = {
         page: next.page ?? 1,
         location: next.location ?? urlState.location,
@@ -73,7 +83,26 @@ export default function CoachesListingClient({
         sort: next.sort ?? sort,
       };
       state.search = [state.location, state.coach].filter(Boolean).join(" ").trim();
-      pushQuery(() => buildCoachListingQuery(state), { page: state.page });
+      const lat =
+        next.lat !== undefined
+          ? next.lat
+          : state.sort === "distance" && userCoords
+            ? userCoords.latitude
+            : null;
+      const lng =
+        next.lng !== undefined
+          ? next.lng
+          : state.sort === "distance" && userCoords
+            ? userCoords.longitude
+            : null;
+      pushQuery(
+        () =>
+          buildCoachListingQuery(state, {
+            lat: lat != null ? String(lat) : undefined,
+            lng: lng != null ? String(lng) : undefined,
+          }),
+        { page: state.page }
+      );
     },
     [
       pushQuery,
@@ -84,6 +113,7 @@ export default function CoachesListingClient({
       audienceJuniors,
       travelOnly,
       sort,
+      userCoords,
     ]
   );
 
@@ -91,7 +121,7 @@ export default function CoachesListingClient({
     setUserCoords(null);
     setNearbyMode(false);
     clearUserGeo();
-    if (sort === "distance") commitUrl({ sort: "recommended" });
+    if (sort === "distance") commitUrl({ sort: "recommended", lat: null, lng: null });
   }, [sort, commitUrl]);
 
   const handleNearbyFromSearch = useCallback(async () => {
@@ -102,7 +132,13 @@ export default function CoachesListingClient({
       setUserCoords(pos);
       writeUserGeo(pos);
       setNearbyMode(true);
-      commitUrl({ location: "", coach: "", sort: "distance" });
+      commitUrl({
+        location: "",
+        coach: "",
+        sort: "distance",
+        lat: pos.latitude,
+        lng: pos.longitude,
+      });
     }
   }, [commitUrl]);
 
@@ -129,7 +165,8 @@ export default function CoachesListingClient({
     async (nextSort: CoachListingSort) => {
       if (nextSort !== "distance") {
         setLocationNotice(null);
-        commitUrl({ sort: nextSort });
+        setNearbyMode(false);
+        commitUrl({ sort: nextSort, lat: null, lng: null });
         return;
       }
 
@@ -145,7 +182,11 @@ export default function CoachesListingClient({
         writeUserGeo(coords);
         setNearbyMode(true);
         setLocationNotice(null);
-        commitUrl({ sort: "distance" });
+        commitUrl({
+          sort: "distance",
+          lat: coords.latitude,
+          lng: coords.longitude,
+        });
         return;
       }
 
@@ -154,10 +195,12 @@ export default function CoachesListingClient({
     [userCoords, commitUrl]
   );
 
-  const coachesWithDistance = useMemo(
-    () => addDistancesToCoaches(coaches, userCoords),
-    [coaches, userCoords]
-  );
+  const coachesWithDistance = useMemo(() => {
+    const withDistance = addDistancesToCoaches(coaches, userCoords);
+    return sort === "distance" && userCoords
+      ? sortCoachListing(withDistance, "distance")
+      : withDistance;
+  }, [coaches, userCoords, sort]);
 
   const modalFilterCount = useMemo(
     () =>
@@ -172,11 +215,16 @@ export default function CoachesListingClient({
 
   const buildPageHref = useCallback(
     (p: number) => {
-      const q = buildCoachListingQuery({ ...urlState, page: p });
+      const q = buildCoachListingQuery(
+        { ...urlState, page: p },
+        userCoords && sort === "distance"
+          ? { lat: String(userCoords.latitude), lng: String(userCoords.longitude) }
+          : undefined
+      );
       const qs = q.toString();
       return qs ? `/coaches?${qs}` : "/coaches";
     },
-    [urlState]
+    [urlState, userCoords, sort]
   );
 
   const activeChips = useMemo(() => {
@@ -252,7 +300,7 @@ export default function CoachesListingClient({
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:py-10">
+    <div className="mx-auto max-w-[1680px] px-4 py-8 sm:px-6 lg:py-10">
       <header className="max-w-2xl">
         <h1>Find a Padel Coach</h1>
         <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
@@ -355,7 +403,7 @@ export default function CoachesListingClient({
         </div>
       ) : null}
 
-      <div className="mt-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-4 border-b border-primary/10 pb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <p className="text-sm text-primary/70">
           <span className="font-semibold text-primary">{totalCount}</span> coach
           {totalCount === 1 ? "" : "es"}
@@ -412,7 +460,7 @@ export default function CoachesListingClient({
         </div>
       ) : (
         <>
-          <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {coachesWithDistance.map((c) => (
               <li key={c.id}>
                 <CoachCard
@@ -424,8 +472,8 @@ export default function CoachesListingClient({
                   locationCountry={c.locationCountry}
                   audience={c.audience}
                   travelAvailable={c.travelAvailable}
-                  outcomes={c.outcomes}
                   outcomeTags={c.outcomeTags}
+                  primaryOutcome={c.primaryOutcome}
                   priceFrom={c.priceFrom}
                   distanceMiles={c.distance}
                   href={coachListingProfileHref(c.id)}

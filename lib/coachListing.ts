@@ -1,7 +1,6 @@
 import type { Coach, CoachSkillLevel } from "./coaches";
 import type { CoachPdpQueryRow } from "./coachProfileView";
 import { rawCoachRowToProfileView } from "./coachProfileView";
-import { formatCoachPriceDisplay } from "./formatCoachPrice";
 import {
   COACH_VENUES_WITH_VENUE_SELECT,
   listingLocationFromCoachRow,
@@ -31,6 +30,7 @@ export type CoachListingItem = {
   travelAvailable: boolean;
   outcomes: string;
   outcomeTags?: string[];
+  primaryOutcome?: string | null;
   priceFrom: string | null;
   /** Primary linked venue coordinates (for distance sorting) */
   locationLat?: number | string | null;
@@ -224,8 +224,10 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     experienceYears: 12,
     audience: ["Adults", "Juniors"],
     travelAvailable: true,
-    outcomes: "Match tactics, bandeja, and pressure play at a high level.",
-    priceFrom: "From €55 / session",
+    outcomes: "Match tactics",
+    outcomeTags: ["Match tactics"],
+    primaryOutcome: "Match tactics",
+    priceFrom: "€55 / session",
   },
   {
     id: "mock-coach-2",
@@ -240,8 +242,10 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     experienceYears: 8,
     audience: ["Adults"],
     travelAvailable: true,
-    outcomes: "Improve your bandeja and match play with structured drills.",
-    priceFrom: "From £48 / session",
+    outcomes: "Bandeja & match play",
+    outcomeTags: ["Bandeja & match play"],
+    primaryOutcome: "Bandeja & match play",
+    priceFrom: "£48 / session",
   },
   {
     id: "mock-coach-3",
@@ -258,7 +262,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults", "Juniors"],
     travelAvailable: false,
     outcomes: "Technical foundations and confident net play.",
-    priceFrom: "From €45 / session",
+    priceFrom: "€45 / session",
   },
   {
     id: "mock-coach-4",
@@ -274,7 +278,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults"],
     travelAvailable: true,
     outcomes: "Smart positioning and doubles communication.",
-    priceFrom: "From €40 / session",
+    priceFrom: "€40 / session",
   },
   {
     id: "mock-coach-5",
@@ -291,7 +295,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults"],
     travelAvailable: true,
     outcomes: "Aggressive serving and transition to the net.",
-    priceFrom: "From €50 / session",
+    priceFrom: "€50 / session",
   },
   {
     id: "mock-coach-6",
@@ -307,7 +311,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults", "Juniors"],
     travelAvailable: false,
     outcomes: "Fun intro sessions — grips, wall drills, and first matches.",
-    priceFrom: "From €35 / session",
+    priceFrom: "€35 / session",
   },
   {
     id: "mock-coach-7",
@@ -324,7 +328,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Juniors"],
     travelAvailable: false,
     outcomes: "Junior pathways: athleticism, discipline, and tournament prep.",
-    priceFrom: "From £52 / session",
+    priceFrom: "£52 / session",
   },
   {
     id: "mock-coach-8",
@@ -340,7 +344,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults"],
     travelAvailable: true,
     outcomes: "Consistent lobs, exits from the glass, and defensive structure.",
-    priceFrom: "From €42 / session",
+    priceFrom: "€42 / session",
   },
   {
     id: "mock-coach-9",
@@ -357,7 +361,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults"],
     travelAvailable: true,
     outcomes: "Elite footwork and reading the game one step earlier.",
-    priceFrom: "From 520 SEK / session",
+    priceFrom: "520 SEK / session",
   },
   {
     id: "mock-coach-10",
@@ -373,7 +377,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults", "Juniors"],
     travelAvailable: false,
     outcomes: "Build confidence from zero — rules, safety, and social play.",
-    priceFrom: "From £38 / session",
+    priceFrom: "£38 / session",
   },
   {
     id: "mock-coach-11",
@@ -390,7 +394,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults"],
     travelAvailable: true,
     outcomes: "Volleys that stick and calm decision-making under stress.",
-    priceFrom: "From €46 / session",
+    priceFrom: "€46 / session",
   },
   {
     id: "mock-coach-12",
@@ -406,7 +410,7 @@ export const MOCK_COACH_LISTING: CoachListingItem[] = [
     audience: ["Adults", "Juniors"],
     travelAvailable: true,
     outcomes: "Rhythm and patience — build rallies before attacking.",
-    priceFrom: "From €39 / session",
+    priceFrom: "€39 / session",
   },
 ];
 
@@ -444,14 +448,8 @@ function parseListingSkillLevel(raw?: string | null): CoachSkillLevel {
   return "Intermediate";
 }
 
-function shortOutcomeLine(text: string, max = 72): string {
-  const t = text.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max - 1)}…`;
-}
-
 function formatListingPriceFrom(raw: Coach["price_from"]): string | null {
-  return formatCoachPriceDisplay(raw);
+  return raw == null ? null : String(raw).trim() || null;
 }
 
 function extractOutcomeLines(row: Coach, profile: ReturnType<typeof rawCoachRowToProfileView>): string[] {
@@ -490,12 +488,7 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     audienceLabels.length > 0 ? audienceLabels : parseListingAudience(row.audience);
 
   const outcomeLines = extractOutcomeLines(row, profile);
-  const rawOutcomeLine =
-    outcomeLines[0] ||
-    profile.primaryOutcome ||
-    profile.description?.trim() ||
-    row.specialty?.trim() ||
-    "Padel coaching tailored to your game.";
+  const primaryOutcome = outcomeLines[0] || profile.primaryOutcome || null;
 
   return {
     id,
@@ -510,8 +503,9 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     experienceYears: profile.experienceYears,
     audience,
     travelAvailable: profile.travel === true,
-    outcomes: shortOutcomeLine(rawOutcomeLine),
-    outcomeTags: outcomeLines.slice(0, 4),
+    outcomes: primaryOutcome ?? "",
+    outcomeTags: primaryOutcome ? [primaryOutcome] : [],
+    primaryOutcome,
     priceFrom: formatListingPriceFrom(profile.pricing.from),
     locationLat: coords.lat,
     locationLng: coords.lng,
