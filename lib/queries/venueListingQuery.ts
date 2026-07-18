@@ -2,7 +2,7 @@ import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { LISTING_PAGE_SIZE } from "../constants/listings";
 import { clampPage, listingPageCount } from "../listingUrlParams";
 import { applyVenueLocationFilter, applyVenueNameFilter } from "../venueSearchFilters";
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 import type { FilterState, SortBy, SortDirection, Venue } from "../venueFilters";
 
 export type VenueListingQueryInput = {
@@ -80,6 +80,7 @@ function applyVenueSort(
 export async function fetchVenueListingPage(
   input: VenueListingQueryInput
 ): Promise<VenueListingQueryResult> {
+  const supabase = await createClient();
   const pageSize = input.pageSize ?? LISTING_PAGE_SIZE;
 
   let countQuery = supabase.from("venues").select("*", { count: "exact", head: true });

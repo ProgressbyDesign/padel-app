@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
+import { createClient } from "../../../lib/supabase/server";
 import VenueDetailPage from "../../../components/VenueDetailPage";
 import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
 import type { Coach } from "../../../lib/coaches";
@@ -12,6 +12,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
+  const supabase = await createClient();
   const { data } = await supabase.from("venues").select("name, city, country").eq("id", id).maybeSingle();
 
   if (!data?.name) {
@@ -27,6 +28,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function VenuePdpPage({ params }: PageProps) {
   const { id } = await params;
+  const supabase = await createClient();
 
   const { data: venue, error } = await supabase.from("venues").select("*").eq("id", id).maybeSingle();
 

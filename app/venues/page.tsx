@@ -1,4 +1,3 @@
-import { supabase } from "../../lib/supabase";
 import VenuesClient from "../../components/VenuesClient";
 import { parseVenueListingParams, firstQueryString } from "../../lib/listingUrlParams";
 import { fetchVenueListingPage } from "../../lib/queries/venueListingQuery";

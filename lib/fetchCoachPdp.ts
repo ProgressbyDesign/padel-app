@@ -1,4 +1,4 @@
-import { supabase } from "./supabase.js";
+import { createClient } from "./supabase/server";
 import { COACH_VENUES_WITH_VENUE_SELECT } from "./coachVenueGeo";
 import { rawCoachRowToProfileView, type CoachPdpQueryRow, type CoachProfileView } from "./coachProfileView";
 
@@ -46,6 +46,7 @@ const COACH_PDP_NESTED_SELECT = `
  * (missing table, RLS, etc.), falls back to `select("*")` so real rows still resolve.
  */
 export async function fetchCoachPdpById(id: string): Promise<CoachProfileView | null> {
+  const supabase = await createClient();
   const nested = await supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id).maybeSingle();
   if (!nested.error && nested.data) {
     return rawCoachRowToProfileView(nested.data as CoachPdpQueryRow);

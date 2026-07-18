@@ -1,8 +1,9 @@
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 import { buildWhereOptions, type Venue, type WhereOption } from "../venueFilters";
 
 /** Distinct countries + city pairs for location comboboxes (no full venue load). */
 export async function fetchVenueWhereOptions(): Promise<WhereOption[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("venues")
     .select("city, country")
