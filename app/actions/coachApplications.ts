@@ -1,7 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import {
   validateCoachApplicationPayload,
   type CoachApplicationSubmitPayload,
@@ -59,6 +59,7 @@ export async function submitCoachApplication(
   const err = validateCoachApplicationPayload(payload);
   if (err) return { ok: false, message: err };
 
+  const supabase = await createClient();
   const row = {
     service_type: payload.service_type,
     business_name: payload.business_name,

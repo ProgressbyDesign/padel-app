@@ -5,7 +5,7 @@ import {
   slugifyCountryName,
   type PadelCountry,
 } from "../padelCountries";
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 
 type VenueGeoRow = {
   country: string | null;
@@ -20,6 +20,7 @@ function parseCoord(v: number | string | null | undefined): number | null {
 }
 
 export async function fetchPadelCountries(): Promise<PadelCountry[]> {
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("venues")
     .select("country, lat, lng")

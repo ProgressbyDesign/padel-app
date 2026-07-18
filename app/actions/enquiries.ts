@@ -1,7 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { buildTeamEnquiryEmailHtml, buildUserConfirmationEmailHtml } from "@/lib/enquiryEmail";
 import {
   pickPrimaryVenueFromCoachRow,
@@ -30,6 +30,7 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
   const err = validateEnquiryPayload(payload);
   if (err) return { ok: false, message: err };
 
+  const supabase = await createClient();
   const coachId = payload.coachId?.trim() || null;
   const venueId = payload.venueId?.trim() || null;
 

@@ -7,7 +7,7 @@ import {
 } from "../venueSearchFilters";
 import { resolveCoachImageUrl } from "../coachImageResolve";
 import { conciseCoachLocationSummary, type CoachWithVenueLinks } from "../coachVenueGeo";
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 import type { SearchMode } from "../marketplaceSearch";
 
 export type LocationCitySuggestion = {
@@ -100,6 +100,7 @@ function dedupeCountries(rows: { country?: string | null }[]): LocationCountrySu
 
 /** Countries + cities from venues (works for venue and coach search). */
 export async function fetchWhereSuggestions(query: string): Promise<WhereSuggestionsResult> {
+  const supabase = await createClient();
   const q = query.trim();
   const key = q ? normalizeSearchKey(q) : "";
 
@@ -167,6 +168,7 @@ export async function fetchVenueNameSuggestions(
   query: string,
   locationHint?: string
 ): Promise<EntityVenueSuggestion[]> {
+  const supabase = await createClient();
   const q = query.trim();
   const loc = locationHint?.trim() ?? "";
 
@@ -214,6 +216,7 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
   const loc = locationHint.trim();
   if (!loc) return null;
 
+  const supabase = await createClient();
   let venueQuery = supabase.from("venues").select("id").limit(100);
   venueQuery = applyVenueLocationFilter(venueQuery, loc);
 
@@ -260,6 +263,7 @@ async function fetchOutcomeSuggestionsFromDb(query: string): Promise<OutcomeSugg
   const q = query.trim();
   if (!q) return [];
 
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_outcomes")
     .select("outcome")
@@ -288,6 +292,7 @@ export async function fetchCoachEntitySuggestions(
   query: string,
   locationHint?: string
 ): Promise<{ outcomes: OutcomeSuggestion[]; coaches: EntityCoachSuggestion[] }> {
+  const supabase = await createClient();
   const q = query.trim();
   const key = q ? normalizeSearchKey(q) : "";
 

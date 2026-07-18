@@ -11,7 +11,7 @@ import type { CoachSkillLevel } from "../coaches";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
 import { clampPage, listingPageCount } from "../listingUrlParams";
 import { normalizeSearchKey, searchMatchScore } from "../searchFuzzy";
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 import type { Coach } from "../coaches";
 import type { Venue } from "../venueFilters";
 
@@ -41,6 +41,7 @@ export type CoachListingQueryResult = {
 
 /** Coach IDs with an outcome label matching the normalized query. */
 async function coachIdsMatchingOutcomeSearch(search: string): Promise<string[]> {
+  const supabase = await createClient();
   const key = normalizeSearchKey(search);
   if (!key) return [];
 
@@ -63,6 +64,7 @@ async function coachIdsMatchingOutcomeSearch(search: string): Promise<string[]> 
 
 /** Coach IDs linked to venues matching a normalized location/search key. */
 async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
+  const supabase = await createClient();
   const key = normalizeSearchKey(search);
   if (!key) return [];
 
@@ -162,6 +164,7 @@ function applyCoachSort(
 export async function fetchCoachListingPage(
   input: CoachListingQueryInput
 ): Promise<CoachListingQueryResult> {
+  const supabase = await createClient();
   const pageSize = input.pageSize ?? LISTING_PAGE_SIZE;
   const sort = input.sort ?? "recommended";
 
@@ -171,7 +174,7 @@ export async function fetchCoachListingPage(
   const locationCoachIds = location ? await coachIdsMatchingVenueSearch(location) : null;
   const goalCoachIds = coachGoal ? await coachIdsMatchingOutcomeSearch(coachGoal) : null;
 
-  let countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  const countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
   const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds, goalCoachIds);
   if (countFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };

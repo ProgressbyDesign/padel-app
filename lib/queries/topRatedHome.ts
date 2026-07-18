@@ -1,12 +1,12 @@
 import {
   coachesRowsToListingItems,
-  fetchCoachRowsFromSupabase,
   type CoachListingItem,
 } from "../coachListing";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
-import { supabase } from "../supabase";
+import { createClient } from "../supabase/server";
 import type { Venue } from "../venueFilters";
 import { TOP_RATED_MIN_SCORE, TOP_RATED_SECTION_LIMIT } from "../constants/listings";
+import { fetchCoachRowsFromSupabase } from "./coachRows";
 
 function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): number {
   if (b.rating !== a.rating) return b.rating - a.rating;
@@ -18,6 +18,7 @@ function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): numb
  * Prefers rating ≥ 4.9 when available; otherwise best available.
  */
 export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]> {
+  const supabase = await createClient();
   const [venuesRes, coachResult] = await Promise.all([
     supabase.from("venues").select("id, city, country, lat, lng").limit(500),
     fetchCoachRowsFromSupabase(200),
@@ -36,6 +37,7 @@ export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]>
  * Top-rated venues for homepage: rating DESC, capped.
  */
 export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
+  const supabase = await createClient();
   const strict = await supabase
     .from("venues")
     .select("*")

@@ -5,13 +5,9 @@ import {
   COACH_VENUES_WITH_VENUE_SELECT,
   listingLocationFromCoachRow,
   pickPrimaryVenueFromCoachRow,
-  type CoachVenueLinkRow,
   venueCoordPair,
 } from "./coachVenueGeo";
-import { hydrateCoachVenueEmbeds } from "./hydrateCoachVenues";
 import { searchMatchScore } from "./searchFuzzy";
-import { supabase } from "./supabase.js";
-import type { Venue } from "./venueFilters";
 
 /** Listing row — map to API / Supabase when ready */
 export type CoachListingItem = {
@@ -537,137 +533,6 @@ export function coachesRowsToListingItems(rows: Coach[]): CoachListingItem[] {
   return rows.map(coachRowToListingItem).filter((x): x is CoachListingItem => x != null);
 }
 
-const COACH_LISTING_SELECT_OUTCOMES_VENUES = `
-  *,
-  coach_outcomes (
-    outcome
-  ),
-  ${COACH_IMAGES_EMBED},
-  ${COACH_VENUES_WITH_VENUE_SELECT}
-`;
-
-const COACH_LISTING_SELECT_VENUES_ONLY = `
-  *,
-  ${COACH_IMAGES_EMBED},
-  ${COACH_VENUES_WITH_VENUE_SELECT}
-`;
-
-async function attachCoachVenueAndOutcomeEmbeds(rows: Coach[]): Promise<Coach[]> {
-  const ids = rows.map((r) => r.id).filter((id) => id != null && String(id).trim());
-  if (ids.length === 0) return rows;
-
-  const [linksRes, outcomesRes, imagesRes] = await Promise.all([
-    supabase
-      .from("coach_venues")
-      .select(
-        `
-        coach_id,
-        is_primary,
-        venue_id,
-        venues (
-          id,
-          name,
-          city,
-          country,
-          lat,
-          lng
-        )
-      `
-      )
-      .in("coach_id", ids),
-    supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
-    supabase
-      .from("coach_images")
-      .select("coach_id, image_url, is_primary")
-      .in("coach_id", ids),
-  ]);
-
-  const venuesByCoach = new Map<string, CoachVenueLinkRow[]>();
-  for (const link of linksRes.data ?? []) {
-    const coachId = String((link as { coach_id?: string }).coach_id ?? "");
-    if (!coachId) continue;
-    const entry: CoachVenueLinkRow = {
-      is_primary: (link as { is_primary?: boolean }).is_primary,
-      venue_id: (link as { venue_id?: string }).venue_id,
-      venues: (link as { venues?: CoachVenueLinkRow["venues"] }).venues,
-    };
-    const list = venuesByCoach.get(coachId) ?? [];
-    list.push(entry);
-    venuesByCoach.set(coachId, list);
-  }
-
-  const outcomesByCoach = new Map<string, { outcome?: string | null }[]>();
-  for (const row of outcomesRes.data ?? []) {
-    const coachId = String((row as { coach_id?: string }).coach_id ?? "");
-    if (!coachId) continue;
-    const list = outcomesByCoach.get(coachId) ?? [];
-    list.push({ outcome: (row as { outcome?: string | null }).outcome });
-    outcomesByCoach.set(coachId, list);
-  }
-
-  const imagesByCoach = new Map<
-    string,
-    { image_url?: string | null; is_primary?: boolean | null }[]
-  >();
-  for (const row of imagesRes.data ?? []) {
-    const coachId = String((row as { coach_id?: string }).coach_id ?? "");
-    if (!coachId) continue;
-    const list = imagesByCoach.get(coachId) ?? [];
-    list.push({
-      image_url: (row as { image_url?: string | null }).image_url,
-      is_primary: (row as { is_primary?: boolean | null }).is_primary,
-    });
-    imagesByCoach.set(coachId, list);
-  }
-
-  return rows.map((row) => {
-    const id = String(row.id);
-    return {
-      ...row,
-      coach_venues: venuesByCoach.get(id) ?? row.coach_venues ?? null,
-      coach_outcomes: outcomesByCoach.get(id) ?? row.coach_outcomes ?? null,
-      coach_images: imagesByCoach.get(id) ?? row.coach_images ?? null,
-    };
-  });
-}
-
-/**
- * Loads coach rows with nested embeds; degrades select shape on PostgREST errors
- * (e.g. missing optional tables/columns) so listing/home never return empty silently.
- */
-export async function fetchCoachRowsFromSupabase(limit = 200): Promise<{
-  rows: Coach[];
-  error: string | null;
-}> {
-  const selects = [
-    COACH_LISTING_SELECT,
-    COACH_LISTING_SELECT_OUTCOMES_VENUES,
-    COACH_LISTING_SELECT_VENUES_ONLY,
-    "*",
-  ];
-
-  let lastError: string | null = null;
-
-  for (const select of selects) {
-    const res = await supabase.from("coaches").select(select).limit(limit);
-    if (res.error) {
-      lastError = res.error.message;
-      continue;
-    }
-    if (!res.data?.length) {
-      return { rows: [], error: null };
-    }
-
-    let rows = res.data as unknown as Coach[];
-    if (select === "*") {
-      rows = await attachCoachVenueAndOutcomeEmbeds(rows);
-    }
-    return { rows, error: null };
-  }
-
-  return { rows: [], error: lastError };
-}
-
 /** Target for coach cards: real DB ids open PDP; mock PLP rows stay on the listing. */
 export function coachListingProfileHref(
   coachId: string,
@@ -677,26 +542,4 @@ export function coachListingProfileHref(
   const base = `/coach/${encodeURIComponent(coachId)}`;
   const q = from === "venues" ? "from=venues" : "from=coaches";
   return `${base}?${q}`;
-}
-
-/** Server: venues + coach listing + raw coach rows for PLP / SEO routes */
-export async function loadCoachesExplorerData(): Promise<{
-  venues: Venue[];
-  coaches: CoachListingItem[];
-  coachEntities: Coach[];
-}> {
-  const [venuesRes, coachResult] = await Promise.all([
-    supabase.from("venues").select("*").limit(500),
-    fetchCoachRowsFromSupabase(200),
-  ]);
-
-  const venues = (venuesRes.data ?? []) as Venue[];
-  const coachEntities = hydrateCoachVenueEmbeds(coachResult.rows, venues);
-  const mapped = coachesRowsToListingItems(coachEntities);
-
-  if (coachResult.error && coachEntities.length === 0) {
-    console.warn("[coaches] Supabase listing fetch failed:", coachResult.error);
-  }
-
-  return { venues, coaches: mapped, coachEntities };
 }

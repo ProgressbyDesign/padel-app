@@ -1,7 +1,7 @@
 import LandingPage from "../components/LandingPage";
 import type { HomeStats } from "../components/LandingPage";
 import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
-import { supabase } from "../lib/supabase";
+import { createClient } from "../lib/supabase/server";
 import { fetchPadelCountries } from "../lib/queries/padelCountries";
 import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
 
@@ -25,6 +25,7 @@ function buildHomeStats(
 }
 
 export default async function Home() {
+  const supabase = await createClient();
   const [
     featuredCoaches,
     featuredVenues,
