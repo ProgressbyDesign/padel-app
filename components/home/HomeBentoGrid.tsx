@@ -31,11 +31,11 @@ type HomeBentoGridProps = {
   enquiryVenueId: string | null;
 };
 
-function OpenDirectoryButton() {
+function FindCoachButton() {
   return (
     <span className="relative inline-flex h-11 items-center">
       <span className="inline-flex h-11 items-center rounded-full bg-[#031322] pl-4 pr-14 text-sm font-medium text-accent">
-        Open Directory
+        Find your coach
       </span>
       <span className="absolute right-1 top-1/2 -translate-y-1/2">
         <CardArrowButton accent="lime" />
@@ -59,18 +59,20 @@ export default function HomeBentoGrid({
           <div className="flex min-w-0 flex-1 flex-col gap-6">
             <Link
               href="/coaches"
-              className="group relative flex min-h-[360px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[420px] lg:min-h-[490px]"
+              className="group relative flex min-h-[420px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[440px] lg:min-h-[520px]"
             >
               <div className="relative z-10 flex max-w-md flex-col justify-center p-8 sm:p-[52px]">
-                <p className="text-2xl font-bold uppercase tracking-tight text-primary/50">Discover</p>
-                <h3 className="mt-1 font-heading text-4xl font-bold uppercase leading-none text-primary sm:text-5xl lg:text-[56px] lg:leading-[56px]">
-                  Find a coach
+                <p className="text-2xl font-bold uppercase tracking-tight text-primary/50">
+                  Discover your
+                </p>
+                <h3 className="mt-1 max-w-sm font-heading text-3xl font-bold uppercase leading-none text-primary sm:text-4xl lg:text-[48px] lg:leading-[49px]">
+                  Padel Pathways Certified Coach
                 </h3>
                 <p className="mt-3 max-w-sm text-lg text-primary">
                   Browse profiles by location, level, and coaching focus—then book with confidence.
                 </p>
                 <span className="mt-8 inline-flex">
-                  <OpenDirectoryButton />
+                  <FindCoachButton />
                 </span>
               </div>
               <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-[55%] min-w-[220px] max-w-[540px]">
@@ -113,7 +115,7 @@ export default function HomeBentoGrid({
                       Get matched
                     </h3>
                     <p className="mt-2 text-lg text-[#f0f1f7]">
-                      Answer a few questions and we&apos;ll suggest the right coach or venue.
+                      Answer a few questions to help find the right coach for you.
                     </p>
                   </div>
                   <CardArrowButton accent="lime" className="h-11 w-11 shrink-0" />

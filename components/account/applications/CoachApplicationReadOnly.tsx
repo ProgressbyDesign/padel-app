@@ -1,0 +1,168 @@
+import Link from "next/link";
+import {
+  APPLICATION_STATUS_LABELS,
+  AUDIENCES,
+  COACHING_OUTCOMES,
+  PLAYER_LEVELS,
+  coachingRoleLabel,
+  optionLabel,
+} from "@/lib/coachProfileApplication/constants";
+import type { CoachApplicationWithLocations } from "@/lib/coachProfileApplication/types";
+
+export default function CoachApplicationReadOnly({
+  data,
+  verifiedEmail,
+}: {
+  data: CoachApplicationWithLocations;
+  verifiedEmail: string;
+}) {
+  const { application, locations } = data;
+  const statusLabel = APPLICATION_STATUS_LABELS[application.status];
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
+          Application status
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-bold text-primary">{statusLabel}</h2>
+          <span className="rounded-full border border-primary/10 bg-surface px-3 py-1 text-xs font-semibold text-primary/70">
+            Step {application.current_step} of 4
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-primary/65">
+          {application.status === "submitted" ||
+          application.status === "under_review"
+            ? "Your application is with our team for review. You cannot edit it while it is being reviewed."
+            : application.status === "approved"
+              ? "This application was approved. Manage your coach profile from your account when a membership is available."
+              : application.status === "declined"
+                ? "This application was declined. Contact Padel Pathways if you need guidance on next steps."
+                : application.status === "withdrawn"
+                  ? "This application was withdrawn."
+                  : "This application is currently read-only."}
+        </p>
+        {application.submitted_at ? (
+          <p className="mt-2 text-sm text-primary/55">
+            Submitted{" "}
+            {new Date(application.submitted_at).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+        ) : application.status === "submitted" ||
+          application.status === "under_review" ? (
+          <p className="mt-2 text-sm text-primary/55">
+            Submitted for review
+          </p>
+        ) : null}
+      </section>
+
+      <section className="rounded-[24px] border border-primary/10 bg-white p-6">
+        <h3 className="text-lg font-bold text-primary">About you</h3>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Full name
+            </dt>
+            <dd className="mt-1 text-sm text-primary">
+              {application.full_name || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Email
+            </dt>
+            <dd className="mt-1 text-sm text-primary">{verifiedEmail || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Phone
+            </dt>
+            <dd className="mt-1 text-sm text-primary">{application.phone || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Role
+            </dt>
+            <dd className="mt-1 text-sm text-primary">
+              {coachingRoleLabel(application.coaching_role)}
+              {application.coaching_role === "other" &&
+              application.coaching_role_other
+                ? ` — ${application.coaching_role_other}`
+                : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Experience
+            </dt>
+            <dd className="mt-1 text-sm text-primary">
+              {application.experience_years === null
+                ? "—"
+                : `${application.experience_years} years`}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="rounded-[24px] border border-primary/10 bg-white p-6">
+        <h3 className="text-lg font-bold text-primary">Locations</h3>
+        <ul className="mt-4 space-y-2 text-sm text-primary/80">
+          {locations.length === 0 ? (
+            <li>No locations</li>
+          ) : (
+            locations.map((location) => (
+              <li key={location.id}>
+                {location.city}, {location.country}
+                {location.is_primary ? " (primary)" : ""}
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section className="rounded-[24px] border border-primary/10 bg-white p-6">
+        <h3 className="text-lg font-bold text-primary">Coaching</h3>
+        <div className="mt-4 space-y-4 text-sm text-primary/80">
+          <p>
+            <span className="font-semibold text-primary">Levels: </span>
+            {application.player_levels.length
+              ? application.player_levels
+                  .map((value) => optionLabel(PLAYER_LEVELS, value))
+                  .join(", ")
+              : "—"}
+          </p>
+          <p>
+            <span className="font-semibold text-primary">Audiences: </span>
+            {application.audiences.length
+              ? application.audiences
+                  .map((value) => optionLabel(AUDIENCES, value))
+                  .join(", ")
+              : "—"}
+          </p>
+          <p>
+            <span className="font-semibold text-primary">Outcomes: </span>
+            {application.outcomes.length
+              ? application.outcomes
+                  .map((value) => optionLabel(COACHING_OUTCOMES, value))
+                  .join(", ")
+              : "—"}
+          </p>
+          <p className="whitespace-pre-wrap">
+            <span className="font-semibold text-primary">Introduction: </span>
+            {application.description || "—"}
+          </p>
+        </div>
+      </section>
+
+      <Link
+        href="/account/applications"
+        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
+      >
+        Back to applications
+      </Link>
+    </div>
+  );
+}

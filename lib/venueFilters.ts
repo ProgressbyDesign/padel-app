@@ -2,23 +2,29 @@
  * Example shape (Supabase / API):
  * {
  *   id, name, city, country,
- *   image_url: "https://...",      // legacy single hero
- *   main_image: "https://...",      // optional; preferred over image_url when set
- *   images: ["url1", "url2"],      // optional gallery; when non-empty, PDP uses grid gallery
+ *   venue_images: [{ url, is_primary, ... }], // managed gallery
+ *   image_url: "https://...",      // legacy single hero fallback
+ *   main_image: "https://...",     // older optional fallback
+ *   images: ["url1", "url2"],      // older optional gallery
  *   courts, court_type, rating, ...
  * }
  */
+import type { VenueImageRow } from "./venueImages";
+import type { VenueSocialRow } from "./venueSocials";
+
 export type Venue = {
   id: string | number;
   name?: string | null;
   city?: string | null;
   country?: string | null;
   address?: string | null;
-  /** Primary hero image (optional; falls back to `image_url`) */
+  /** Older hero image fallback. */
   main_image?: string | null;
-  /** Optional gallery URLs; when empty, PDP shows single hero only */
+  /** Older gallery URL fallback. */
   images?: string[] | null;
   image_url?: string | null;
+  venue_images?: VenueImageRow[] | null;
+  venue_socials?: VenueSocialRow[] | null;
   courts?: number | null;
   court_type?: string | null;
   coaching_available?: boolean | null;
@@ -32,6 +38,7 @@ export type Venue = {
   website?: string | null;
   phone?: string | null;
   opening_hours?: unknown;
+  opening_hours_structured?: unknown;
   lat?: number | null;
   lng?: number | null;
   /** Alternate column names (some DB schemas) */

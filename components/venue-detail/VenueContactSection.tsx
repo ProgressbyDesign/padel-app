@@ -1,6 +1,15 @@
-import { Clock, Globe, MapPin, Phone } from "lucide-react";
+import { Clock, ExternalLink, Globe, MapPin, Phone } from "lucide-react";
+import SocialPlatformIcon from "@/components/social/SocialPlatformIcon";
 import type { Venue } from "../../lib/venueFilters";
 import { getVenueOpeningHoursUi, normalizeWebsiteUrl } from "../../lib/venueDetailHelpers";
+import {
+  getStructuredOpeningHours,
+  structuredOpeningHoursDisplayRows,
+} from "../../lib/openingHours";
+import {
+  validPublicVenueSocials,
+  venueSocialPlatformLabel,
+} from "../../lib/venueSocials";
 
 type VenueContactSectionProps = {
   venue: Venue;
@@ -10,12 +19,21 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
   const website = venue.website?.trim() ? normalizeWebsiteUrl(venue.website) : null;
   const phone = venue.phone?.trim();
   const address = venue.address?.trim();
-  const hoursUi = getVenueOpeningHoursUi(venue.opening_hours);
+  const socials = validPublicVenueSocials(venue.venue_socials);
+  const structuredHours = getStructuredOpeningHours(
+    venue.opening_hours_structured
+  );
+  const structuredRows = structuredHours
+    ? structuredOpeningHoursDisplayRows(structuredHours)
+    : null;
+  const hoursUi = structuredRows
+    ? null
+    : getVenueOpeningHoursUi(venue.opening_hours);
 
   const hasContact = Boolean(website || phone || address);
-  const hasHours = hoursUi !== null;
+  const hasHours = structuredRows !== null || hoursUi !== null;
 
-  if (!hasContact && !hasHours) {
+  if (!hasContact && socials.length === 0 && !hasHours) {
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-primary">Contact &amp; info</h2>
@@ -69,13 +87,65 @@ export default function VenueContactSection({ venue }: VenueContactSectionProps)
         </ul>
       ) : null}
 
-      {hasHours ? (
+      {socials.length > 0 ? (
         <div className={hasContact ? "border-t border-primary/10 pt-4" : ""}>
+          <p className="text-xs font-medium uppercase tracking-wide text-primary/60">
+            Social links
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {socials.map((social) => {
+              const label = venueSocialPlatformLabel(social.platform);
+              const venueName = venue.name?.trim() || "this venue";
+              return (
+                <li key={social.id}>
+                  <a
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open ${venueName} on ${label}`}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/10 bg-surface px-2.5 py-1.5 text-sm font-semibold text-primary transition hover:border-primary/20 hover:bg-white"
+                  >
+                    <SocialPlatformIcon
+                      platform={social.platform}
+                      className="h-7 w-7 text-[10px]"
+                    />
+                    {label}
+                    <ExternalLink
+                      className="h-3.5 w-3.5 text-primary/45"
+                      aria-hidden
+                    />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
+      {hasHours ? (
+        <div
+          className={
+            hasContact || socials.length > 0
+              ? "border-t border-primary/10 pt-4"
+              : ""
+          }
+        >
           <div className="flex gap-3">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium uppercase tracking-wide text-primary/60">Opening hours</p>
-              {hoursUi?.kind === "grouped" ? (
+              {structuredRows ? (
+                <ul className="mt-2 list-none space-y-1.5 text-sm text-primary/80">
+                  {structuredRows.map((row) => (
+                    <li key={`${row.label}-${row.hours}`}>
+                      <strong className="font-semibold text-primary">
+                        {row.label}:
+                      </strong>{" "}
+                      {row.hours}
+                    </li>
+                  ))}
+                </ul>
+              ) : hoursUi?.kind === "grouped" ? (
                 <ul className="mt-2 list-none space-y-1.5 text-sm text-primary/80">
                   {hoursUi.rows.map((row) => (
                     <li key={`${row.label}-${row.hours}`}>

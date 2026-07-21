@@ -4,6 +4,7 @@ import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
 import { createClient } from "../lib/supabase/server";
 import { fetchPadelCountries } from "../lib/queries/padelCountries";
 import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
+import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 
 export const metadata = {
   title: "Find the best venues abroad",
@@ -60,7 +61,7 @@ export default async function Home() {
       subtitle,
       city: topVenue.city ?? null,
       country: topVenue.country ?? null,
-      imageUrl: topVenue.main_image?.trim() || topVenue.image_url?.trim() || null,
+      imageUrl: getVenueMainImageUrl(topVenue),
       rating: topVenue.rating ?? null,
       courts: topVenue.courts ?? null,
       coachingAvailable: topVenue.coaching_available ?? null,

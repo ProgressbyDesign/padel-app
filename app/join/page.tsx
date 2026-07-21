@@ -1,42 +1,110 @@
 import type { Metadata } from "next";
-import JoinApplicationForm from "@/components/join/JoinApplicationForm";
+import Link from "next/link";
+import { getAuthenticatedAccount } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Join Padel Pathways",
   description:
-    "Apply to list your academy, coaching, or padel travel experiences and connect with international players.",
+    "Apply as an individual coach, academy, or padel travel partner on Padel Pathways.",
 };
 
 const benefits = [
-  "Reach players actively searching for training, camps, and padel holidays abroad.",
-  "Structured profile and discovery alongside trusted venues and coaches.",
-  "Lead options that match how you prefer to work — introductions, profiles, or both.",
-  "Room to grow: approvals, packages, and partner tools as the platform expands.",
+  "Reach players actively searching for training and coaches abroad.",
+  "Structured discovery alongside trusted venues and coaching profiles.",
+  "A short authenticated application with progress saved to your account.",
+  "Room to grow into profile completion, images, and partner tools after approval.",
 ] as const;
 
-export default function JoinPage() {
+export default async function JoinPage() {
+  const account = await getAuthenticatedAccount();
+  const coachHref = account
+    ? "/account/applications/coach"
+    : "/signup?next=/account/applications/coach";
+  const loginHref = `/login?next=${encodeURIComponent("/account/applications/coach")}`;
+
   return (
     <div className="bg-surface/50">
       <section className="border-b border-primary/10 bg-gradient-to-b from-white to-surface/80">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 sm:py-20">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">Partners</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary/50">
+            Partners
+          </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
             Join Padel Pathways
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-primary/75 sm:text-lg">
-            List your academy, coaching services, or padel holiday experiences and connect with international players
-            actively looking to train.
+            Choose how you want to partner with us. Individual coaches can start a
+            short account-based application today.
           </p>
-          <a
-            href="#apply-form"
-            className="mt-8 inline-flex rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            Apply now
-          </a>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
+      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+        <h2 className="text-xl font-semibold text-primary sm:text-2xl">
+          How do you want to join?
+        </h2>
+        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Available now
+            </p>
+            <h3 className="mt-3 text-xl font-bold text-primary">Individual coach</h3>
+            <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
+              Create an authenticated application for your coaching profile. Progress
+              saves to your account across devices.
+            </p>
+            <Link
+              href={coachHref}
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
+            >
+              {account ? "Continue application" : "Apply as a coach"}
+            </Link>
+            {!account ? (
+              <p className="mt-3 text-xs text-primary/55">
+                Already have an account?{" "}
+                <Link href={loginHref} className="font-semibold text-primary underline">
+                  Log in
+                </Link>
+              </p>
+            ) : null}
+          </article>
+
+          <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Coming next
+            </p>
+            <h3 className="mt-3 text-xl font-bold text-primary">Academy or venue</h3>
+            <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
+              Venue partner onboarding will use a separate flow. Existing venue managers
+              can continue from their account.
+            </p>
+            <Link
+              href="/contact"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
+            >
+              Contact us
+            </Link>
+          </article>
+
+          <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Coming next
+            </p>
+            <h3 className="mt-3 text-xl font-bold text-primary">
+              Padel holiday or travel partner
+            </h3>
+            <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
+              Travel and holiday packages will get a dedicated partner journey. This is
+              not the individual coach application.
+            </p>
+            <span className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-surface px-4 py-2.5 text-sm font-semibold text-primary/55">
+              Coming next
+            </span>
+          </article>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6 sm:pb-24">
         <h2 className="text-xl font-semibold text-primary sm:text-2xl">Why apply</h2>
         <ul className="mt-6 grid gap-4 sm:grid-cols-2">
           {benefits.map((line) => (
@@ -44,21 +112,14 @@ export default function JoinPage() {
               key={line}
               className="flex gap-3 rounded-2xl border border-primary/10 bg-white px-4 py-4 text-sm text-primary/85 shadow-sm"
             >
-              <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-secondary" aria-hidden />
+              <span
+                className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-secondary"
+                aria-hidden
+              />
               <span>{line}</span>
             </li>
           ))}
         </ul>
-      </section>
-
-      <section id="apply-form" className="mx-auto max-w-3xl scroll-mt-24 px-4 pb-16 sm:px-6 sm:pb-24">
-        <h2 className="text-xl font-semibold text-primary sm:text-2xl">Application</h2>
-        <p className="mt-2 text-sm text-primary/65">
-          About 6–7 short steps. Your progress is saved in this browser until you submit.
-        </p>
-        <div className="mt-8">
-          <JoinApplicationForm />
-        </div>
       </section>
     </div>
   );

@@ -92,10 +92,10 @@ export default function LandingPage({
             Find the Best
           </p>
           <h1 className="mx-auto max-w-4xl text-center font-heading text-4xl font-bold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl lg:text-[64px] lg:leading-[64px]">
-            Padel Coaching &amp; Training Camps Worldwide
+            Train with some of the world&apos;s most trusted padel coaches.
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-white/90 sm:text-xl">
-            Compare coaches, venues and training camps, then book with confidence.
+            Book with confidence through the Padel Pathways 5★ Experience Guarantee.
           </p>
           <div className="mt-10 sm:mt-12">
             <HomeStickySearch />
@@ -126,7 +126,8 @@ export default function LandingPage({
                 Top-rated coaches
               </h2>
               <p className="mt-2 text-lg text-primary/70">
-                Hand-picked from our directory—compare levels, locations, and coaching focus.
+                Hand-picked from all over the world — compare levels, locations and coaching
+                specialism.
               </p>
             </div>
             <Link

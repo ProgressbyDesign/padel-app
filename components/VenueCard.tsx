@@ -8,6 +8,7 @@ import {
   formatVenueCourtsLabel,
   joinDotLabels,
 } from "../lib/listingCardLabels";
+import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 
 type VenueCardProps = {
   venue: VenueWithDistance;
@@ -21,7 +22,8 @@ function formatRating(raw: VenueCardProps["venue"]["rating"]) {
 }
 
 export default function VenueCard({ venue, badgeLabel }: VenueCardProps) {
-  const imageSrc = venue.image_url || "/images/venue-default.png";
+  const imageSrc =
+    getVenueMainImageUrl(venue) || "/images/venue-default.png";
   const location = [venue.city, venue.country].filter(Boolean).join(", ");
   const distanceMiles = typeof venue.distance === "number" ? venue.distance : null;
   const rating = formatRating(venue.rating);

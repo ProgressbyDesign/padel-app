@@ -4,6 +4,7 @@ import { clampPage, listingPageCount } from "../listingUrlParams";
 import { applyVenueLocationFilter, applyVenueNameFilter } from "../venueSearchFilters";
 import { createClient } from "../supabase/server";
 import type { FilterState, SortBy, SortDirection, Venue } from "../venueFilters";
+import { hydrateVenueImages } from "./venueImages";
 
 export type VenueListingQueryInput = {
   page: number;
@@ -146,8 +147,10 @@ export async function fetchVenueListingPage(
     venues = (data ?? []) as Venue[];
   }
 
+  const venuesWithImages = await hydrateVenueImages(supabase, venues);
+
   return {
-    venues,
+    venues: venuesWithImages,
     totalCount,
     page,
     pageSize,
