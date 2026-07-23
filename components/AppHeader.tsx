@@ -10,31 +10,31 @@ const nav = [
   { href: "/", label: "Home" },
   { href: "/venues", label: "Venues" },
   { href: "/coaches", label: "Coaches" },
+  { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
 const SCROLL_SOLID_AFTER = 72;
 
-export default function AppHeader() {
+export default function AppHeader({ authenticated }: { authenticated: boolean }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const [solid, setSolid] = useState(!isHome);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [homeScrolled, setHomeScrolled] = useState(false);
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const menuOpen = menuPath === pathname;
+  const solid = !isHome || homeScrolled;
 
   useEffect(() => {
-    if (!isHome) {
-      setSolid(true);
-      return;
-    }
-    setSolid(window.scrollY > SCROLL_SOLID_AFTER);
-    const onScroll = () => setSolid(window.scrollY > SCROLL_SOLID_AFTER);
+    if (!isHome) return;
+    const onScroll = () =>
+      setHomeScrolled(window.scrollY > SCROLL_SOLID_AFTER);
+    const frame = window.requestAnimationFrame(onScroll);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, [isHome]);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   const overlay = isHome && !solid && !menuOpen;
   const headerPosition = isHome ? "fixed top-0 left-0 right-0" : "sticky top-0";
@@ -48,13 +48,16 @@ export default function AppHeader() {
     : "text-primary/70 hover:bg-surface hover:text-primary";
 
   const linkActive = overlay ? "bg-white/15 text-white" : "bg-primary/10 text-primary";
+  const accountLink = authenticated
+    ? { href: "/account", label: "My account" }
+    : { href: "/login", label: "Log in" };
 
   return (
     <header className={`${headerPosition} z-50 transition-colors duration-300 ${headerSurface}`}>
       <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-[120px]">
         <PadelPathwaysLogo variant={overlay ? "white" : "black"} />
 
-        <nav className="hidden items-center justify-end gap-1 md:flex md:gap-2" aria-label="Main">
+        <nav className="hidden items-center justify-end gap-1 lg:flex lg:gap-2" aria-label="Main">
           {nav.map((item) => {
             const active = isNavActive(item.href, pathname);
             return (
@@ -70,6 +73,14 @@ export default function AppHeader() {
             );
           })}
           <Link
+            href={accountLink.href}
+            className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${
+              isNavActive(accountLink.href, pathname) ? linkActive : linkIdle
+            }`}
+          >
+            {accountLink.label}
+          </Link>
+          <Link
             href="/join"
             className={`rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${
               overlay
@@ -83,10 +94,12 @@ export default function AppHeader() {
 
         <button
           type="button"
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={() =>
+            setMenuPath((current) => (current === pathname ? null : pathname))
+          }
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
-          className={`flex h-10 w-10 items-center justify-center rounded-full transition md:hidden ${
+          className={`flex h-10 w-10 items-center justify-center rounded-full transition lg:hidden ${
             overlay ? "text-white hover:bg-white/10" : "text-primary hover:bg-surface"
           }`}
         >
@@ -95,7 +108,7 @@ export default function AppHeader() {
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-primary/10 bg-white shadow-lg md:hidden">
+        <div className="border-t border-primary/10 bg-white shadow-lg lg:hidden">
           <nav
             className="mx-auto flex max-w-[1680px] flex-col gap-1 px-4 py-3 sm:px-6 lg:px-[120px]"
             aria-label="Mobile"
@@ -106,7 +119,7 @@ export default function AppHeader() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => setMenuPath(null)}
                   className={`rounded-xl px-4 py-3 text-base font-medium transition ${
                     active ? "bg-primary/10 text-primary" : "text-primary/75 hover:bg-surface"
                   }`}
@@ -116,8 +129,19 @@ export default function AppHeader() {
               );
             })}
             <Link
+              href={accountLink.href}
+              onClick={() => setMenuPath(null)}
+              className={`rounded-xl px-4 py-3 text-base font-medium transition ${
+                isNavActive(accountLink.href, pathname)
+                  ? "bg-primary/10 text-primary"
+                  : "text-primary/75 hover:bg-surface"
+              }`}
+            >
+              {accountLink.label}
+            </Link>
+            <Link
               href="/join"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => setMenuPath(null)}
               className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-accent shadow-sm transition hover:bg-primary/90"
             >
               Join PadelPathways
@@ -134,6 +158,8 @@ function isNavActive(href: string, pathname: string) {
     pathname === href ||
     (href === "/venues" && (pathname === "/venues" || pathname.startsWith("/venue/"))) ||
     (href === "/coaches" && (pathname === "/coaches" || pathname.startsWith("/coach/"))) ||
+    (href === "/about" && pathname.startsWith("/about")) ||
+    (href === "/account" && pathname.startsWith("/account")) ||
     (href === "/contact" && pathname.startsWith("/contact"))
   );
 }

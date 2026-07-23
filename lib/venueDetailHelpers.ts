@@ -1,18 +1,42 @@
 import type { Venue } from "./venueFilters";
+import { sortVenueImages } from "./venueImages";
 
-/** Resolved hero URL: `main_image` → `image_url` → placeholder path handled by caller */
-export function getVenueMainImageUrl(venue: Venue): string | null {
-  const m = venue.main_image?.trim() || venue.image_url?.trim();
-  return m || null;
+function managedVenueImageUrls(venue: Venue): string[] {
+  return sortVenueImages(venue.venue_images ?? [])
+    .map((image) => image.url.trim())
+    .filter(Boolean);
 }
 
-/** Non-empty, de-duplicated gallery URLs from `venue.images` */
+/** Resolved hero URL: managed primary/first → legacy image_url → legacy fallbacks. */
+export function getVenueMainImageUrl(venue: Venue): string | null {
+  const managed = managedVenueImageUrls(venue);
+  const legacyGallery = Array.isArray(venue.images)
+    ? venue.images.map((value) => String(value).trim()).find(Boolean)
+    : null;
+  return (
+    managed[0] ||
+    venue.image_url?.trim() ||
+    venue.main_image?.trim() ||
+    legacyGallery ||
+    null
+  );
+}
+
+/** Managed gallery first, then de-duplicated legacy image fields. */
 export function normalizeGalleryImages(venue: Venue): string[] {
+  const managed = managedVenueImageUrls(venue);
+  if (managed.length > 0) return [...new Set(managed)];
+
   const raw = venue.images;
-  if (!Array.isArray(raw)) return [];
-  const urls = raw
-    .map((x) => (typeof x === "string" ? x.trim() : String(x).trim()))
-    .filter(Boolean);
+  const urls = [
+    venue.image_url?.trim(),
+    ...(Array.isArray(raw)
+      ? raw.map((x) =>
+          typeof x === "string" ? x.trim() : String(x).trim()
+        )
+      : []),
+    venue.main_image?.trim(),
+  ].filter((value): value is string => Boolean(value));
   return [...new Set(urls)];
 }
 
@@ -85,7 +109,6 @@ export function formatOpeningHoursLines(raw: unknown): string[] | null {
   return null;
 }
 
-const WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 const WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 export type OpeningHoursByDay = {

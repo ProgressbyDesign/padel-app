@@ -5,6 +5,8 @@ import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
 import type { Coach } from "../../../lib/coaches";
 import { resolveCoachImageUrl } from "../../../lib/coachImageResolve";
 import type { Venue } from "../../../lib/venueFilters";
+import { hydrateVenueImages } from "../../../lib/queries/venueImages";
+import { loadVenueSocials } from "../../../lib/queries/venueSocials";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -36,14 +38,26 @@ export default async function VenuePdpPage({ params }: PageProps) {
     notFound();
   }
 
-  const typedVenue = venue as Venue;
+  const venueRow = venue as Venue;
 
   const [{ data: pool }, { data: coachLinks }] = await Promise.all([
     supabase.from("venues").select("*").neq("id", id).limit(48),
     supabase.from("coach_venues").select("coach_id").eq("venue_id", id),
   ]);
 
-  const similarVenues = pickSimilarVenues(typedVenue, (pool ?? []) as Venue[], 4);
+  const [hydratedVenues, venueSocials] = await Promise.all([
+    hydrateVenueImages(supabase, [
+      venueRow,
+      ...((pool ?? []) as Venue[]),
+    ]),
+    loadVenueSocials(supabase, id),
+  ]);
+  const [hydratedVenue, ...hydratedPool] = hydratedVenues;
+  const typedVenue: Venue = {
+    ...hydratedVenue,
+    venue_socials: venueSocials ?? [],
+  };
+  const similarVenues = pickSimilarVenues(typedVenue, hydratedPool, 4);
 
   const coachIds = Array.from(
     new Set(

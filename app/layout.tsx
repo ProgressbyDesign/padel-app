@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Sora } from "next/font/google";
 import SiteChrome from "../components/SiteChrome";
+import { getAuthenticatedAccount } from "../lib/auth/session";
 import "./globals.css";
 
 const sora = Sora({
@@ -22,15 +23,17 @@ export const metadata: Metadata = {
   description: "Discover curated padel venues, coaching, and high-quality courts worldwide.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const account = await getAuthenticatedAccount();
+
   return (
     <html lang="en" className={`${sora.variable} ${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface text-primary">
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome authenticated={Boolean(account)}>{children}</SiteChrome>
       </body>
     </html>
   );

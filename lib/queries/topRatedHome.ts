@@ -7,6 +7,7 @@ import { createClient } from "../supabase/server";
 import type { Venue } from "../venueFilters";
 import { TOP_RATED_MIN_SCORE, TOP_RATED_SECTION_LIMIT } from "../constants/listings";
 import { fetchCoachRowsFromSupabase } from "./coachRows";
+import { hydrateVenueImages } from "./venueImages";
 
 function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): number {
   if (b.rating !== a.rating) return b.rating - a.rating;
@@ -48,7 +49,12 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
   const strictRows =
     !strict.error && strict.data?.length ? (strict.data as Venue[]) : [];
 
-  if (strictRows.length > 0) return strictRows.slice(0, TOP_RATED_SECTION_LIMIT);
+  if (strictRows.length > 0) {
+    return hydrateVenueImages(
+      supabase,
+      strictRows.slice(0, TOP_RATED_SECTION_LIMIT)
+    );
+  }
 
   const relaxed = await supabase
     .from("venues")
@@ -58,5 +64,8 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
 
   if (relaxed.error || !relaxed.data?.length) return [];
 
-  return (relaxed.data as Venue[]).slice(0, TOP_RATED_SECTION_LIMIT);
+  return hydrateVenueImages(
+    supabase,
+    (relaxed.data as Venue[]).slice(0, TOP_RATED_SECTION_LIMIT)
+  );
 }

@@ -2,11 +2,10 @@ import Link from "next/link";
 import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
 
 const links = [
+  { href: "/about", label: "About Us" },
   { href: "/coaches", label: "Find a coach" },
-  { href: "/venues", label: "Find a venue" },
-  { href: "/venues", label: "Training camps" },
-  { href: "/join", label: "List your venue" },
-  { href: "/join", label: "Become a coach" },
+  { href: "/join", label: "Become a Padel Pathways Coach" },
+  { href: "/contact", label: "Contact us" },
 ] as const;
 
 function SocialIcon({ label }: { label: string }) {
@@ -25,8 +24,7 @@ export default function AppFooter() {
           <div className="max-w-md space-y-4">
             <PadelPathwaysLogo variant="black" />
             <p className="max-w-sm text-base leading-6 text-primary">
-              Your worldwide padel destination. Book courts, join events, and experience the
-              fastest-growing sport in the UK.
+              Own your path.
             </p>
           </div>
 
