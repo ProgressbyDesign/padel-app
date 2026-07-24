@@ -39,6 +39,9 @@ export type CoachProfileApplicationRow = {
   privacy_accepted_at: string | null;
   submitted_at: string | null;
   coach_id: string | null;
+  reviewed_at: string | null;
+  reviewed_by_user_id: string | null;
+  review_note: string | null;
   created_at: string;
   updated_at: string;
 };

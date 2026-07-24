@@ -30,7 +30,7 @@ export default async function AdminVenueDetailPage({ params }: Props) {
         title={venue?.name ?? "Venue"}
         description={venue ? [venue.city, venue.country].filter(Boolean).join(", ") : undefined}
       >
-        <Link href="/admin/venues" className="text-sm text-secondary underline">
+        <Link href="/admin/data-quality/venues" className="text-sm text-secondary underline">
           ← All venues
         </Link>
       </AdminPageHeader>

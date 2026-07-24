@@ -28,13 +28,13 @@ export default async function AdminCoachVenueLinksPage({ searchParams }: Props) 
   return (
     <>
       <AdminPageHeader
-        title="Coach ↔ venue links"
+        title="Coach â†” venue links"
         description="Default: coaches with no venue links. Match by email domain or description, or search manually."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <AdminSearchForm action="/admin/coach-venue-links" defaultValue={q} placeholder="Filter coaches by name…" />
+        <AdminSearchForm action="/admin/data-quality/coach-venue-links" defaultValue={q} placeholder="Filter coaches by nameâ€¦" />
         <a
-          href={showAll ? "/admin/coach-venue-links" : "/admin/coach-venue-links?all=1"}
+          href={showAll ? "/admin/data-quality/coach-venue-links" : "/admin/data-quality/coach-venue-links?all=1"}
           className="text-sm text-secondary underline"
         >
           {showAll ? "Show unlinked only" : "Show all coaches"}

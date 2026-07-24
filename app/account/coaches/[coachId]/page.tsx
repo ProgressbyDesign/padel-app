@@ -84,7 +84,7 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
       id: "venue",
       label: "Linked venue",
       done: venueCount > 0,
-      href: base,
+      href: `${base}/venues`,
     },
   ] as const;
 

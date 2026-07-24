@@ -20,6 +20,9 @@ export default async function JoinPage() {
   const coachHref = account
     ? "/account/applications/coach"
     : "/signup?next=/account/applications/coach";
+  const venueHref = account
+    ? "/account/applications/venue"
+    : "/signup?next=/account/applications/venue";
   const loginHref = `/login?next=${encodeURIComponent("/account/applications/coach")}`;
 
   return (
@@ -33,8 +36,8 @@ export default async function JoinPage() {
             Join Padel Pathways
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-primary/75 sm:text-lg">
-            Choose how you want to partner with us. Individual coaches can start a
-            short account-based application today.
+            Choose how you want to partner with us. Coaches and venue
+            representatives can start a short account-based application today.
           </p>
         </div>
       </section>
@@ -71,18 +74,19 @@ export default async function JoinPage() {
 
           <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-              Coming next
+              Available now
             </p>
             <h3 className="mt-3 text-xl font-bold text-primary">Academy or venue</h3>
             <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
-              Venue partner onboarding will use a separate flow. Existing venue managers
-              can continue from their account.
+              Manage or claim a venue if you own it, manage it, or are
+              authorised to represent it. Coaches who only coach at a venue
+              should use the individual coach application.
             </p>
             <Link
-              href="/contact"
-              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
+              href={venueHref}
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
             >
-              Contact us
+              {account ? "Manage or claim a venue" : "Apply for a venue"}
             </Link>
           </article>
 

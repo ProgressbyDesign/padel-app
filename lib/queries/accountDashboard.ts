@@ -4,6 +4,7 @@ import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import type { MembershipRole } from "@/lib/auth/types";
 import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
 import { createClient } from "@/lib/supabase/server";
+import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
 
 type ProfileRow = {
   full_name: string | null;
@@ -48,13 +49,38 @@ export type ManagedVenue = {
   membershipRole: MembershipRole;
 };
 
-export type AccountApplicationSummary = {
+export type AccountCoachApplicationSummary = {
   id: string;
   status: CoachApplicationStatus;
   currentStep: number;
   submittedAt: string | null;
   updatedAt: string;
+  reviewNote: string | null;
+  coachId: string | null;
 } | null;
+
+export type AccountVenueApplicationSummary = {
+  id: string;
+  status: VenueApplicationStatus;
+  currentStep: number;
+  submittedAt: string | null;
+  updatedAt: string;
+  reviewNote: string | null;
+  approvedVenueId: string | null;
+} | null;
+
+export type AccountRelationshipAttention = {
+  venueInvitations: number;
+  coachRequests: number;
+  items: Array<{
+    kind: "coach" | "venue";
+    entityId: string;
+    entityName: string;
+    count: number;
+    href: string;
+    message: string;
+  }>;
+};
 
 export type AccountDashboardData = {
   account: {
@@ -64,7 +90,9 @@ export type AccountDashboardData = {
   };
   coaches: ManagedCoach[];
   venues: ManagedVenue[];
-  coachApplication: AccountApplicationSummary;
+  coachApplication: AccountCoachApplicationSummary;
+  venueApplication: AccountVenueApplicationSummary;
+  relationshipAttention: AccountRelationshipAttention;
 };
 
 function one<T>(value: T | T[] | null): T | null {
@@ -76,7 +104,13 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const account = await requireAuthenticatedAccount("/account");
   const supabase = await createClient();
 
-  const [profileResult, coachResult, venueResult, applicationResult] =
+  const [
+    profileResult,
+    coachResult,
+    venueResult,
+    coachApplicationResult,
+    venueApplicationResult,
+  ] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -116,7 +150,25 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
         .order("created_at", { ascending: true }),
       supabase
         .from("coach_profile_applications")
-        .select("id, status, current_step, submitted_at, updated_at")
+        .select(
+          "id, status, current_step, submitted_at, updated_at, review_note, coach_id"
+        )
+        .eq("user_id", account.id)
+        .in("status", [
+          "draft",
+          "submitted",
+          "under_review",
+          "changes_requested",
+          "approved",
+        ])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("venue_profile_applications")
+        .select(
+          "id, status, current_step, submitted_at, updated_at, review_note, approved_venue_id"
+        )
         .eq("user_id", account.id)
         .in("status", [
           "draft",
@@ -138,6 +190,16 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   }
   if (venueResult.error) {
     throw new Error(`Unable to load venue memberships: ${venueResult.error.message}`);
+  }
+  if (coachApplicationResult.error) {
+    throw new Error(
+      `Unable to load coach application: ${coachApplicationResult.error.message}`
+    );
+  }
+  if (venueApplicationResult.error) {
+    throw new Error(
+      `Unable to load venue application: ${venueApplicationResult.error.message}`
+    );
   }
 
   const profile = profileResult.data as ProfileRow | null;
@@ -167,13 +229,109 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     };
   });
 
-  const applicationRow = applicationResult.data as {
+  const coachApplicationRow = coachApplicationResult.data as {
     id: string;
     status: CoachApplicationStatus;
     current_step: number;
     submitted_at: string | null;
     updated_at: string;
+    review_note: string | null;
+    coach_id: string | null;
   } | null;
+  const venueApplicationRow = venueApplicationResult.data as {
+    id: string;
+    status: VenueApplicationStatus;
+    current_step: number;
+    submitted_at: string | null;
+    updated_at: string;
+    review_note: string | null;
+    approved_venue_id: string | null;
+  } | null;
+
+  const coachIds = coaches.map((coach) => coach.id);
+  const venueIds = venues.map((venue) => venue.id);
+  const relationshipAttention: AccountRelationshipAttention = {
+    venueInvitations: 0,
+    coachRequests: 0,
+    items: [],
+  };
+
+  if (coachIds.length > 0 || venueIds.length > 0) {
+    const [coachPendingResult, venuePendingResult] = await Promise.all([
+      coachIds.length > 0
+        ? supabase
+            .from("coach_venues")
+            .select("id, coach_id")
+            .in("coach_id", coachIds)
+            .eq("status", "pending")
+            .eq("initiated_by", "venue")
+        : Promise.resolve({ data: [], error: null }),
+      venueIds.length > 0
+        ? supabase
+            .from("coach_venues")
+            .select("id, venue_id")
+            .in("venue_id", venueIds)
+            .eq("status", "pending")
+            .eq("initiated_by", "coach")
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (coachPendingResult.error) {
+      throw new Error(
+        `Unable to load venue invitations: ${coachPendingResult.error.message}`
+      );
+    }
+    if (venuePendingResult.error) {
+      throw new Error(
+        `Unable to load coach requests: ${venuePendingResult.error.message}`
+      );
+    }
+
+    const invitationsByCoach = new Map<string, number>();
+    for (const row of coachPendingResult.data ?? []) {
+      const id = String(row.coach_id);
+      invitationsByCoach.set(id, (invitationsByCoach.get(id) ?? 0) + 1);
+    }
+    const requestsByVenue = new Map<string, number>();
+    for (const row of venuePendingResult.data ?? []) {
+      const id = String(row.venue_id);
+      requestsByVenue.set(id, (requestsByVenue.get(id) ?? 0) + 1);
+    }
+
+    for (const coach of coaches) {
+      const count = invitationsByCoach.get(coach.id) ?? 0;
+      if (count <= 0) continue;
+      relationshipAttention.venueInvitations += count;
+      relationshipAttention.items.push({
+        kind: "coach",
+        entityId: coach.id,
+        entityName: coach.name,
+        count,
+        href: `/account/coaches/${encodeURIComponent(coach.id)}/venues`,
+        message:
+          count === 1
+            ? "1 venue invitation awaiting your response"
+            : `${count} venue invitations awaiting your response`,
+      });
+    }
+
+    for (const venue of venues) {
+      const count = requestsByVenue.get(venue.id) ?? 0;
+      if (count <= 0) continue;
+      relationshipAttention.coachRequests += count;
+      relationshipAttention.items.push({
+        kind: "venue",
+        entityId: venue.id,
+        entityName: venue.name,
+        count,
+        href: `/account/venues/${encodeURIComponent(venue.id)}/coaches`,
+        message:
+          count === 1
+            ? "1 coach request awaiting venue review"
+            : `${count} coach requests awaiting venue review`,
+      });
+    }
+  }
 
   return {
     account: {
@@ -183,14 +341,28 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     },
     coaches,
     venues,
-    coachApplication: applicationRow
+    coachApplication: coachApplicationRow
       ? {
-          id: applicationRow.id,
-          status: applicationRow.status,
-          currentStep: applicationRow.current_step,
-          submittedAt: applicationRow.submitted_at,
-          updatedAt: applicationRow.updated_at,
+          id: coachApplicationRow.id,
+          status: coachApplicationRow.status,
+          currentStep: coachApplicationRow.current_step,
+          submittedAt: coachApplicationRow.submitted_at,
+          updatedAt: coachApplicationRow.updated_at,
+          reviewNote: coachApplicationRow.review_note,
+          coachId: coachApplicationRow.coach_id,
         }
       : null,
+    venueApplication: venueApplicationRow
+      ? {
+          id: venueApplicationRow.id,
+          status: venueApplicationRow.status,
+          currentStep: venueApplicationRow.current_step,
+          submittedAt: venueApplicationRow.submitted_at,
+          updatedAt: venueApplicationRow.updated_at,
+          reviewNote: venueApplicationRow.review_note,
+          approvedVenueId: venueApplicationRow.approved_venue_id,
+        }
+      : null,
+    relationshipAttention,
   };
 }

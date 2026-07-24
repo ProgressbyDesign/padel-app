@@ -42,7 +42,12 @@ export default async function VenuePdpPage({ params }: PageProps) {
 
   const [{ data: pool }, { data: coachLinks }] = await Promise.all([
     supabase.from("venues").select("*").neq("id", id).limit(48),
-    supabase.from("coach_venues").select("coach_id").eq("venue_id", id),
+    supabase
+      .from("coach_venues")
+      .select("coach_id, status, is_primary")
+      .eq("venue_id", id)
+      .in("status", ["active", "unverified"])
+      .order("is_primary", { ascending: false }),
   ]);
 
   const [hydratedVenues, venueSocials] = await Promise.all([
@@ -62,6 +67,13 @@ export default async function VenuePdpPage({ params }: PageProps) {
   const coachIds = Array.from(
     new Set(
       (coachLinks ?? [])
+        .slice()
+        .sort((a, b) => {
+          const aActive = a.status === "active" ? 0 : 1;
+          const bActive = b.status === "active" ? 0 : 1;
+          if (aActive !== bActive) return aActive - bActive;
+          return Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary));
+        })
         .map((row: { coach_id?: string }) => row.coach_id)
         .filter((cid): cid is string => Boolean(cid))
     )

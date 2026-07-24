@@ -319,6 +319,17 @@ export default function CoachApplicationWizard({
 
   return (
     <div className="space-y-6">
+      {initial.application.status === "changes_requested" &&
+      initial.application.review_note ? (
+        <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800/70">
+            Changes requested
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+            {initial.application.review_note}
+          </p>
+        </div>
+      ) : null}
       <div className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

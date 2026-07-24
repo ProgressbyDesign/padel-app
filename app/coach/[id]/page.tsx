@@ -33,10 +33,19 @@ export default async function CoachPdpPage({ params }: PageProps) {
     notFound();
   }
 
-  const { data: links } = await supabase.from("coach_venues").select("venue_id").eq("coach_id", id);
+  const { data: links } = await supabase
+    .from("coach_venues")
+    .select("venue_id, is_primary, status")
+    .eq("coach_id", id)
+    .in("status", ["active", "unverified"])
+    .order("is_primary", { ascending: false });
 
   const venueIds = Array.from(
-    new Set((links ?? []).map((row: { venue_id?: string }) => row.venue_id).filter((vid): vid is string => Boolean(vid)))
+    new Set(
+      (links ?? [])
+        .map((row: { venue_id?: string }) => row.venue_id)
+        .filter((vid): vid is string => Boolean(vid))
+    )
   );
 
   let venues: Venue[] = [];

@@ -33,7 +33,7 @@ export default async function AdminCoachDetailPage({ params }: Props) {
   return (
     <>
       <AdminPageHeader title={coach?.name ?? "Coach"} description={coach?.role ?? undefined}>
-        <Link href="/admin/coaches" className="text-sm text-secondary underline">
+        <Link href="/admin/data-quality/coaches" className="text-sm text-secondary underline">
           ← All coaches
         </Link>
       </AdminPageHeader>

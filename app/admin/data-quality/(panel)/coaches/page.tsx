@@ -25,7 +25,7 @@ function venueLabels(coach: AdminCoachRow): string {
       return row?.name;
     })
     .filter(Boolean);
-  return names.length ? names.join(", ") : "—";
+  return names.length ? names.join(", ") : "â€”";
 }
 
 type Props = { searchParams: Promise<{ page?: string; q?: string }> };
@@ -52,7 +52,7 @@ export default async function AdminCoachesPage({ searchParams }: Props) {
   return (
     <>
       <AdminPageHeader title="Coaches" description="Review coaches; location on site uses linked venues." />
-      <AdminSearchForm action="/admin/coaches" defaultValue={q} placeholder="Search coaches…" />
+      <AdminSearchForm action="/admin/data-quality/coaches" defaultValue={q} placeholder="Search coachesâ€¦" />
       {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
       {rows.length === 0 ? (
         <AdminEmpty message="No coaches found." />
@@ -80,23 +80,23 @@ export default async function AdminCoachesPage({ searchParams }: Props) {
                         <Image src={c.image_url} alt="" fill className="object-cover" unoptimized />
                       </div>
                     ) : (
-                      <span className="text-xs text-primary/40">—</span>
+                      <span className="text-xs text-primary/40">â€”</span>
                     )}
                   </AdminTd>
-                  <AdminTd>{c.name ?? "—"}</AdminTd>
+                  <AdminTd>{c.name ?? "â€”"}</AdminTd>
                   <AdminTd>
-                    {[c.role, c.level].filter(Boolean).join(" · ") || "—"}
+                    {[c.role, c.level].filter(Boolean).join(" Â· ") || "â€”"}
                   </AdminTd>
                   <AdminTd className="text-xs">
-                    {c.email ?? "—"}
+                    {c.email ?? "â€”"}
                     {c.phone ? <br /> : null}
                     {c.phone ?? ""}
                   </AdminTd>
-                  <AdminTd>{c.price_from ?? "—"}</AdminTd>
+                  <AdminTd>{c.price_from ?? "â€”"}</AdminTd>
                   <AdminTd className="max-w-[160px] text-xs">{venueLabels(c)}</AdminTd>
                   <AdminTd>{qualityBadge(c.data_quality_status, c.is_approved)}</AdminTd>
                   <AdminTd>
-                    <Link href={`/admin/coaches/${c.id}`} className="text-sm text-secondary underline">
+                    <Link href={`/admin/data-quality/coaches/${c.id}`} className="text-sm text-secondary underline">
                       Edit
                     </Link>
                   </AdminTd>
@@ -108,7 +108,7 @@ export default async function AdminCoachesPage({ searchParams }: Props) {
             page={page}
             total={total}
             pageSize={pageSize}
-            basePath="/admin/coaches"
+            basePath="/admin/data-quality/coaches"
             searchParams={{ q }}
           />
         </>

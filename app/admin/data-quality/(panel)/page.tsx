@@ -34,41 +34,41 @@ export default async function AdminDashboardPage() {
         </p>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Total venues" value={stats.venueCount} href="/admin/venues" />
-        <StatCard label="Total coaches" value={stats.coachCount} href="/admin/coaches" />
+        <StatCard label="Total venues" value={stats.venueCount} href="/admin/data-quality/venues" />
+        <StatCard label="Total coaches" value={stats.coachCount} href="/admin/data-quality/coaches" />
         <StatCard
           label="Coaches without venue links"
           value={stats.coachesWithoutVenue}
-          href="/admin/coach-venue-links"
+          href="/admin/data-quality/coach-venue-links"
         />
         <StatCard
           label="Coaches without images"
           value={stats.coachesWithoutImage}
-          href="/admin/review-queue?filter=coaches_without_image"
+          href="/admin/data-quality/review-queue?filter=coaches_without_image"
         />
         <StatCard
           label="Venues without socials"
           value={stats.venuesWithoutSocials}
-          href="/admin/review-queue?filter=venues_without_socials"
+          href="/admin/data-quality/review-queue?filter=venues_without_socials"
         />
         <StatCard
           label="Coaches needing review"
           value={stats.coachesNeedingReview}
-          href="/admin/review-queue?filter=coaches_low_confidence"
+          href="/admin/data-quality/review-queue?filter=coaches_low_confidence"
         />
         <StatCard
           label="Venues needing review"
           value={stats.venuesNeedingReview}
-          href="/admin/review-queue?filter=venues_needing_review"
+          href="/admin/data-quality/review-queue?filter=venues_needing_review"
         />
       </div>
       <p className="mt-8 text-sm text-primary/60">
         Quick links:{" "}
-        <Link href="/admin/review-queue" className="text-secondary underline">
+        <Link href="/admin/data-quality/review-queue" className="text-secondary underline">
           Review queue
         </Link>
-        {" · "}
-        <Link href="/admin/coach-venue-links" className="text-secondary underline">
+        {" Â· "}
+        <Link href="/admin/data-quality/coach-venue-links" className="text-secondary underline">
           Link coaches to venues
         </Link>
       </p>

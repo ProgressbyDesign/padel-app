@@ -245,7 +245,8 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
     .in(
       "venue_id",
       venues.map((v) => v.id)
-    );
+    )
+    .in("status", ["active", "unverified"]);
 
   return links?.length ? [...new Set(links.map((l) => String(l.coach_id)))] : [];
 }

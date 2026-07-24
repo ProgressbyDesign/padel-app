@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 export const ADMIN_COOKIE = "pp_admin_token";
 
 /**
- * Simple shared-secret gate for /admin.
- * TODO: Replace with Supabase Auth + `app_metadata.role = 'admin'` when roles exist.
+ * Shared-secret gate for legacy /admin/data-quality tools only.
+ * Operational admin uses profiles.role = "admin" via Supabase Auth.
  */
 export function getAdminSecret(): string | null {
   return process.env.ADMIN_SECRET?.trim() || null;
