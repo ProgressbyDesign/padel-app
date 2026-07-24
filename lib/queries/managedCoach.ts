@@ -93,7 +93,8 @@ export async function loadManagedCoachOverview(
     supabase
       .from("coach_venues")
       .select("venue_id")
-      .eq("coach_id", coachId),
+      .eq("coach_id", coachId)
+      .in("status", ["active", "unverified"]),
     supabase
       .from("coach_attributes")
       .select("audience_adults, audience_juniors")

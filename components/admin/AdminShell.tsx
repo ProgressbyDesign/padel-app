@@ -3,11 +3,11 @@ import { adminLogout } from "@/app/actions/admin";
 import { adminAuthConfigured } from "@/lib/admin/auth";
 
 const NAV = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/review-queue", label: "Review queue" },
-  { href: "/admin/venues", label: "Venues" },
-  { href: "/admin/coaches", label: "Coaches" },
-  { href: "/admin/coach-venue-links", label: "Coach ↔ venue links" },
+  { href: "/admin/data-quality", label: "Dashboard" },
+  { href: "/admin/data-quality/review-queue", label: "Review queue" },
+  { href: "/admin/data-quality/venues", label: "Venues" },
+  { href: "/admin/data-quality/coaches", label: "Coaches" },
+  { href: "/admin/data-quality/coach-venue-links", label: "Coach → venue links" },
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
@@ -18,11 +18,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <header className="border-b border-primary/10 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>
-            <Link href="/admin" className="font-heading text-lg font-semibold text-primary">
-              Padel Pathways Admin
+            <Link href="/admin/data-quality" className="font-heading text-lg font-semibold text-primary">
+              Data quality admin
             </Link>
             <p className="text-xs text-primary/50">
-              Internal data review
+              Legacy crawler / repair tools
               {!configured ? " · ADMIN_SECRET not set" : null}
             </p>
           </div>

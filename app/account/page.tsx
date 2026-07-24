@@ -7,11 +7,16 @@ import {
   isEditableApplicationStatus,
 } from "@/lib/coachProfileApplication/constants";
 import { loadAccountDashboard } from "@/lib/queries/accountDashboard";
+import {
+  VENUE_APPLICATION_STATUS_LABELS,
+  isEditableVenueApplicationStatus,
+} from "@/lib/venueProfileApplication/constants";
 
 export default async function AccountPage() {
   const data = await loadAccountDashboard();
   const hasMemberships = data.coaches.length > 0 || data.venues.length > 0;
-  const application = data.coachApplication;
+  const coachApplication = data.coachApplication;
+  const venueApplication = data.venueApplication;
 
   return (
     <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 sm:py-14 lg:px-[120px]">
@@ -49,8 +54,9 @@ export default async function AccountPage() {
           </Link>
         </div>
 
-        <div className="mt-5 max-w-xl rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
-          {!application ? (
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+          {!coachApplication ? (
             <div>
               <h3 className="text-lg font-bold text-primary">Coach application</h3>
               <p className="mt-2 text-sm text-primary/65">
@@ -66,29 +72,131 @@ export default async function AccountPage() {
           ) : (
             <div>
               <h3 className="text-lg font-bold text-primary">
-                {isEditableApplicationStatus(application.status)
+                {isEditableApplicationStatus(coachApplication.status)
                   ? "Continue coach application"
-                  : application.status === "submitted" ||
-                      application.status === "under_review"
+                  : coachApplication.status === "submitted" ||
+                      coachApplication.status === "under_review"
                     ? "Coach application submitted"
                     : "Coach application"}
               </h3>
               <p className="mt-2 text-sm text-primary/65">
-                Status: {APPLICATION_STATUS_LABELS[application.status]} · Step{" "}
-                {application.currentStep} of 4
+                Status: {APPLICATION_STATUS_LABELS[coachApplication.status]} · Step{" "}
+                {coachApplication.currentStep} of 4
               </p>
+              {coachApplication.status === "changes_requested" &&
+              coachApplication.reviewNote ? (
+                <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+                  {coachApplication.reviewNote}
+                </p>
+              ) : null}
               <Link
-                href="/account/applications/coach"
+                href={
+                  coachApplication.status === "approved" && coachApplication.coachId
+                    ? `/account/coaches/${coachApplication.coachId}`
+                    : "/account/applications/coach"
+                }
                 className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent transition hover:bg-primary/90"
               >
-                {isEditableApplicationStatus(application.status)
+                {coachApplication.status === "approved" && coachApplication.coachId
+                  ? "Manage coach profile"
+                  : isEditableApplicationStatus(coachApplication.status)
                   ? "Continue application"
                   : "View application"}
               </Link>
             </div>
           )}
+          </div>
+
+          <div className="rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
+            {!venueApplication ? (
+              <div>
+                <h3 className="text-lg font-bold text-primary">Venue application</h3>
+                <p className="mt-2 text-sm text-primary/65">
+                  Claim an existing venue or propose a new listing.
+                </p>
+                <Link
+                  href="/account/applications/venue"
+                  className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent transition hover:bg-primary/90"
+                >
+                  Start venue application
+                </Link>
+              </div>
+            ) : (
+              <div>
+                <h3 className="text-lg font-bold text-primary">
+                  {isEditableVenueApplicationStatus(venueApplication.status)
+                    ? "Continue venue application"
+                    : venueApplication.status === "submitted" ||
+                        venueApplication.status === "under_review"
+                      ? "Venue application submitted"
+                      : "Venue application"}
+                </h3>
+                <p className="mt-2 text-sm text-primary/65">
+                  Status: {VENUE_APPLICATION_STATUS_LABELS[venueApplication.status]} · Step{" "}
+                  {venueApplication.currentStep} of 4
+                </p>
+                {venueApplication.status === "changes_requested" &&
+                venueApplication.reviewNote ? (
+                  <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+                    {venueApplication.reviewNote}
+                  </p>
+                ) : null}
+                <Link
+                  href={
+                    venueApplication.status === "approved" &&
+                    venueApplication.approvedVenueId
+                      ? `/account/venues/${venueApplication.approvedVenueId}`
+                      : "/account/applications/venue"
+                  }
+                  className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent transition hover:bg-primary/90"
+                >
+                  {venueApplication.status === "approved" &&
+                  venueApplication.approvedVenueId
+                    ? "Manage venue"
+                    : isEditableVenueApplicationStatus(venueApplication.status)
+                      ? "Continue application"
+                      : "View application"}
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </section>
+
+      {data.relationshipAttention.items.length > 0 ? (
+        <section className="mt-10" aria-labelledby="relationships-attention-heading">
+          <div>
+            <h2
+              id="relationships-attention-heading"
+              className="text-2xl font-bold text-primary"
+            >
+              Relationship updates
+            </h2>
+            <p className="mt-1 text-sm text-primary/60">
+              Coach and venue relationship actions that need your attention.
+            </p>
+          </div>
+          <ul className="mt-5 space-y-3">
+            {data.relationshipAttention.items.map((item) => (
+              <li
+                key={`${item.kind}-${item.entityId}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-amber-200 bg-amber-50/80 px-5 py-4"
+              >
+                <div>
+                  <p className="font-semibold text-amber-950">{item.entityName}</p>
+                  <p className="mt-1 text-sm text-amber-900/80">{item.message}</p>
+                </div>
+                <Link
+                  href={item.href}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent transition hover:bg-primary/90"
+                >
+                  Review
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {!hasMemberships ? (
         <div className="mt-8">

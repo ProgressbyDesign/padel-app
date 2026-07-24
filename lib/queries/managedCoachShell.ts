@@ -51,6 +51,7 @@ export const loadManagedCoachShell = cache(
       .from("coach_venues")
       .select("is_primary, venues ( city, country )")
       .eq("coach_id", coachId)
+      .in("status", ["active", "unverified"])
       .order("is_primary", { ascending: false })
       .limit(5);
 

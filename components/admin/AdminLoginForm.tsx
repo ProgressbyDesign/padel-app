@@ -13,7 +13,7 @@ export default function AdminLoginForm() {
   const [pending, startTransition] = useTransition();
 
   const configError = searchParams.get("error") === "config";
-  const nextPath = searchParams.get("next") ?? "/admin";
+  const nextPath = searchParams.get("next") ?? "/admin/data-quality";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,7 +24,7 @@ export default function AdminLoginForm() {
         setError(res.message);
         return;
       }
-      router.push(nextPath.startsWith("/admin") ? nextPath : "/admin");
+      router.push(nextPath.startsWith("/admin") ? nextPath : "/admin/data-quality");
       router.refresh();
     });
   }

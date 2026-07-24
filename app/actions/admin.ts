@@ -70,7 +70,7 @@ export async function searchVenuesAdminAction(term: string): Promise<
 export async function adminLogout(): Promise<void> {
   const jar = await cookies();
   jar.delete(ADMIN_COOKIE);
-  redirect("/admin/login");
+  redirect("/admin/data-quality/login");
 }
 
 export async function updateVenueAdmin(
@@ -120,7 +120,7 @@ export async function updateVenueAdmin(
     .eq("id", venueId);
 
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin("/admin/venues", `/admin/venues/${venueId}`, "/admin", "/admin/review-queue");
+  revalidateAdmin("/admin/data-quality/venues", `/admin/data-quality/venues/${venueId}`, "/admin/data-quality", "/admin/data-quality/review-queue");
   return { ok: true };
 }
 
@@ -159,7 +159,7 @@ export async function upsertVenueSocialAdmin(payload: {
     if (error) return { ok: false, message: error.message };
   }
 
-  revalidateAdmin(`/admin/venues/${payload.venue_id}`);
+  revalidateAdmin(`/admin/data-quality/venues/${payload.venue_id}`);
   return { ok: true };
 }
 
@@ -168,7 +168,7 @@ export async function deleteVenueSocialAdmin(id: string, venueId: string): Promi
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("venue_socials").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin(`/admin/venues/${venueId}`);
+  revalidateAdmin(`/admin/data-quality/venues/${venueId}`);
   return { ok: true };
 }
 
@@ -220,7 +220,7 @@ export async function updateCoachAdmin(
     .eq("id", coachId);
 
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin("/admin/coaches", `/admin/coaches/${coachId}`, "/admin", "/admin/review-queue");
+  revalidateAdmin("/admin/data-quality/coaches", `/admin/data-quality/coaches/${coachId}`, "/admin/data-quality", "/admin/data-quality/review-queue");
   return { ok: true };
 }
 
@@ -268,11 +268,11 @@ export async function linkCoachVenuesAdmin(
     }
   }
   revalidateAdmin(
-    "/admin/coach-venue-links",
-    `/admin/coaches/${coachId}`,
-    "/admin/coaches",
-    "/admin",
-    "/admin/review-queue"
+    "/admin/data-quality/coach-venue-links",
+    `/admin/data-quality/coaches/${coachId}`,
+    "/admin/data-quality/coaches",
+    "/admin/data-quality",
+    "/admin/data-quality/review-queue"
   );
   return { ok: true };
 }
@@ -289,7 +289,7 @@ export async function unlinkCoachVenueAdmin(
     .eq("coach_id", coachId)
     .eq("venue_id", venueId);
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin(`/admin/coaches/${coachId}`, "/admin/coach-venue-links");
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coach-venue-links");
   return { ok: true };
 }
 
@@ -310,7 +310,7 @@ export async function upsertCoachOutcomeAdmin(payload: {
     const { error } = await db.from("coach_outcomes").insert({ coach_id: payload.coach_id, outcome });
     if (error) return { ok: false, message: error.message };
   }
-  revalidateAdmin(`/admin/coaches/${payload.coach_id}`);
+  revalidateAdmin(`/admin/data-quality/coaches/${payload.coach_id}`);
   return { ok: true };
 }
 
@@ -322,7 +322,7 @@ export async function deleteCoachOutcomeAdmin(
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_outcomes").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin(`/admin/coaches/${coachId}`);
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`);
   return { ok: true };
 }
 
@@ -357,7 +357,7 @@ export async function upsertCoachSocialAdmin(payload: {
     });
     if (error) return { ok: false, message: error.message };
   }
-  revalidateAdmin(`/admin/coaches/${payload.coach_id}`);
+  revalidateAdmin(`/admin/data-quality/coaches/${payload.coach_id}`);
   return { ok: true };
 }
 
@@ -369,7 +369,7 @@ export async function deleteCoachSocialAdmin(
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_socials").delete().eq("id", id);
   if (error) return { ok: false, message: error.message };
-  revalidateAdmin(`/admin/coaches/${coachId}`);
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`);
   return { ok: true };
 }
 
@@ -398,7 +398,7 @@ export async function addCoachImageUrlAdmin(
   const inserted = await insertCoachImageIfNew(db, coachId, url);
   if (!inserted.ok) return { ok: false, message: inserted.message };
 
-  revalidateAdmin(`/admin/coaches/${coachId}`, "/admin/coaches");
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coaches");
   return { ok: true };
 }
 
@@ -460,7 +460,7 @@ export async function uploadCoachImageAdmin(formData: FormData): Promise<AdminAc
     return { ok: false, message: inserted.message };
   }
 
-  revalidateAdmin(`/admin/coaches/${coachId}`, "/admin/coaches");
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coaches");
   return { ok: true };
 }
 
@@ -493,7 +493,7 @@ export async function setPrimaryCoachImageAdmin(
     await db.from("coaches").update({ image_url: row.image_url.trim() }).eq("id", coachId);
   }
 
-  revalidateAdmin(`/admin/coaches/${coachId}`, "/admin/coaches");
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coaches");
   return { ok: true };
 }
 
@@ -524,6 +524,6 @@ export async function deleteCoachImageAdmin(
     await syncCoachImageUrlFromPrimary(db, coachId);
   }
 
-  revalidateAdmin(`/admin/coaches/${coachId}`, "/admin/coaches");
+  revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coaches");
   return { ok: true };
 }

@@ -79,7 +79,8 @@ async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
   const { data: links, error: linkErr } = await supabase
     .from("coach_venues")
     .select("coach_id")
-    .in("venue_id", venueIds);
+    .in("venue_id", venueIds)
+    .in("status", ["active", "unverified"]);
 
   if (linkErr || !links?.length) return [];
 

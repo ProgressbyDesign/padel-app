@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ImageIcon, LayoutDashboard, Link2, PenSquare } from "lucide-react";
+import {
+  Building2,
+  ImageIcon,
+  LayoutDashboard,
+  Link2,
+  PenSquare,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   {
@@ -31,6 +37,13 @@ const NAV_ITEMS = [
     icon: Link2,
     match: (pathname: string, base: string) =>
       pathname.startsWith(`${base}/socials`),
+  },
+  {
+    href: "/venues",
+    label: "Venues",
+    icon: Building2,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/venues`),
   },
 ] as const;
 

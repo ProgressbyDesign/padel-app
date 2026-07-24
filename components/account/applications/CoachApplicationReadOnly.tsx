@@ -57,6 +57,38 @@ export default function CoachApplicationReadOnly({
             Submitted for review
           </p>
         ) : null}
+        {application.reviewed_at ? (
+          <p className="mt-2 text-sm text-primary/55">
+            Reviewed{" "}
+            {new Date(application.reviewed_at).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+        ) : null}
+        {application.review_note ? (
+          <div className="mt-5 rounded-2xl border border-primary/10 bg-surface/60 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Review note
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-primary/75">
+              {application.review_note}
+            </p>
+          </div>
+        ) : null}
+        {application.status === "approved" && application.coach_id ? (
+          <div className="mt-5">
+            <p className="mb-2 break-all text-xs text-primary/45">
+              Coach ID: {application.coach_id}
+            </p>
+            <Link
+              href={`/account/coaches/${application.coach_id}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
+            >
+              Manage coach profile
+            </Link>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">

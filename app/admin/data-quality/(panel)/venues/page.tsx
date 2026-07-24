@@ -37,7 +37,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
   return (
     <>
       <AdminPageHeader title="Venues" description="Review and edit imported venue records." />
-      <AdminSearchForm action="/admin/venues" defaultValue={q} placeholder="Search venues…" />
+      <AdminSearchForm action="/admin/data-quality/venues" defaultValue={q} placeholder="Search venuesâ€¦" />
       {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
       {rows.length === 0 ? (
         <AdminEmpty message="No venues found." />
@@ -60,9 +60,9 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
             <tbody>
               {rows.map((v) => (
                 <tr key={v.id}>
-                  <AdminTd>{v.name ?? "—"}</AdminTd>
+                  <AdminTd>{v.name ?? "â€”"}</AdminTd>
                   <AdminTd>
-                    {[v.city, v.country].filter(Boolean).join(", ") || "—"}
+                    {[v.city, v.country].filter(Boolean).join(", ") || "â€”"}
                   </AdminTd>
                   <AdminTd className="max-w-[140px] truncate">
                     {v.website ? (
@@ -70,20 +70,20 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
                         {v.website}
                       </a>
                     ) : (
-                      "—"
+                      "â€”"
                     )}
                   </AdminTd>
-                  <AdminTd>{v.courts ?? "—"}</AdminTd>
+                  <AdminTd>{v.courts ?? "â€”"}</AdminTd>
                   <AdminTd>
-                    {[v.court_type, v.venue_type].filter(Boolean).join(" / ") || "—"}
+                    {[v.court_type, v.venue_type].filter(Boolean).join(" / ") || "â€”"}
                   </AdminTd>
-                  <AdminTd>{v.ai_confidence ?? "—"}</AdminTd>
+                  <AdminTd>{v.ai_confidence ?? "â€”"}</AdminTd>
                   <AdminTd>{qualityBadge(v.data_quality_status, v.is_approved)}</AdminTd>
                   <AdminTd className="text-xs text-primary/50">
-                    {v.last_crawled_at ? new Date(v.last_crawled_at).toLocaleDateString() : "—"}
+                    {v.last_crawled_at ? new Date(v.last_crawled_at).toLocaleDateString() : "â€”"}
                   </AdminTd>
                   <AdminTd>
-                    <Link href={`/admin/venues/${v.id}`} className="text-sm text-secondary underline">
+                    <Link href={`/admin/data-quality/venues/${v.id}`} className="text-sm text-secondary underline">
                       Edit
                     </Link>
                   </AdminTd>
@@ -95,7 +95,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
             page={page}
             total={total}
             pageSize={pageSize}
-            basePath="/admin/venues"
+            basePath="/admin/data-quality/venues"
             searchParams={{ q }}
           />
         </>

@@ -62,7 +62,8 @@ async function attachCoachVenueAndOutcomeEmbeds(
         )
       `
       )
-      .in("coach_id", ids),
+      .in("coach_id", ids)
+      .in("status", ["active", "unverified"]),
     supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
     supabase
       .from("coach_images")

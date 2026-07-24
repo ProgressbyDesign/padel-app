@@ -30,6 +30,9 @@ const APPLICATION_SELECT = `
   privacy_accepted_at,
   submitted_at,
   coach_id,
+  reviewed_at,
+  reviewed_by_user_id,
+  review_note,
   created_at,
   updated_at
 `;
@@ -55,6 +58,9 @@ function asApplication(
     privacy_accepted_at: (row.privacy_accepted_at as string | null) ?? null,
     submitted_at: (row.submitted_at as string | null) ?? null,
     coach_id: (row.coach_id as string | null) ?? null,
+    reviewed_at: (row.reviewed_at as string | null) ?? null,
+    reviewed_by_user_id: (row.reviewed_by_user_id as string | null) ?? null,
+    review_note: (row.review_note as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };

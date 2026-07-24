@@ -51,7 +51,7 @@ export default async function AdminReviewQueuePage({ searchParams }: Props) {
         {FILTERS.map((f) => (
           <Link
             key={f.id}
-            href={`/admin/review-queue?filter=${f.id}`}
+            href={`/admin/data-quality/review-queue?filter=${f.id}`}
             className={`rounded-full px-3 py-1 text-sm ${
               filter === f.id
                 ? "bg-primary text-white"
@@ -85,19 +85,19 @@ export default async function AdminReviewQueuePage({ searchParams }: Props) {
                         <Image src={c.image_url} alt="" fill className="object-cover" unoptimized />
                       </div>
                     ) : (
-                      "—"
+                      "â€”"
                     )}
                   </AdminTd>
-                  <AdminTd>{c.name ?? "—"}</AdminTd>
+                  <AdminTd>{c.name ?? "â€”"}</AdminTd>
                   <AdminTd>{qualityBadge(c.data_quality_status, c.is_approved)}</AdminTd>
                   <AdminTd>
-                    <Link href={`/admin/coaches/${c.id}`} className="text-secondary underline">
+                    <Link href={`/admin/data-quality/coaches/${c.id}`} className="text-secondary underline">
                       Edit
                     </Link>
                     {filter === "coaches_without_venue" ? (
                       <>
-                        {" · "}
-                        <Link href="/admin/coach-venue-links" className="text-secondary underline">
+                        {" Â· "}
+                        <Link href="/admin/data-quality/coach-venue-links" className="text-secondary underline">
                           Link venues
                         </Link>
                       </>
@@ -125,11 +125,11 @@ export default async function AdminReviewQueuePage({ searchParams }: Props) {
             <tbody>
               {venues.map((v) => (
                 <tr key={v.id}>
-                  <AdminTd>{v.name ?? "—"}</AdminTd>
-                  <AdminTd>{[v.city, v.country].filter(Boolean).join(", ") || "—"}</AdminTd>
+                  <AdminTd>{v.name ?? "â€”"}</AdminTd>
+                  <AdminTd>{[v.city, v.country].filter(Boolean).join(", ") || "â€”"}</AdminTd>
                   <AdminTd>{qualityBadge(v.data_quality_status, v.is_approved)}</AdminTd>
                   <AdminTd>
-                    <Link href={`/admin/venues/${v.id}`} className="text-secondary underline">
+                    <Link href={`/admin/data-quality/venues/${v.id}`} className="text-secondary underline">
                       Edit
                     </Link>
                   </AdminTd>
@@ -148,7 +148,7 @@ export default async function AdminReviewQueuePage({ searchParams }: Props) {
         page={page}
         total={total}
         pageSize={25}
-        basePath="/admin/review-queue"
+        basePath="/admin/data-quality/review-queue"
         searchParams={{ filter }}
       />
     </>
