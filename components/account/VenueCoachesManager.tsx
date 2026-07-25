@@ -26,6 +26,7 @@ import type {
   CoachVenueRelationship,
   CoachVenueSearchCoach,
 } from "@/lib/coachVenues/types";
+import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
 
 function statusTone(status: string) {
   if (status === "active") return "green" as const;
@@ -37,9 +38,19 @@ function statusTone(status: string) {
 export default function VenueCoachesManager({
   venueId,
   board,
+  availability = {},
 }: {
   venueId: string;
   board: CoachVenueBoard;
+  availability?: Record<
+    string,
+    {
+      configured: boolean;
+      isPublic: boolean;
+      timezone: string | null;
+      nextSlotStartsAt: string | null;
+    }
+  >;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -211,7 +222,9 @@ export default function VenueCoachesManager({
         title="Current coaches"
         empty="No current coach relationships."
         items={board.current}
-        renderItem={(row) => (
+        renderItem={(row) => {
+          const hint = availability[row.id];
+          return (
           <RelationshipCard
             key={row.id}
             title={row.coach?.name ?? "Coach"}
@@ -221,8 +234,38 @@ export default function VenueCoachesManager({
             status={row.status}
             isPrimary={row.is_primary}
             meta={`Via ${COACH_VENUE_INITIATOR_LABELS[row.initiated_by]}`}
+            availabilityNote={
+              row.status === "active"
+                ? hint?.configured
+                  ? `${hint.isPublic ? "Public" : "Private"} availability${
+                      hint.nextSlotStartsAt && hint.timezone
+                        ? ` · next ${formatInTimeZone(
+                            hint.nextSlotStartsAt,
+                            hint.timezone,
+                            {
+                              weekday: "short",
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hourCycle: "h23",
+                            }
+                          )}`
+                        : ""
+                    }`
+                  : "No availability set"
+                : undefined
+            }
             actions={
               <>
+                {row.status === "active" && row.coach ? (
+                  <Link
+                    href={`/account/venues/${encodeURIComponent(venueId)}/coaches/${encodeURIComponent(row.coach.id)}/availability`}
+                    className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
+                  >
+                    View schedule
+                  </Link>
+                ) : null}
                 {row.status === "active" ? (
                   <ConfirmActionButton
                     label="End relationship"
@@ -240,7 +283,8 @@ export default function VenueCoachesManager({
               </>
             }
           />
-        )}
+          );
+        }}
       />
 
       <RelationshipSection
@@ -376,6 +420,7 @@ function RelationshipCard({
   status,
   isPrimary,
   meta,
+  availabilityNote,
   imageUrl,
   actions,
 }: {
@@ -385,6 +430,7 @@ function RelationshipCard({
   status: CoachVenueRelationship["status"];
   isPrimary?: boolean;
   meta?: string;
+  availabilityNote?: string;
   imageUrl?: string | null;
   actions?: ReactNode;
 }) {
@@ -413,6 +459,9 @@ function RelationshipCard({
             </div>
             {subtitle ? <p className="mt-1 text-sm text-primary/55">{subtitle}</p> : null}
             {meta ? <p className="mt-1 text-xs text-primary/45">{meta}</p> : null}
+            {availabilityNote ? (
+              <p className="mt-1 text-xs text-primary/65">{availabilityNote}</p>
+            ) : null}
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

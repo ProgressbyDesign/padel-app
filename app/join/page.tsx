@@ -17,13 +17,16 @@ const benefits = [
 
 export default async function JoinPage() {
   const account = await getAuthenticatedAccount();
+  const coachAppPath = "/account/applications/coach";
+  const venueAppPath = "/account/applications/venue";
   const coachHref = account
-    ? "/account/applications/coach"
-    : "/signup?next=/account/applications/coach";
+    ? coachAppPath
+    : `/signup?next=${encodeURIComponent(coachAppPath)}`;
   const venueHref = account
-    ? "/account/applications/venue"
-    : "/signup?next=/account/applications/venue";
-  const loginHref = `/login?next=${encodeURIComponent("/account/applications/coach")}`;
+    ? venueAppPath
+    : `/signup?next=${encodeURIComponent(venueAppPath)}`;
+  const coachLoginHref = `/login?next=${encodeURIComponent(coachAppPath)}`;
+  const venueLoginHref = `/login?next=${encodeURIComponent(venueAppPath)}`;
 
   return (
     <div className="bg-surface/50">
@@ -65,7 +68,7 @@ export default async function JoinPage() {
             {!account ? (
               <p className="mt-3 text-xs text-primary/55">
                 Already have an account?{" "}
-                <Link href={loginHref} className="font-semibold text-primary underline">
+                <Link href={coachLoginHref} className="font-semibold text-primary underline">
                   Log in
                 </Link>
               </p>
@@ -88,6 +91,17 @@ export default async function JoinPage() {
             >
               {account ? "Manage or claim a venue" : "Apply for a venue"}
             </Link>
+            {!account ? (
+              <p className="mt-3 text-xs text-primary/55">
+                Already have an account?{" "}
+                <Link
+                  href={venueLoginHref}
+                  className="font-semibold text-primary underline"
+                >
+                  Log in
+                </Link>
+              </p>
+            ) : null}
           </article>
 
           <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">

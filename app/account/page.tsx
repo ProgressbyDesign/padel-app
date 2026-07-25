@@ -36,6 +36,126 @@ export default async function AccountPage() {
         <AccountHeader email={data.account.email} />
       </div>
 
+      <div className="mt-6">
+        <Link
+          href="/account/bookings"
+          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-primary/15 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:bg-surface"
+        >
+          My bookings
+        </Link>
+      </div>
+
+      {(data.bookingAttention.playerAwaiting > 0 ||
+        data.bookingAttention.playerAcceptedUpcoming > 0 ||
+        data.bookingAttention.coachNewRequests.length > 0 ||
+        data.bookingAttention.coachAcceptedUpcoming.length > 0) && (
+        <section className="mt-10" aria-labelledby="bookings-attention-heading">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2
+                id="bookings-attention-heading"
+                className="text-2xl font-bold text-primary"
+              >
+                Bookings needing attention
+              </h2>
+              <p className="mt-1 text-sm text-primary/60">
+                Session requests that need attention.
+              </p>
+            </div>
+            <Link
+              href="/account/bookings"
+              className="text-sm font-semibold text-primary/70 transition hover:text-primary"
+            >
+              View my bookings
+            </Link>
+          </div>
+          <ul className="mt-5 space-y-3">
+            {data.bookingAttention.playerAwaiting > 0 ? (
+              <li className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-amber-200 bg-amber-50/80 px-5 py-4">
+                <div>
+                  <p className="font-semibold text-amber-950">
+                    Awaiting coach response
+                  </p>
+                  <p className="mt-1 text-sm text-amber-900/80">
+                    {data.bookingAttention.playerAwaiting === 1
+                      ? "1 booking request is waiting for a coach reply."
+                      : `${data.bookingAttention.playerAwaiting} booking requests are waiting for a coach reply.`}
+                  </p>
+                </div>
+                <Link
+                  href="/account/bookings"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent"
+                >
+                  Review
+                </Link>
+              </li>
+            ) : null}
+            {data.bookingAttention.playerAcceptedUpcoming > 0 ? (
+              <li className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-emerald-200 bg-emerald-50/80 px-5 py-4">
+                <div>
+                  <p className="font-semibold text-emerald-950">
+                    Accepted upcoming sessions
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-900/80">
+                    {data.bookingAttention.playerAcceptedUpcoming === 1
+                      ? "1 accepted session — arrange payment with the coach."
+                      : `${data.bookingAttention.playerAcceptedUpcoming} accepted sessions — arrange payment with the coach.`}
+                  </p>
+                </div>
+                <Link
+                  href="/account/bookings"
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent"
+                >
+                  View
+                </Link>
+              </li>
+            ) : null}
+            {data.bookingAttention.coachNewRequests.map((item) => (
+              <li
+                key={`coach-new-${item.coachId}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-amber-200 bg-amber-50/80 px-5 py-4"
+              >
+                <div>
+                  <p className="font-semibold text-amber-950">{item.coachName}</p>
+                  <p className="mt-1 text-sm text-amber-900/80">
+                    {item.count === 1
+                      ? "1 new booking request"
+                      : `${item.count} new booking requests`}
+                  </p>
+                </div>
+                <Link
+                  href={`/account/coaches/${encodeURIComponent(item.coachId)}/bookings`}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent"
+                >
+                  Review
+                </Link>
+              </li>
+            ))}
+            {data.bookingAttention.coachAcceptedUpcoming.map((item) => (
+              <li
+                key={`coach-accepted-${item.coachId}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-emerald-200 bg-emerald-50/80 px-5 py-4"
+              >
+                <div>
+                  <p className="font-semibold text-emerald-950">{item.coachName}</p>
+                  <p className="mt-1 text-sm text-emerald-900/80">
+                    {item.count === 1
+                      ? "1 upcoming accepted session"
+                      : `${item.count} upcoming accepted sessions`}
+                  </p>
+                </div>
+                <Link
+                  href={`/account/coaches/${encodeURIComponent(item.coachId)}/bookings`}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent"
+                >
+                  View
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="mt-10" aria-labelledby="applications-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

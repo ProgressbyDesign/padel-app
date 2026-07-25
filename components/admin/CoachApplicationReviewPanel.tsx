@@ -32,6 +32,7 @@ export default function CoachApplicationReviewPanel({
   const [search, setSearch] = useState(application.full_name ?? "");
   const [results, setResults] = useState<AdminCoachSearchResult[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState(application.coach_id ?? "");
+  const [approvedCoachId, setApprovedCoachId] = useState(application.coach_id ?? "");
   const [name, setName] = useState(application.full_name ?? "");
   const [role, setRole] = useState(
     application.coaching_role === "other"
@@ -55,6 +56,7 @@ export default function CoachApplicationReviewPanel({
       setMessage(result.message);
       setIsError(!result.ok);
       if (result.entityId && !result.ok) setSelectedCoachId(result.entityId);
+      if (result.ok && result.entityId) setApprovedCoachId(result.entityId);
       if (result.ok) router.refresh();
     });
   }
@@ -78,6 +80,43 @@ export default function CoachApplicationReviewPanel({
     <aside className="space-y-5">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg">Review controls</h2>
+        {reviewable ? (
+          <div className="mb-4 rounded-xl border border-primary/10 bg-surface/60 p-3 text-xs leading-5 text-primary/65">
+            Approving seeds the coach profile from this application (name, role,
+            description, experience, phone, locations, levels, audiences,
+            outcomes). The database trigger also creates membership — you do not
+            copy fields manually.
+          </div>
+        ) : null}
+        {application.status === "approved" && application.coach_id ? (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+            <p className="font-semibold">Approved</p>
+            <p className="mt-1 text-xs leading-5">
+              Membership was created by the database. Remaining work: images,
+              venues, availability, and booking readiness.
+            </p>
+            <a
+              href={`/admin/coaches/${application.coach_id}`}
+              className="mt-2 inline-flex text-sm font-semibold underline-offset-2 hover:underline"
+            >
+              Open managed coach profile
+            </a>
+          </div>
+        ) : approvedCoachId ? (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+            <p className="font-semibold">Approved</p>
+            <p className="mt-1 text-xs leading-5">
+              Membership was created by the database. Remaining work: images,
+              venues, availability, and booking readiness.
+            </p>
+            <a
+              href={`/admin/coaches/${approvedCoachId}`}
+              className="mt-2 inline-flex text-sm font-semibold underline-offset-2 hover:underline"
+            >
+              Open managed coach profile
+            </a>
+          </div>
+        ) : null}
         {application.status === "submitted" ? (
           <button
             type="button"

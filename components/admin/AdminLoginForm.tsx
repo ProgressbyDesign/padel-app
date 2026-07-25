@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { adminLogin } from "@/app/actions/admin";
+import { safeInternalPath } from "@/lib/auth/safePath";
 import { AdminButton, AdminInput } from "./ui";
 
 export default function AdminLoginForm() {
@@ -13,7 +14,13 @@ export default function AdminLoginForm() {
   const [pending, startTransition] = useTransition();
 
   const configError = searchParams.get("error") === "config";
-  const nextPath = searchParams.get("next") ?? "/admin/data-quality";
+  const nextPath = safeInternalPath(
+    searchParams.get("next"),
+    "/admin/data-quality"
+  );
+  const safeNext = nextPath.startsWith("/admin/data-quality")
+    ? nextPath
+    : "/admin/data-quality";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,7 +31,7 @@ export default function AdminLoginForm() {
         setError(res.message);
         return;
       }
-      router.push(nextPath.startsWith("/admin") ? nextPath : "/admin/data-quality");
+      router.push(safeNext);
       router.refresh();
     });
   }

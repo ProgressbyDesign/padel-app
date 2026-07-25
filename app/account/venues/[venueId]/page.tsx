@@ -5,11 +5,13 @@ import {
   ArrowRight,
   CheckCircle2,
   Circle,
+  ExternalLink,
   ImageIcon,
   Link2,
   PenSquare,
   Star,
 } from "lucide-react";
+import { buildVenueCompletion } from "@/lib/coachProfileCompletion";
 import { loadManagedVenueOverview } from "@/lib/queries/managedVenue";
 import { getStructuredOpeningHours } from "@/lib/openingHours";
 
@@ -22,74 +24,74 @@ type PageProps = {
   params: Promise<{ venueId: string }>;
 };
 
-function hasCoreDetails(venue: {
-  name: string | null;
-  city: string | null;
-  country: string | null;
-  address: string | null;
-  website: string | null;
-  phone: string | null;
-  venue_type: string | null;
-}): boolean {
-  return Boolean(
-    venue.name?.trim() &&
-      venue.city?.trim() &&
-      venue.country?.trim() &&
-      venue.address?.trim() &&
-      venue.venue_type?.trim()
-  );
-}
-
 export default async function ManagedVenueOverviewPage({ params }: PageProps) {
   const { venueId } = await params;
   const result = await loadManagedVenueOverview(venueId);
   if (!result) notFound();
 
-  const { venue, imageCount, socialCount } = result;
+  const {
+    venue,
+    imageCount,
+    socialCount,
+    activeCoachCount,
+    hasCoachAvailability,
+  } = result;
   const venueName = venue.name?.trim() || "Venue";
   const location = [venue.city, venue.country].filter(Boolean).join(", ");
   const base = `/account/venues/${encodeURIComponent(venue.id)}`;
   const hasHours = Boolean(
     getStructuredOpeningHours(venue.opening_hours_structured)
   );
-  const checklist = [
-    {
-      id: "details",
-      label: "Core details present",
-      done: hasCoreDetails(venue),
-      href: `${base}/details`,
-    },
-    {
-      id: "hours",
-      label: "Opening hours configured",
-      done: hasHours,
-      href: `${base}/details`,
-    },
-    {
-      id: "images",
-      label: "At least one image",
-      done: imageCount > 0,
-      href: `${base}/images`,
-    },
-    {
-      id: "socials",
-      label: "At least one social link",
-      done: socialCount > 0,
-      href: `${base}/socials`,
-    },
-  ] as const;
-
-  const completedCount = checklist.filter((item) => item.done).length;
+  const completion = buildVenueCompletion(venue.id, {
+    name: venue.name,
+    city: venue.city,
+    country: venue.country,
+    address: venue.address,
+    website: venue.website,
+    phone: venue.phone,
+    courts: venue.courts,
+    courtType: venue.court_type,
+    venueType: venue.venue_type,
+    hasOpeningHours: hasHours,
+    imageCount,
+    socialCount,
+    hasCoachingDescription: Boolean(venue.coaching_description?.trim()),
+    activeCoachCount,
+    hasCoachAvailability,
+    isVerified: Boolean(venue.is_approved),
+  });
 
   return (
     <div className="space-y-8">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">Overview</h2>
-          <p className="mt-1 text-sm text-primary/60">
-            Current public and account status for this venue.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-primary">Overview</h2>
+            <p className="mt-1 text-sm text-primary/60">
+              Current public and account status for this venue.
+            </p>
+          </div>
+          <Link
+            href={`/venue/${encodeURIComponent(venue.id)}`}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-primary/15 px-4 py-2 text-sm font-semibold text-primary/80 hover:bg-surface"
+          >
+            Public preview
+            <ExternalLink className="h-4 w-4" aria-hidden />
+          </Link>
         </div>
+
+        {completion.badges.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {completion.badges.map((badge) => (
+              <li
+                key={badge.id}
+                className="rounded-lg border border-primary/10 bg-surface px-2.5 py-1 text-xs font-semibold text-primary/80"
+              >
+                {badge.label}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl bg-surface p-4">
@@ -142,6 +144,10 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
             <dd className="mt-2 font-semibold text-primary">
               {venue.coaching_available ? "Available" : "Not listed"}
             </dd>
+            <dd className="mt-1 text-sm text-primary/60">
+              {activeCoachCount} active coach
+              {activeCoachCount === 1 ? "" : "es"}
+            </dd>
           </div>
         </dl>
 
@@ -159,41 +165,56 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-primary">Completeness</h2>
-            <p className="mt-1 text-sm text-primary/60">
-              {completedCount} of {checklist.length} checklist items complete.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-primary">Completeness</h2>
+          <p className="mt-1 text-sm text-primary/60">
+            Focus on essential details first, then trust signals and coach
+            readiness. This is not a search ranking score.
+          </p>
+          <p className="mt-3 text-sm font-semibold text-primary">
+            {completion.completedWeighted} of {completion.weightedTotal} core
+            items complete
+          </p>
         </div>
 
-        <ul className="mt-6 space-y-3">
-          {checklist.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={item.href}
-                className="flex items-center gap-3 rounded-2xl border border-primary/10 px-4 py-3 transition hover:bg-surface"
-              >
-                {item.done ? (
-                  <CheckCircle2
-                    className="h-5 w-5 shrink-0 text-emerald-600"
-                    aria-hidden
-                  />
-                ) : (
-                  <Circle
-                    className="h-5 w-5 shrink-0 text-primary/30"
-                    aria-hidden
-                  />
-                )}
-                <span className="flex-1 text-sm font-semibold text-primary">
-                  {item.label}
-                </span>
-                <ArrowRight className="h-4 w-4 text-primary/40" aria-hidden />
-              </Link>
-            </li>
+        <div className="mt-6 space-y-6">
+          {completion.groups.map((group) => (
+            <div key={group.id}>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+                {group.title}
+              </h3>
+              <ul className="mt-3 space-y-2">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 rounded-2xl border border-primary/10 px-4 py-3 transition hover:bg-surface"
+                    >
+                      {item.done ? (
+                        <CheckCircle2
+                          className="h-5 w-5 shrink-0 text-emerald-600"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Circle
+                          className="h-5 w-5 shrink-0 text-primary/30"
+                          aria-hidden
+                        />
+                      )}
+                      <span className="flex-1 text-sm font-semibold text-primary">
+                        {item.label}
+                      </span>
+                      <ArrowRight
+                        className="h-4 w-4 text-primary/40"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">

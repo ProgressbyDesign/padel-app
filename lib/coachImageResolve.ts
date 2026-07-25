@@ -8,13 +8,29 @@ export function resolveCoachImageUrl(
   images: CoachImageEmbed[] | null | undefined,
   fallbackImageUrl?: string | null
 ): string | null {
-  const list = images ?? [];
-  const primary = list.find((img) => img.is_primary && img.image_url?.trim());
-  if (primary?.image_url?.trim()) return primary.image_url.trim();
-  const first = list.find((img) => img.image_url?.trim());
-  if (first?.image_url?.trim()) return first.image_url.trim();
+  const gallery = resolveCoachGalleryUrls(images, fallbackImageUrl);
+  return gallery[0] ?? null;
+}
+
+/** Primary-first gallery URLs; falls back to legacy `image_url` when embeds are empty. */
+export function resolveCoachGalleryUrls(
+  images: CoachImageEmbed[] | null | undefined,
+  fallbackImageUrl?: string | null
+): string[] {
+  const list = [...(images ?? [])].sort(
+    (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+  );
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const img of list) {
+    const url = img.image_url?.trim();
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    urls.push(url);
+  }
   const legacy = fallbackImageUrl?.trim();
-  return legacy || null;
+  if (legacy && !seen.has(legacy)) urls.push(legacy);
+  return urls;
 }
 
 export function normalizeCoachImageUrl(url: string): string {

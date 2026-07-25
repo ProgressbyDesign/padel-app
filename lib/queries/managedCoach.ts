@@ -10,6 +10,7 @@ import {
   isValidCoachId,
   loadManagedCoachShell,
 } from "@/lib/queries/managedCoachShell";
+import { coachHasLivePublicAvailability } from "@/lib/queries/coachAvailability";
 
 export { isValidCoachId };
 
@@ -33,12 +34,19 @@ export type ManagedCoachOverview = {
   coach: ManagedCoachDetail;
   membershipRole: MembershipRole;
   primaryLocation: string | null;
+  hasPrimaryLocation: boolean;
   imageCount: number;
   socialCount: number;
   venueCount: number;
+  achievementCount: number;
   audienceAdults: boolean;
   audienceJuniors: boolean;
+  playerLevels: string[];
   outcomes: string[];
+  availabilityStatus: "none" | "private" | "live";
+  nextAvailableAt: string | null;
+  availabilityComplete: boolean;
+  pendingBookingCount: number;
 };
 
 async function assertManagedCoachAccess(coachId: string) {
@@ -60,6 +68,9 @@ export async function loadManagedCoachOverview(
     venuesResult,
     attributesResult,
     outcomesResult,
+    locationsResult,
+    achievementsResult,
+    bookingsResult,
   ] = await Promise.all([
     supabase
       .from("coaches")
@@ -94,30 +105,62 @@ export async function loadManagedCoachOverview(
       .from("coach_venues")
       .select("venue_id")
       .eq("coach_id", coachId)
-      .in("status", ["active", "unverified"]),
+      .eq("status", "active"),
     supabase
       .from("coach_attributes")
-      .select("audience_adults, audience_juniors")
+      .select("audience_adults, audience_juniors, player_levels")
       .eq("coach_id", coachId)
       .maybeSingle(),
     supabase
       .from("coach_outcomes")
-      .select("outcome")
+      .select("outcome, outcome_key")
       .eq("coach_id", coachId),
+    supabase
+      .from("coach_locations")
+      .select("id, is_primary")
+      .eq("coach_id", coachId),
+    supabase
+      .from("coach_achievements")
+      .select("id")
+      .eq("coach_id", coachId),
+    supabase
+      .from("coach_booking_requests")
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("status", "requested")
+      .gte("starts_at", new Date().toISOString()),
   ]);
 
   if (coachResult.error || !coachResult.data) return null;
+
+  const availability = await coachHasLivePublicAvailability(coachId);
+  const locations = locationsResult.data ?? [];
+  const hasPrimaryLocation =
+    locations.some((row) => row.is_primary) || locations.length > 0;
 
   return {
     coach: coachResult.data as ManagedCoachDetail,
     membershipRole: shell.membershipRole,
     primaryLocation: shell.primaryLocation,
+    hasPrimaryLocation,
     imageCount: imagesResult.data?.length ?? 0,
     socialCount: socialsResult.data?.length ?? 0,
     venueCount: venuesResult.data?.length ?? 0,
+    achievementCount: achievementsResult.data?.length ?? 0,
     audienceAdults: Boolean(attributesResult.data?.audience_adults),
     audienceJuniors: Boolean(attributesResult.data?.audience_juniors),
-    outcomes: (outcomesResult.data ?? []).map((row) => String(row.outcome)),
+    playerLevels: Array.isArray(attributesResult.data?.player_levels)
+      ? (attributesResult.data?.player_levels as string[])
+      : [],
+    outcomes: (outcomesResult.data ?? []).map(
+      (row) =>
+        (row.outcome_key ? String(row.outcome_key) : null) ||
+        String(row.outcome)
+    ),
+    availabilityStatus: availability.status,
+    nextAvailableAt: availability.nextSlotStartsAt,
+    availabilityComplete: availability.status === "live",
+    pendingBookingCount: bookingsResult.data?.length ?? 0,
   };
 }
 
@@ -128,7 +171,8 @@ export async function loadManagedCoachDetails(
   membershipRole: MembershipRole;
   audienceAdults: boolean;
   audienceJuniors: boolean;
-  outcomes: string[];
+  playerLevels: string[];
+  outcomes: Array<{ outcome: string; outcome_key: string | null }>;
 } | null> {
   const shell = await assertManagedCoachAccess(coachId);
   if (!shell) return null;
@@ -158,12 +202,12 @@ export async function loadManagedCoachDetails(
       .maybeSingle(),
     supabase
       .from("coach_attributes")
-      .select("audience_adults, audience_juniors")
+      .select("audience_adults, audience_juniors, player_levels")
       .eq("coach_id", coachId)
       .maybeSingle(),
     supabase
       .from("coach_outcomes")
-      .select("outcome")
+      .select("outcome, outcome_key")
       .eq("coach_id", coachId),
   ]);
 
@@ -174,7 +218,13 @@ export async function loadManagedCoachDetails(
     membershipRole: shell.membershipRole,
     audienceAdults: Boolean(attributesResult.data?.audience_adults),
     audienceJuniors: Boolean(attributesResult.data?.audience_juniors),
-    outcomes: (outcomesResult.data ?? []).map((row) => String(row.outcome)),
+    playerLevels: Array.isArray(attributesResult.data?.player_levels)
+      ? (attributesResult.data?.player_levels as string[])
+      : [],
+    outcomes: (outcomesResult.data ?? []).map((row) => ({
+      outcome: String(row.outcome),
+      outcome_key: row.outcome_key ? String(row.outcome_key) : null,
+    })),
   };
 }
 
@@ -199,6 +249,7 @@ export async function loadManagedCoachImages(
       id: string;
       image_url: string;
       is_primary: boolean | null;
+      created_at: string | null;
     }[]
   | null
 > {
@@ -207,14 +258,16 @@ export async function loadManagedCoachImages(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_images")
-    .select("id, image_url, is_primary")
+    .select("id, image_url, is_primary, created_at")
     .eq("coach_id", coachId)
-    .order("is_primary", { ascending: false });
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true });
   if (error) return null;
   return (data ?? []) as {
     id: string;
     image_url: string;
     is_primary: boolean | null;
+    created_at: string | null;
   }[];
 }
 

@@ -47,7 +47,12 @@ async function loadApplication(
     )
     .eq("id", applicationId)
     .maybeSingle();
-  if (error) throw new Error(`Unable to load application: ${error.message}`);
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[admin] load coach application failed:", error.message);
+    }
+    throw new Error("Unable to load application.");
+  }
   return (data as CoachApplicationMutationRow | null) ?? null;
 }
 

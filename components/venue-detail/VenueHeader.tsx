@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { ArrowLeft, MapPin, Star } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { getDistanceInMiles } from "../../lib/distance";
 import type { Venue } from "../../lib/venueFilters";
 import { formatRatingValue } from "../../lib/venueDetailHelpers";
-import { readUserGeo } from "../../lib/userGeoSession";
-import type { UserGeolocation } from "../../hooks/useUserGeolocation";
+import {
+  getUserGeoServerSnapshot,
+  getUserGeoSnapshot,
+  subscribeUserGeo,
+} from "../../lib/userGeoSession";
 
 type VenueHeaderProps = {
   venue: Venue;
@@ -19,11 +22,11 @@ function distanceLabel(miles: number) {
 }
 
 export default function VenueHeader({ venue }: VenueHeaderProps) {
-  const [sessionCoords, setSessionCoords] = useState<UserGeolocation>(null);
-
-  useEffect(() => {
-    setSessionCoords(readUserGeo());
-  }, []);
+  const sessionCoords = useSyncExternalStore(
+    subscribeUserGeo,
+    getUserGeoSnapshot,
+    getUserGeoServerSnapshot
+  );
 
   const locationLine = [venue.city, venue.country].filter(Boolean).join(", ");
   const ratingStr = formatRatingValue(venue.rating);
@@ -35,10 +38,25 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
 
   const distanceMiles = useMemo(() => {
     if (!sessionCoords) return null;
-    const lat = typeof venue.lat === "number" ? venue.lat : venue.lat != null ? Number(venue.lat) : NaN;
-    const lng = typeof venue.lng === "number" ? venue.lng : venue.lng != null ? Number(venue.lng) : NaN;
+    const lat =
+      typeof venue.lat === "number"
+        ? venue.lat
+        : venue.lat != null
+          ? Number(venue.lat)
+          : NaN;
+    const lng =
+      typeof venue.lng === "number"
+        ? venue.lng
+        : venue.lng != null
+          ? Number(venue.lng)
+          : NaN;
     if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
-    return getDistanceInMiles(sessionCoords.latitude, sessionCoords.longitude, lat, lng);
+    return getDistanceInMiles(
+      sessionCoords.latitude,
+      sessionCoords.longitude,
+      lat,
+      lng
+    );
   }, [sessionCoords, venue.lat, venue.lng]);
 
   return (
@@ -52,14 +70,17 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
       </Link>
 
       <div className="space-y-3">
-        <h1>
-          {venue.name?.trim() || "Venue"}
-        </h1>
+        <h1>{venue.name?.trim() || "Venue"}</h1>
 
         {coachingAvailable ? (
           <p className="inline-flex items-center gap-2 rounded-full bg-secondary/20 px-3 py-1 text-sm font-semibold text-primary ring-1 ring-secondary/35">
-            <span aria-hidden>🎾</span>
             Coaching available
+          </p>
+        ) : null}
+
+        {venue.is_approved ? (
+          <p className="inline-flex items-center rounded-lg border border-primary/12 bg-surface px-2.5 py-1 text-xs font-semibold text-primary/80">
+            Verified venue
           </p>
         ) : null}
 
@@ -72,7 +93,9 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
                 <span className="text-primary/45" aria-hidden>
                   ·
                 </span>
-                <span className="font-semibold text-primary">{distanceLabel(distanceMiles)}</span>
+                <span className="font-semibold text-primary">
+                  {distanceLabel(distanceMiles)}
+                </span>
               </>
             ) : null}
           </p>
@@ -83,7 +106,11 @@ export default function VenueHeader({ venue }: VenueHeaderProps) {
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
               <Star className="h-4 w-4 fill-secondary text-secondary" aria-hidden />
               {ratingStr}
-              {reviewCount ? <span className="font-normal text-primary/60">({reviewCount} reviews)</span> : null}
+              {reviewCount ? (
+                <span className="font-normal text-primary/60">
+                  ({reviewCount} reviews)
+                </span>
+              ) : null}
             </span>
           </div>
         ) : (

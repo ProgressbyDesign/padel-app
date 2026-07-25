@@ -18,7 +18,8 @@ export default async function ManagedCoachDetailsPage({ params }: PageProps) {
   const result = await loadManagedCoachDetails(coachId);
   if (!result) notFound();
 
-  const { coach, audienceAdults, audienceJuniors, outcomes } = result;
+  const { coach, audienceAdults, audienceJuniors, playerLevels, outcomes } =
+    result;
 
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
@@ -37,10 +38,12 @@ export default async function ManagedCoachDetailsPage({ params }: PageProps) {
             description: coach.description,
             experience_years: coach.experience_years,
             phone: coach.phone,
+            email: coach.email,
             travel_available: coach.travel_available,
             price_from: coach.price_from,
             audienceAdults,
             audienceJuniors,
+            playerLevels,
             outcomes,
           })}
         />

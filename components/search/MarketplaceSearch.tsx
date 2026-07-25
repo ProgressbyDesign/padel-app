@@ -74,7 +74,15 @@ export default function MarketplaceSearch({
   const [nearbyLoadingLocal, setNearbyLoadingLocal] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modeOpen, setModeOpen] = useState(false);
+  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  if (initialValues !== prevInitialValues) {
+    setPrevInitialValues(initialValues);
+    if (initialValues?.mode) setMode(initialValues.mode);
+    if (initialValues?.location !== undefined) setLocation(initialValues.location);
+    if (initialValues?.entity !== undefined) setEntity(initialValues.entity);
+  }
 
   const debouncedFieldQuery = useDebounced(
     activeField === "where" ? location : activeField === "entity" ? entity : "",
@@ -84,13 +92,6 @@ export default function MarketplaceSearch({
   const isHero = variant === "hero";
   const isCompact = variant === "compact";
   const nearbyLoading = nearbyLoadingProp ?? nearbyLoadingLocal;
-
-  useEffect(() => {
-    if (!initialValues) return;
-    if (initialValues.mode) setMode(initialValues.mode);
-    if (initialValues.location !== undefined) setLocation(initialValues.location);
-    if (initialValues.entity !== undefined) setEntity(initialValues.entity);
-  }, [initialValues]);
 
   const emitValues = useCallback(
     (patch: Partial<MarketplaceSearchValues>) => {
@@ -153,10 +154,7 @@ export default function MarketplaceSearch({
   }, [activeField, modalOpen, closeDropdown]);
 
   useEffect(() => {
-    if (!activeField) {
-      setSuggestions(EMPTY_SUGGESTIONS);
-      return;
-    }
+    if (!activeField) return;
 
     const ac = new AbortController();
     const params = new URLSearchParams({
@@ -168,7 +166,11 @@ export default function MarketplaceSearch({
       params.set("location", location.trim());
     }
 
-    setLoadingSuggestions(true);
+    void Promise.resolve().then(() => {
+      if (ac.signal.aborted) return;
+      setLoadingSuggestions(true);
+    });
+
     fetch(`/api/search/suggestions?${params}`, { signal: ac.signal })
       .then((r) => r.json())
       .then((data: SuggestionsApiPayload) => {
@@ -183,6 +185,9 @@ export default function MarketplaceSearch({
 
     return () => ac.abort();
   }, [activeField, mode, debouncedFieldQuery, location]);
+
+  const displaySuggestions = activeField ? suggestions : EMPTY_SUGGESTIONS;
+  const displayLoadingSuggestions = activeField ? loadingSuggestions : false;
 
   const submit = useCallback(
     (override?: Partial<MarketplaceSearchValues>) => {
@@ -306,8 +311,8 @@ export default function MarketplaceSearch({
         entity={entity}
         activeField={activeField}
         setActiveField={setActiveField}
-        suggestions={suggestions}
-        loadingSuggestions={loadingSuggestions}
+        suggestions={displaySuggestions}
+        loadingSuggestions={displayLoadingSuggestions}
         onChangeMode={changeMode}
         onChangeLocation={changeLocation}
         onChangeEntity={changeEntity}
@@ -464,11 +469,11 @@ export default function MarketplaceSearch({
             <MarketplaceSearchSuggestions
               mode={mode}
               field={activeField}
-              where={suggestions.where}
-              venues={suggestions.venues}
-              coaches={suggestions.coaches}
-              outcomes={suggestions.outcomes}
-              loading={loadingSuggestions}
+              where={displaySuggestions.where}
+              venues={displaySuggestions.venues}
+              coaches={displaySuggestions.coaches}
+              outcomes={displaySuggestions.outcomes}
+              loading={displayLoadingSuggestions}
               onSelectOutcome={(label) => {
                 changeEntity(label);
                 closeDropdown();

@@ -47,28 +47,48 @@ export const loadManagedCoachShell = cache(
 
     if (coachError || !coach) return null;
 
-    const { data: venueLinks } = await supabase
-      .from("coach_venues")
-      .select("is_primary, venues ( city, country )")
+    const { data: coachLocations } = await supabase
+      .from("coach_locations")
+      .select("city, country, is_primary")
       .eq("coach_id", coachId)
-      .in("status", ["active", "unverified"])
       .order("is_primary", { ascending: false })
       .limit(5);
 
     let primaryLocation: string | null = null;
-    for (const link of venueLinks ?? []) {
-      const venues = link.venues as
-        | { city: string | null; country: string | null }
-        | { city: string | null; country: string | null }[]
-        | null;
-      const venue = Array.isArray(venues) ? venues[0] : venues;
-      const location = [venue?.city, venue?.country]
-        .map((part) => part?.trim())
+    for (const location of coachLocations ?? []) {
+      const label = [location.city, location.country]
+        .map((part) => String(part ?? "").trim())
         .filter(Boolean)
         .join(", ");
-      if (location) {
-        primaryLocation = location;
+      if (label) {
+        primaryLocation = label;
         break;
+      }
+    }
+
+    if (!primaryLocation) {
+      const { data: venueLinks } = await supabase
+        .from("coach_venues")
+        .select("is_primary, venues ( city, country )")
+        .eq("coach_id", coachId)
+        .in("status", ["active", "unverified"])
+        .order("is_primary", { ascending: false })
+        .limit(5);
+
+      for (const link of venueLinks ?? []) {
+        const venues = link.venues as
+          | { city: string | null; country: string | null }
+          | { city: string | null; country: string | null }[]
+          | null;
+        const venue = Array.isArray(venues) ? venues[0] : venues;
+        const location = [venue?.city, venue?.country]
+          .map((part) => part?.trim())
+          .filter(Boolean)
+          .join(", ");
+        if (location) {
+          primaryLocation = location;
+          break;
+        }
       }
     }
 

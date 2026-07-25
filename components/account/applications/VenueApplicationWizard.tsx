@@ -69,6 +69,10 @@ export default function VenueApplicationWizard({
   >([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [proposeDuplicates, setProposeDuplicates] = useState<
+    VenueApplicationTargetVenue[]
+  >([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [proposedName, setProposedName] = useState(
     initial.application.proposed_venue_name ?? ""
   );
@@ -126,6 +130,53 @@ export default function VenueApplicationWizard({
       window.clearTimeout(timeout);
     };
   }, [applicationMode, searchQuery]);
+
+  useEffect(() => {
+    if (applicationMode !== "create_new") return;
+
+    const name = proposedName.trim();
+    const city = proposedCity.trim();
+    const country = proposedCountry.trim();
+    if (name.length < 2 || city.length < 2 || !country) {
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      startTransition(async () => {
+        if (cancelled) return;
+        setCheckingDuplicates(true);
+        const result = await searchVenueApplicationTargets(name);
+        if (cancelled) return;
+        if (!result.ok) {
+          setProposeDuplicates([]);
+          setCheckingDuplicates(false);
+          return;
+        }
+        const matches = result.venues.filter((venue) => {
+          const sameName =
+            (venue.name ?? "").trim().toLowerCase() === name.toLowerCase();
+          const sameCity =
+            (venue.city ?? "").trim().toLowerCase() === city.toLowerCase();
+          const sameCountry =
+            (venue.country ?? "").trim().toLowerCase() === country.toLowerCase();
+          return sameName && sameCity && sameCountry;
+        });
+        setProposeDuplicates(matches);
+        setCheckingDuplicates(false);
+      });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [applicationMode, proposedName, proposedCity, proposedCountry]);
+
+  const visibleProposeDuplicates =
+    applicationMode === "create_new" ? proposeDuplicates : [];
+  const showCheckingDuplicates =
+    applicationMode === "create_new" && checkingDuplicates;
 
   const stepMeta = VENUE_APPLICATION_STEPS[step - 1];
   const progress = (step / VENUE_APPLICATION_TOTAL_STEPS) * 100;
@@ -241,6 +292,8 @@ export default function VenueApplicationWizard({
     setSearchResults([]);
     setSearching(false);
     setSearchError(null);
+    setProposeDuplicates([]);
+    setCheckingDuplicates(false);
   }
 
   function selectVenue(venue: VenueApplicationTargetVenue) {
@@ -293,25 +346,44 @@ export default function VenueApplicationWizard({
           timeStyle: "short",
         })
       : "Just now";
+    const venueId = initial.application.approved_venue_id;
+    const isApproved = initial.application.status === "approved";
 
     return (
       <section className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
-          Application submitted
+          {isApproved ? "Application approved" : "Application submitted"}
         </p>
         <h2 className="mt-3 text-2xl font-bold text-primary">
-          Thanks — your venue application is with our team
+          {isApproved
+            ? "Your venue is ready to manage"
+            : "Submitted — we will review shortly"}
         </h2>
         <p className="mt-3 text-sm leading-6 text-primary/65">
-          Submitted {dateLabel}. We will review your relationship to the venue
-          and follow up by email when there is an update.
+          {isApproved
+            ? "Membership was created from this application. Continue completing venue details from your dashboard."
+            : `Submitted ${dateLabel}. We review your relationship to the venue and email updates to your verified address.`}
         </p>
-        <a
-          href="/account"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
-        >
-          Back to account
-        </a>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {isApproved && venueId ? (
+            <a
+              href={`/account/venues/${venueId}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
+            >
+              Open venue dashboard
+            </a>
+          ) : null}
+          <a
+            href="/account"
+            className={`inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+              isApproved && venueId
+                ? "border border-primary/15 text-primary hover:bg-surface"
+                : "bg-primary text-accent hover:bg-primary/90"
+            }`}
+          >
+            Back to account
+          </a>
+        </div>
       </section>
     );
   }
@@ -422,9 +494,9 @@ export default function VenueApplicationWizard({
           </fieldset>
 
           <p className="rounded-2xl border border-primary/10 bg-surface/60 p-4 text-sm leading-6 text-primary/70">
-            This application is for people who own, manage, or are authorised
-            to represent a venue. If you only coach at a venue, do not claim it
-            — use the individual coach application instead.
+            This form is for owners, managers, or authorised representatives —
+            not for “I coach here.” Coaching at a venue is a coach–venue
+            relationship, managed from your coach profile after approval.
           </p>
 
           <label className="block text-sm font-medium text-primary">
@@ -457,8 +529,12 @@ export default function VenueApplicationWizard({
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
           <fieldset>
             <legend className="text-sm font-medium text-primary">
-              How should we add your venue?
+              Claim or propose?
             </legend>
+            <p className="mt-1 text-xs text-primary/55">
+              Claim links you to an existing listing. Propose creates a new
+              venue for review.
+            </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {VENUE_APPLICATION_MODES.map((option) => (
                 <button
@@ -564,6 +640,11 @@ export default function VenueApplicationWizard({
                             .filter(Boolean)
                             .join(", ") || "Location not available"}
                         </span>
+                        {venue.website?.trim() ? (
+                          <span className="mt-1 block truncate text-xs text-primary/45">
+                            {venue.website.trim()}
+                          </span>
+                        ) : null}
                       </button>
                     </li>
                   ))}
@@ -581,7 +662,8 @@ export default function VenueApplicationWizard({
           ) : null}
 
           {applicationMode === "create_new" ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Venue name"
                 value={proposedName}
@@ -631,6 +713,50 @@ export default function VenueApplicationWizard({
                   inputMode="url"
                 />
               </div>
+              </div>
+              {showCheckingDuplicates ? (
+                <p className="text-sm text-primary/55">Checking for similar listings…</p>
+              ) : null}
+              {visibleProposeDuplicates.length > 0 ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                  <p className="text-sm font-semibold">
+                    A listing with this name, city, and country already exists
+                  </p>
+                  <p className="mt-1 text-sm leading-6">
+                    Prefer claiming the existing venue instead of proposing a
+                    duplicate.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {visibleProposeDuplicates.map((venue) => (
+                      <li key={venue.id} className="text-sm">
+                        <span className="font-semibold">
+                          {venue.name || "Unnamed venue"}
+                        </span>
+                        <span className="text-amber-900/70">
+                          {" "}
+                          · {[venue.city, venue.country]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const first = visibleProposeDuplicates[0];
+                      changeMode("claim_existing");
+                      if (first) {
+                        setSearchQuery(first.name ?? "");
+                        selectVenue(first);
+                      }
+                    }}
+                    className="mt-3 text-sm font-semibold underline-offset-2 hover:underline"
+                  >
+                    Switch to claim existing
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -887,7 +1013,7 @@ function WizardActions({
         onClick={onContinue}
         className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90 disabled:opacity-60"
       >
-        Save and continue
+        {pending ? "Saving…" : "Save and continue"}
       </button>
       <button
         type="button"
@@ -895,7 +1021,7 @@ function WizardActions({
         onClick={onExit}
         className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface disabled:opacity-60"
       >
-        Save and exit
+        {pending ? "Saving…" : "Save and exit"}
       </button>
     </div>
   );

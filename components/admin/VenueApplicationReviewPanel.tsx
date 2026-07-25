@@ -41,6 +41,9 @@ export default function VenueApplicationReviewPanel({
   const [selectedVenueId, setSelectedVenueId] = useState(
     application.approved_venue_id ?? application.target_venue_id ?? ""
   );
+  const [approvedVenueId, setApprovedVenueId] = useState(
+    application.approved_venue_id ?? application.target_venue_id ?? ""
+  );
   const [name, setName] = useState(application.proposed_venue_name ?? "");
   const [country, setCountry] = useState(application.proposed_country ?? "");
   const [city, setCity] = useState(application.proposed_city ?? "");
@@ -59,6 +62,7 @@ export default function VenueApplicationReviewPanel({
       setMessage(result.message);
       setIsError(!result.ok);
       if (result.entityId && !result.ok) setSelectedVenueId(result.entityId);
+      if (result.ok && result.entityId) setApprovedVenueId(result.entityId);
       if (result.ok) router.refresh();
     });
   }
@@ -82,6 +86,35 @@ export default function VenueApplicationReviewPanel({
     <aside className="space-y-5">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg">Review controls</h2>
+        {reviewable ? (
+          <div className="mb-4 rounded-xl border border-primary/10 bg-surface/60 p-3 text-xs leading-5 text-primary/65">
+            Approving seeds the venue profile from claim or proposed fields (name,
+            city, country, address, website, phone as applicable). The database
+            trigger creates the selected membership — you do not grant access
+            separately.
+          </div>
+        ) : null}
+        {(application.status === "approved" &&
+          (application.approved_venue_id || application.target_venue_id)) ||
+        approvedVenueId ? (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-950">
+            <p className="font-semibold">Approved</p>
+            <p className="mt-1 text-xs leading-5">
+              Membership was created by the database. Remaining work: details,
+              images, socials, and coach relationships.
+            </p>
+            <a
+              href={`/admin/venues/${
+                application.approved_venue_id ??
+                application.target_venue_id ??
+                approvedVenueId
+              }`}
+              className="mt-2 inline-flex text-sm font-semibold underline-offset-2 hover:underline"
+            >
+              Open managed venue profile
+            </a>
+          </div>
+        ) : null}
         {application.status === "submitted" ? (
           <button
             type="button"

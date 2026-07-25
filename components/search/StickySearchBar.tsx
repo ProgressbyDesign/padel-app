@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 type StickySearchBarProps = {
@@ -14,6 +14,8 @@ type StickySearchBarProps = {
 // Header height (h-14 mobile / h-16 desktop) — the bar pins just under it.
 const HEADER_OFFSET = 64;
 
+const emptySubscribe = () => () => {};
+
 /**
  * Airbnb-style compact search bar that fades + slides in once the page's
  * primary search scrolls behind the header. Rendered through a portal on
@@ -25,10 +27,12 @@ export default function StickySearchBar({
   children,
   innerClassName = "mx-auto max-w-6xl",
 }: StickySearchBarProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
   const [stuck, setStuck] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const el = anchorRef.current;

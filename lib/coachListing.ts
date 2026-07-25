@@ -1,4 +1,7 @@
 import type { Coach, CoachSkillLevel } from "./coaches";
+import { coachOutcomeLabel } from "./coachManagement";
+import { formatCoachLocationLabel } from "./coachLocations";
+import { optionLabel, PLAYER_LEVELS } from "./coachProfileApplication/constants";
 import type { CoachPdpQueryRow } from "./coachProfileView";
 import { rawCoachRowToProfileView } from "./coachProfileView";
 import {
@@ -17,6 +20,8 @@ export type CoachListingItem = {
   rating: number;
   reviewCount: number | null;
   level: CoachSkillLevel;
+  /** Structured player level labels when available */
+  playerLevels?: string[];
   locationCity: string;
   locationCountry: string;
   /** URL slug for `/coaches/[city]` (lowercase, hyphenated) */
@@ -438,10 +443,28 @@ function parseListingSkillLevel(raw?: string | null): CoachSkillLevel {
   if (s === "Beginner" || s === "Intermediate" || s === "Advanced" || s === "Pro") return s;
   const l = s?.toLowerCase() ?? "";
   if (l.includes("beginner")) return "Beginner";
-  if (l.includes("pro")) return "Pro";
+  if (l.includes("pro") || l.includes("competitive")) return "Pro";
   if (l.includes("advanced")) return "Advanced";
   if (l.includes("intermediate")) return "Intermediate";
   return "Intermediate";
+}
+
+/** Prefer structured player_levels; soft-fallback to legacy coaches.level. */
+export function skillLevelFromPlayerLevels(
+  playerLevels: string[] | null | undefined,
+  legacyLevel?: string | null
+): CoachSkillLevel {
+  const values = (playerLevels ?? []).map((v) => v.trim().toLowerCase()).filter(Boolean);
+  if (values.some((v) => v === "competitive_professional" || v.includes("pro"))) return "Pro";
+  if (values.some((v) => v === "advanced" || v.includes("advanced"))) return "Advanced";
+  if (values.some((v) => v === "intermediate" || v.includes("intermediate"))) return "Intermediate";
+  if (values.some((v) => v === "beginner" || v.includes("beginner"))) return "Beginner";
+  return parseListingSkillLevel(legacyLevel);
+}
+
+export function playerLevelValueForSkillFilter(level: CoachSkillLevel): string {
+  if (level === "Pro") return "competitive_professional";
+  return level.toLowerCase();
 }
 
 function formatListingPriceFrom(raw: Coach["price_from"]): string | null {
@@ -449,10 +472,54 @@ function formatListingPriceFrom(raw: Coach["price_from"]): string | null {
 }
 
 function extractOutcomeLines(row: Coach, profile: ReturnType<typeof rawCoachRowToProfileView>): string[] {
-  const fromTable =
-    row.coach_outcomes?.map((o) => o.outcome?.trim()).filter((s): s is string => Boolean(s)) ?? [];
-  if (fromTable.length > 0) return fromTable;
+  const embeds = row.coach_outcomes ?? [];
+  const fromStructured = embeds
+    .map((o) => {
+      const key = (o as { outcome_key?: string | null }).outcome_key?.trim();
+      const label = o.outcome?.trim();
+      if (key) return coachOutcomeLabel(key);
+      if (label) return coachOutcomeLabel(label);
+      return null;
+    })
+    .filter((s): s is string => Boolean(s));
+  if (fromStructured.length > 0) return [...new Set(fromStructured)];
   return profile.outcomes.length > 0 ? profile.outcomes : [];
+}
+
+function listingLocationFromStructured(
+  row: Coach
+): { city: string; country: string } | null {
+  const locations = (
+    row as Coach & {
+      coach_locations?: Array<{
+        city?: string | null;
+        country?: string | null;
+        is_primary?: boolean | null;
+      }> | null;
+    }
+  ).coach_locations;
+  if (!locations?.length) return null;
+  const primary =
+    locations.find((loc) => loc.is_primary) ?? locations[0] ?? null;
+  if (!primary) return null;
+  const city = primary.city?.trim() || "";
+  const country = primary.country?.trim() || "";
+  if (!city && !country) return null;
+  return { city: city || formatCoachLocationLabel({ city, country }), country };
+}
+
+function extractPlayerLevelLabels(row: Coach): string[] {
+  const attrs = (
+    row as Coach & {
+      coach_attributes?:
+        | { player_levels?: string[] | null }
+        | Array<{ player_levels?: string[] | null }>
+        | null;
+    }
+  ).coach_attributes;
+  const raw = Array.isArray(attrs) ? attrs[0]?.player_levels : attrs?.player_levels;
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return [...new Set(raw.map((value) => optionLabel(PLAYER_LEVELS, String(value))))];
 }
 
 function parseListingAudience(raw: unknown): ("Adults" | "Juniors")[] {
@@ -475,13 +542,39 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
   if (!id) return null;
 
   const primaryVenue = pickPrimaryVenueFromCoachRow(row);
-  const { city: cityLabel, country: countryLabel } = listingLocationFromCoachRow(row);
+  const structuredLocation = listingLocationFromStructured(row);
+  const venueLocation = listingLocationFromCoachRow(row);
+  const cityLabel =
+    structuredLocation?.city ||
+    (venueLocation.city !== "Location not confirmed" ? venueLocation.city : "") ||
+    profile.location.city ||
+    "Location not confirmed";
+  const countryLabel =
+    structuredLocation?.country || venueLocation.country || profile.location.country || "";
   const coords = venueCoordPair(primaryVenue);
   const name = profile.name?.trim() || "Coach";
 
-  const audienceLabels = profile.audience.filter((x): x is "Adults" | "Juniors" => x === "Adults" || x === "Juniors");
+  const audienceLabels = profile.audience.filter(
+    (x): x is "Adults" | "Juniors" => x === "Adults" || x === "Juniors"
+  );
   const audience =
     audienceLabels.length > 0 ? audienceLabels : parseListingAudience(row.audience);
+
+  const playerLevelLabels =
+    profile.playerLevels.length > 0 ? profile.playerLevels : extractPlayerLevelLabels(row);
+  const rawPlayerLevelValues = (() => {
+    const attrs = (
+      row as Coach & {
+        coach_attributes?:
+          | { player_levels?: string[] | null }
+          | Array<{ player_levels?: string[] | null }>
+          | null;
+      }
+    ).coach_attributes;
+    const raw = Array.isArray(attrs) ? attrs[0]?.player_levels : attrs?.player_levels;
+    return Array.isArray(raw) ? raw.map(String) : [];
+  })();
+  const level = skillLevelFromPlayerLevels(rawPlayerLevelValues, profile.level ?? row.role);
 
   const outcomeLines = extractOutcomeLines(row, profile);
   const primaryOutcome = outcomeLines[0] || profile.primaryOutcome || null;
@@ -492,7 +585,8 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     avatarImage: profile.image,
     rating: parseListingRating(profile.rating.score),
     reviewCount: parseListingReviewCount(profile.rating.count),
-    level: parseListingSkillLevel(profile.level ?? row.role),
+    level,
+    playerLevels: playerLevelLabels,
     locationCity: cityLabel,
     locationCountry: countryLabel,
     citySlug: slugifyCity(cityLabel || "unknown"),
@@ -500,7 +594,12 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     audience,
     travelAvailable: profile.travel === true,
     outcomes: primaryOutcome ?? "",
-    outcomeTags: primaryOutcome ? [primaryOutcome] : [],
+    outcomeTags:
+      outcomeLines.length > 0
+        ? outcomeLines.slice(0, 3)
+        : primaryOutcome
+          ? [primaryOutcome]
+          : [],
     primaryOutcome,
     priceFrom: formatListingPriceFrom(profile.pricing.from),
     locationLat: coords.lat,
@@ -519,11 +618,18 @@ const COACH_IMAGES_EMBED = `
 export const COACH_LISTING_SELECT = `
   *,
   coach_outcomes (
-    outcome
+    outcome,
+    outcome_key
   ),
   coach_attributes (
     audience_adults,
-    audience_juniors
+    audience_juniors,
+    player_levels
+  ),
+  coach_locations (
+    country,
+    city,
+    is_primary
   ),
   ${COACH_IMAGES_EMBED},
   ${COACH_VENUES_WITH_VENUE_SELECT}

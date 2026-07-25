@@ -18,13 +18,20 @@ export async function proxy(request: NextRequest) {
     return copyResponseCookies(response, NextResponse.redirect(url));
   }
 
-  const legacyPaths = [
+  // Exact list paths only for coaches/venues — nested IDs are ops overview pages.
+  const legacyExactPaths = ["/admin/venues", "/admin/coaches"];
+  const legacyPrefixedPaths = [
     "/admin/review-queue",
-    "/admin/venues",
-    "/admin/coaches",
     "/admin/coach-venue-links",
   ];
-  for (const legacy of legacyPaths) {
+  for (const legacy of legacyExactPaths) {
+    if (pathname === legacy) {
+      const url = request.nextUrl.clone();
+      url.pathname = pathname.replace("/admin", "/admin/data-quality");
+      return copyResponseCookies(response, NextResponse.redirect(url));
+    }
+  }
+  for (const legacy of legacyPrefixedPaths) {
     if (pathname === legacy || pathname.startsWith(`${legacy}/`)) {
       const url = request.nextUrl.clone();
       url.pathname = pathname.replace("/admin", "/admin/data-quality");

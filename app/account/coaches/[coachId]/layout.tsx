@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import ManagedCoachHeader from "@/components/account/ManagedCoachHeader";
 import ManagedCoachNav from "@/components/account/ManagedCoachNav";
-import { loadManagedCoachShell } from "@/lib/queries/managedCoachShell";
+import { loadCoachAvailabilityAccess } from "@/lib/queries/coachAvailabilityAccess";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export default async function ManagedCoachLayout({
   params,
 }: LayoutProps) {
   const { coachId } = await params;
-  const shell = await loadManagedCoachShell(coachId);
+  const shell = await loadCoachAvailabilityAccess(coachId);
   if (!shell) notFound();
 
   return (

@@ -11,7 +11,7 @@ import DE from "country-flag-icons/react/3x2/DE";
 import AE from "country-flag-icons/react/3x2/AE";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   countryCode,
   countryNavLabel,
@@ -47,29 +47,33 @@ function GlobeSkeleton() {
 }
 
 function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return reduced;
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false
+  );
 }
 
 function useWebGLAvailable(): boolean {
-  const [ok, setOk] = useState(true);
-  useEffect(() => {
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-      setOk(Boolean(gl));
-    } catch {
-      setOk(false);
-    }
-  }, []);
-  return ok;
+  return useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const gl =
+          canvas.getContext("webgl") ||
+          canvas.getContext("experimental-webgl");
+        return Boolean(gl);
+      } catch {
+        return false;
+      }
+    },
+    () => true
+  );
 }
 
 type Props = { countries: PadelCountry[] };
@@ -139,12 +143,10 @@ export default function InteractiveGlobeDestinations({ countries }: Props) {
   const webglOk = useWebGLAvailable();
   const navCountries = useMemo(() => sortCountriesForNav(countries), [countries]);
   const [activeSlug, setActiveSlug] = useState(() => defaultActiveCountrySlug(countries));
-
-  useEffect(() => {
-    if (!activeSlug && countries[0]) {
-      setActiveSlug(defaultActiveCountrySlug(countries));
-    }
-  }, [countries, activeSlug]);
+  const resolvedSlug =
+    activeSlug && navCountries.some((country) => country.slug === activeSlug)
+      ? activeSlug
+      : defaultActiveCountrySlug(countries);
 
   if (countries.length === 0) return null;
 
@@ -181,7 +183,7 @@ export default function InteractiveGlobeDestinations({ countries }: Props) {
               <div className="absolute left-1/2 top-0 h-full w-full -translate-x-1/2">
                 <PadelGlobeGL
                   countries={countries}
-                  activeSlug={activeSlug}
+                  activeSlug={resolvedSlug}
                   reducedMotion={reducedMotion}
                   onCountrySelect={setActiveSlug}
                 />
@@ -193,7 +195,7 @@ export default function InteractiveGlobeDestinations({ countries }: Props) {
             <div className="absolute inset-x-0 bottom-6 z-40 px-4 md:bottom-8 lg:bottom-10">
               <CountryNavOverlay
                 countries={navCountries}
-                activeSlug={activeSlug}
+                activeSlug={resolvedSlug}
                 onSelect={setActiveSlug}
               />
             </div>

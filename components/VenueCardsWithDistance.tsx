@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { addDistancesToVenues } from "../lib/distance";
 import type { Venue } from "../lib/venueFilters";
-import { readUserGeo } from "../lib/userGeoSession";
+import {
+  getUserGeoServerSnapshot,
+  getUserGeoSnapshot,
+  subscribeUserGeo,
+} from "../lib/userGeoSession";
 import type { UserGeolocation } from "../hooks/useUserGeolocation";
 import VenueCard from "./VenueCard";
 
@@ -14,14 +18,19 @@ type VenueCardsWithDistanceProps = {
   userCoords?: UserGeolocation;
 };
 
-export default function VenueCardsWithDistance({ venues, className, userCoords: userCoordsProp }: VenueCardsWithDistanceProps) {
-  const [sessionCoords, setSessionCoords] = useState<UserGeolocation>(null);
+export default function VenueCardsWithDistance({
+  venues,
+  className,
+  userCoords: userCoordsProp,
+}: VenueCardsWithDistanceProps) {
+  const sessionCoords = useSyncExternalStore(
+    subscribeUserGeo,
+    getUserGeoSnapshot,
+    getUserGeoServerSnapshot
+  );
 
-  useEffect(() => {
-    setSessionCoords(readUserGeo());
-  }, []);
-
-  const effectiveCoords = userCoordsProp !== undefined ? userCoordsProp : sessionCoords;
+  const effectiveCoords =
+    userCoordsProp !== undefined ? userCoordsProp : sessionCoords;
 
   const venuesWithDistance = useMemo(
     () => addDistancesToVenues(venues, effectiveCoords),

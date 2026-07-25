@@ -51,10 +51,21 @@ export default function AdminRelationshipsPanel({
   rows,
   buckets,
   initialStatus,
+  availability = {},
 }: {
   rows: AdminRelationshipListItem[];
   buckets: Record<"pending" | "unverified" | "active" | "past", number>;
   initialStatus: string | null;
+  availability?: Record<
+    string,
+    {
+      configured: boolean;
+      isPublic: boolean;
+      timezone: string | null;
+      ruleCount: number;
+      upcomingExceptionCount: number;
+    }
+  >;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -204,18 +215,21 @@ export default function AdminRelationshipsPanel({
               <th className="px-4 py-3 font-semibold">Initiator</th>
               <th className="px-4 py-3 font-semibold">Requested</th>
               <th className="px-4 py-3 font-semibold">Primary</th>
+              <th className="px-4 py-3 font-semibold">Availability</th>
               <th className="px-4 py-3 font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-primary/50">
+                <td colSpan={8} className="px-4 py-8 text-center text-primary/50">
                   No relationships match these filters.
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              rows.map((row) => {
+                const hint = availability[row.id];
+                return (
                 <tr key={row.id} className="border-b border-primary/5 align-top">
                   <td className="px-4 py-3">
                     <Link
@@ -254,6 +268,23 @@ export default function AdminRelationshipsPanel({
                     {formatDate(row.requested_at)}
                   </td>
                   <td className="px-4 py-3">{row.is_primary ? "Yes" : "—"}</td>
+                  <td className="px-4 py-3 text-xs text-primary/70">
+                    {row.status !== "active" ? (
+                      "—"
+                    ) : hint?.configured ? (
+                      <>
+                        <p>
+                          {hint.isPublic ? "Public" : "Private"}
+                          {hint.timezone ? ` · ${hint.timezone}` : ""}
+                        </p>
+                        <p className="mt-1 text-primary/45">
+                          {hint.ruleCount} rules · {hint.upcomingExceptionCount} exceptions
+                        </p>
+                      </>
+                    ) : (
+                      "Not configured"
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <ActionButton
@@ -267,11 +298,20 @@ export default function AdminRelationshipsPanel({
                       >
                         {selectedId === row.id ? "Hide" : "Details"}
                       </ActionButton>
+                      {row.status === "active" ? (
+                        <Link
+                          href={`/account/coaches/${row.coach_id}/availability/${row.id}`}
+                          className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
+                        >
+                          Manage availability
+                        </Link>
+                      ) : null}
                       <RowActions row={row} pending={pending} run={run} onDone={applyResult} />
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

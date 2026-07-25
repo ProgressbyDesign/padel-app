@@ -3,6 +3,7 @@ import {
   countAdminRelationshipBuckets,
   listAdminCoachVenueRelationships,
 } from "@/lib/admin/relationshipQueries";
+import { loadAvailabilityMetaForRelationships } from "@/lib/queries/coachAvailability";
 
 type PageProps = {
   searchParams: Promise<{
@@ -25,6 +26,11 @@ export default async function AdminRelationshipsPage({ searchParams }: PageProps
     countAdminRelationshipBuckets(),
   ]);
 
+  const availabilityMeta = await loadAvailabilityMetaForRelationships(
+    rows.map((row) => row.id)
+  );
+  const availability = Object.fromEntries(availabilityMeta.entries());
+
   return (
     <div className="space-y-6">
       <div>
@@ -41,6 +47,7 @@ export default async function AdminRelationshipsPage({ searchParams }: PageProps
         rows={rows}
         buckets={buckets}
         initialStatus={params.status ?? null}
+        availability={availability}
       />
     </div>
   );

@@ -45,7 +45,9 @@ export default function SearchModeSelect({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const controlled = openProp !== undefined;
   const open = controlled ? openProp : uncontrolledOpen;
-  const [highlight, setHighlight] = useState<number>(MODES.indexOf(mode));
+  const modeIndex = Math.max(0, MODES.indexOf(mode));
+  const [highlightOverride, setHighlightOverride] = useState<number | null>(null);
+  const highlight = highlightOverride ?? modeIndex;
   const wrapRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
@@ -53,6 +55,7 @@ export default function SearchModeSelect({
   const countFor = (m: SearchMode) => (m === "venues" ? venueCount : coachCount);
 
   const setOpen = (next: boolean) => {
+    if (!next) setHighlightOverride(null);
     if (!controlled) setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
@@ -66,10 +69,6 @@ export default function SearchModeSelect({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  useEffect(() => {
-    if (open) setHighlight(MODES.indexOf(mode));
-  }, [open, mode]);
-
   const select = (m: SearchMode) => {
     onChange(m);
     setOpen(false);
@@ -82,7 +81,11 @@ export default function SearchModeSelect({
         setOpen(true);
         return;
       }
-      setHighlight((h) => (h + (e.key === "ArrowDown" ? 1 : MODES.length - 1)) % MODES.length);
+      setHighlightOverride(
+        (h) =>
+          ((h ?? modeIndex) + (e.key === "ArrowDown" ? 1 : MODES.length - 1)) %
+          MODES.length
+      );
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (open) select(MODES[highlight]);
@@ -143,7 +146,7 @@ export default function SearchModeSelect({
                 <button
                   type="button"
                   onClick={() => select(m)}
-                  onMouseEnter={() => setHighlight(i)}
+                  onMouseEnter={() => setHighlightOverride(i)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                     selected
                       ? "bg-accent/15 ring-1 ring-accent/40"

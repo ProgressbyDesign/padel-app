@@ -86,7 +86,7 @@ export async function signupAction(
     if (/already registered|already exists/i.test(authError.message)) {
       return error("An account with this email already exists.");
     }
-    return error(authError.message || "We could not create your account.");
+    return error("We could not create your account. Please try again.");
   }
 
   return {
@@ -143,7 +143,7 @@ export async function resetPasswordAction(
 
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
-    return error(updateError.message || "We could not update your password.");
+    return error("We could not update your password. Please try again.");
   }
 
   await clearPasswordRecoverySession();
