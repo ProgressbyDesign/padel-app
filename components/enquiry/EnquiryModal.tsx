@@ -278,25 +278,58 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [destinationInput, setDestinationInput] = useState("");
-  const [destinationSuggestions, setDestinationSuggestions] = useState<string[]>([]);
   const [step0Error, setStep0Error] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   /** Avoid persisting before localStorage has been read on open (prevents empty draft overwriting saved data). */
   const [storageHydrated, setStorageHydrated] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const handleCloseRef = useRef<() => void>(() => {});
+
+  const destinationSuggestions = useMemo(
+    () => filterCountryLabels(destinationInput, 8),
+    [destinationInput]
+  );
 
   const resetFormState = useCallback(() => {
     setStep(0);
     setDraft(emptyDraft());
     setDestinationInput("");
-    setDestinationSuggestions([]);
     setStep0Error(null);
     setSubmitting(false);
     setSubmitError(null);
     setSuccess(false);
   }, []);
+
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) {
+      setStorageHydrated(false);
+    } else if (ENQUIRY_SKIP_LOCAL_STORAGE) {
+      setStorageHydrated(true);
+    } else {
+      try {
+        const raw = localStorage.getItem(ENQUIRY_DRAFT_KEY);
+        if (raw) {
+          const merged = mergeStoredDraft(JSON.parse(raw));
+          setDraft((prev) => {
+            const prevMeaningful = draftHasMeaningfulInput(prev);
+            const mergedMeaningful = draftHasMeaningfulInput(merged);
+            if (prevMeaningful && !mergedMeaningful) return prev;
+            const prevBasics = Boolean(prev.full_name.trim() && prev.email.trim());
+            const mergedBasics = Boolean(merged.full_name.trim() && merged.email.trim());
+            if (prevBasics && !mergedBasics) return prev;
+            return merged;
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+      setStorageHydrated(true);
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -305,35 +338,6 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      setStorageHydrated(false);
-      return;
-    }
-    if (ENQUIRY_SKIP_LOCAL_STORAGE) {
-      setStorageHydrated(true);
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(ENQUIRY_DRAFT_KEY);
-      if (raw) {
-        const merged = mergeStoredDraft(JSON.parse(raw));
-        setDraft((prev) => {
-          const prevMeaningful = draftHasMeaningfulInput(prev);
-          const mergedMeaningful = draftHasMeaningfulInput(merged);
-          if (prevMeaningful && !mergedMeaningful) return prev;
-          const prevBasics = Boolean(prev.full_name.trim() && prev.email.trim());
-          const mergedBasics = Boolean(merged.full_name.trim() && merged.email.trim());
-          if (prevBasics && !mergedBasics) return prev;
-          return merged;
-        });
-      }
-    } catch {
-      /* ignore */
-    }
-    setStorageHydrated(true);
   }, [open]);
 
   useEffect(() => {
@@ -355,10 +359,6 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
   }, [open]);
 
   useEffect(() => {
-    setDestinationSuggestions(filterCountryLabels(destinationInput, 8));
-  }, [destinationInput]);
-
-  useEffect(() => {
     if (!open || success) return;
     const el = bodyScrollRef.current;
     el?.scrollTo({ top: 0, behavior: "smooth" });
@@ -367,8 +367,6 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
       focusEl?.focus();
     });
   }, [step, open, success]);
-
-  const handleCloseRef = useRef<() => void>(() => {});
 
   const handleClose = useCallback(() => {
     if (!success && draftHasMeaningfulInput(draft)) {
@@ -381,6 +379,10 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
     }
     onClose();
   }, [draft, onClose, success]);
+
+  useEffect(() => {
+    handleCloseRef.current = handleClose;
+  }, [handleClose]);
 
   const handleSuccessClose = useCallback(() => {
     if (ENQUIRY_SKIP_LOCAL_STORAGE) {
@@ -396,8 +398,6 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
     resetFormState();
     onClose();
   }, [onClose, resetFormState]);
-
-  handleCloseRef.current = handleClose;
 
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -420,7 +420,6 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
         : [...d.preferred_destinations, t],
     }));
     setDestinationInput("");
-    setDestinationSuggestions([]);
   };
 
   const removeDestination = (label: string) => {

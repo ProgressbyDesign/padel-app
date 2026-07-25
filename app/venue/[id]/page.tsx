@@ -7,6 +7,7 @@ import { resolveCoachImageUrl } from "../../../lib/coachImageResolve";
 import type { Venue } from "../../../lib/venueFilters";
 import { hydrateVenueImages } from "../../../lib/queries/venueImages";
 import { loadVenueSocials } from "../../../lib/queries/venueSocials";
+import { loadPublicVenueCoachAvailability } from "../../../lib/queries/coachAvailability";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -106,5 +107,14 @@ export default async function VenuePdpPage({ params }: PageProps) {
     coaches = coachIds.map((cid) => byId.get(cid)).filter((c): c is Coach => Boolean(c));
   }
 
-  return <VenueDetailPage venue={typedVenue} similarVenues={similarVenues} coaches={coaches} />;
+  const availabilityCards = await loadPublicVenueCoachAvailability(id, 14);
+
+  return (
+    <VenueDetailPage
+      venue={typedVenue}
+      similarVenues={similarVenues}
+      coaches={coaches}
+      availabilityCards={availabilityCards}
+    />
+  );
 }

@@ -48,6 +48,7 @@ export type ManagedVenueOverview = {
     | "courts"
     | "court_type"
     | "coaching_available"
+    | "coaching_description"
     | "opening_hours"
     | "opening_hours_structured"
     | "address"
@@ -63,6 +64,8 @@ export type ManagedVenueOverview = {
   membershipRole: MembershipRole;
   imageCount: number;
   socialCount: number;
+  activeCoachCount: number;
+  hasCoachAvailability: boolean;
 };
 
 export type ManagedVenueDetailsResult = {
@@ -131,12 +134,16 @@ export async function loadManagedVenueOverview(
 
   const supabase = await createClient();
 
-  const [{ data: venue, error: venueError }, images, socials] =
-    await Promise.all([
-      supabase
-        .from("venues")
-        .select(
-          `
+  const [
+    { data: venue, error: venueError },
+    images,
+    socials,
+    coachesResult,
+  ] = await Promise.all([
+    supabase
+      .from("venues")
+      .select(
+        `
           id,
           name,
           city,
@@ -145,6 +152,7 @@ export async function loadManagedVenueOverview(
           courts,
           court_type,
           coaching_available,
+          coaching_description,
           venue_type,
           phone,
           opening_hours,
@@ -156,20 +164,39 @@ export async function loadManagedVenueOverview(
           is_approved,
           data_quality_status
         `
-        )
-        .eq("id", venueId)
-        .maybeSingle(),
-      loadManagedVenueImages(venueId),
-      loadManagedVenueSocialRows(venueId),
-    ]);
+      )
+      .eq("id", venueId)
+      .maybeSingle(),
+    loadManagedVenueImages(venueId),
+    loadManagedVenueSocialRows(venueId),
+    supabase
+      .from("coach_venues")
+      .select("id")
+      .eq("venue_id", venueId)
+      .eq("status", "active"),
+  ]);
 
   if (venueError || !venue || !images || !socials) return null;
+
+  const relationshipIds = (coachesResult.data ?? []).map((row) => String(row.id));
+  let hasCoachAvailability = false;
+  if (relationshipIds.length > 0) {
+    const { data: settings } = await supabase
+      .from("coach_venue_availability_settings")
+      .select("id")
+      .in("coach_venue_id", relationshipIds)
+      .eq("is_public", true)
+      .limit(1);
+    hasCoachAvailability = Boolean(settings?.length);
+  }
 
   return {
     venue: venue as ManagedVenueOverview["venue"],
     membershipRole: shell.membershipRole,
     imageCount: images.length,
     socialCount: socials.length,
+    activeCoachCount: relationshipIds.length,
+    hasCoachAvailability,
   };
 }
 

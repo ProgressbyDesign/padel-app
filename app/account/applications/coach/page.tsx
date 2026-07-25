@@ -36,7 +36,7 @@ export default async function CoachApplicationPage() {
           Coach application
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-6 text-primary/65">
-          A short four-step application. Your progress is saved to your account.
+          Four short steps. Progress saves to your account.
         </p>
       </div>
 

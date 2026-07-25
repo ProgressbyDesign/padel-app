@@ -35,10 +35,27 @@ export type Coach = {
   /** Parsed labels from `coach_outcomes` (and optional legacy `outcome`) */
   outcomes?: string[];
   /** Raw embed from Supabase when listing/PDP query joins coach_outcomes */
-  coach_outcomes?: { outcome?: string | null }[] | null;
+  coach_outcomes?: { outcome?: string | null; outcome_key?: string | null }[] | null;
   /** Geography via linked venues (`is_primary` preferred) */
   coach_venues?: CoachVenueLinkRow[] | null;
   coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] | null;
+  coach_attributes?:
+    | {
+        audience_adults?: boolean | null;
+        audience_juniors?: boolean | null;
+        player_levels?: string[] | null;
+      }
+    | Array<{
+        audience_adults?: boolean | null;
+        audience_juniors?: boolean | null;
+        player_levels?: string[] | null;
+      }>
+    | null;
+  coach_locations?: Array<{
+    country?: string | null;
+    city?: string | null;
+    is_primary?: boolean | null;
+  }> | null;
   /** Listing / PDP: who the coach trains (e.g. Adults, Juniors) */
   audience?: string[];
   achievements?: CoachAchievement[];

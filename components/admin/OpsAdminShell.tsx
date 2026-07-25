@@ -2,11 +2,13 @@
 
 import {
   Building2,
+  CalendarCheck2,
   ClipboardList,
   Database,
   LayoutDashboard,
   Link2,
   Menu,
+  UserRound,
   UserRoundCheck,
   X,
 } from "lucide-react";
@@ -31,8 +33,24 @@ const NAV = [
     exact: false,
   },
   { href: "/admin/relationships", label: "Relationships", icon: Link2, exact: false },
+  { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck2, exact: false },
   { href: "/admin/data-quality", label: "Data quality", icon: Database, exact: false },
 ] as const;
+
+function navIsActive(pathname: string, href: string, exact: boolean) {
+  if (exact) return pathname === href;
+  if (href === "/admin/applications/coaches") {
+    return (
+      pathname.startsWith(href) || pathname.startsWith("/admin/coaches/")
+    );
+  }
+  if (href === "/admin/applications/venues") {
+    return (
+      pathname.startsWith(href) || pathname.startsWith("/admin/venues/")
+    );
+  }
+  return pathname.startsWith(href);
+}
 
 export default function OpsAdminShell({
   account,
@@ -48,7 +66,7 @@ export default function OpsAdminShell({
   const nav = (
     <nav className="space-y-1" aria-label="Admin navigation">
       {NAV.map(({ href, label, icon: Icon, exact }) => {
-        const active = exact ? pathname === href : pathname.startsWith(href);
+        const active = navIsActive(pathname, href, exact);
         return (
           <Link
             key={href}
@@ -65,6 +83,13 @@ export default function OpsAdminShell({
           </Link>
         );
       })}
+      {(pathname.startsWith("/admin/coaches/") ||
+        pathname.startsWith("/admin/venues/")) && (
+        <p className="mt-4 flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
+          <UserRound className="h-3.5 w-3.5" aria-hidden />
+          Profile inspection
+        </p>
+      )}
     </nav>
   );
 

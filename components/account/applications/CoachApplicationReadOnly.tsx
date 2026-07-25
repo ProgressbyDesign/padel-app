@@ -18,6 +18,22 @@ export default function CoachApplicationReadOnly({
 }) {
   const { application, locations } = data;
   const statusLabel = APPLICATION_STATUS_LABELS[application.status];
+  const coachHref = application.coach_id
+    ? `/account/coaches/${application.coach_id}`
+    : null;
+
+  const statusCopy =
+    application.status === "submitted" || application.status === "under_review"
+      ? "Your application is with our team. Editing is locked until review finishes — we email updates to your verified address."
+      : application.status === "approved"
+        ? "Approved. Your coach profile was seeded from this application. Finish images, venues, and availability on your profile."
+        : application.status === "declined"
+          ? "This application was declined. Contact Padel Pathways if you need guidance on next steps."
+          : application.status === "withdrawn"
+            ? "This application was withdrawn."
+            : application.status === "changes_requested"
+              ? "Changes were requested. Open the editable draft from Applications to update and resubmit."
+              : "This application is currently read-only.";
 
   return (
     <div className="space-y-6">
@@ -31,18 +47,7 @@ export default function CoachApplicationReadOnly({
             Step {application.current_step} of 4
           </span>
         </div>
-        <p className="mt-3 text-sm leading-6 text-primary/65">
-          {application.status === "submitted" ||
-          application.status === "under_review"
-            ? "Your application is with our team for review. You cannot edit it while it is being reviewed."
-            : application.status === "approved"
-              ? "This application was approved. Manage your coach profile from your account when a membership is available."
-              : application.status === "declined"
-                ? "This application was declined. Contact Padel Pathways if you need guidance on next steps."
-                : application.status === "withdrawn"
-                  ? "This application was withdrawn."
-                  : "This application is currently read-only."}
-        </p>
+        <p className="mt-3 text-sm leading-6 text-primary/65">{statusCopy}</p>
         {application.submitted_at ? (
           <p className="mt-2 text-sm text-primary/55">
             Submitted{" "}
@@ -53,9 +58,7 @@ export default function CoachApplicationReadOnly({
           </p>
         ) : application.status === "submitted" ||
           application.status === "under_review" ? (
-          <p className="mt-2 text-sm text-primary/55">
-            Submitted for review
-          </p>
+          <p className="mt-2 text-sm text-primary/55">Submitted for review</p>
         ) : null}
         {application.reviewed_at ? (
           <p className="mt-2 text-sm text-primary/55">
@@ -76,13 +79,10 @@ export default function CoachApplicationReadOnly({
             </p>
           </div>
         ) : null}
-        {application.status === "approved" && application.coach_id ? (
+        {application.status === "approved" && coachHref ? (
           <div className="mt-5">
-            <p className="mb-2 break-all text-xs text-primary/45">
-              Coach ID: {application.coach_id}
-            </p>
             <Link
-              href={`/account/coaches/${application.coach_id}`}
+              href={coachHref}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
             >
               Manage coach profile
@@ -148,7 +148,7 @@ export default function CoachApplicationReadOnly({
             locations.map((location) => (
               <li key={location.id}>
                 {location.city}, {location.country}
-                {location.is_primary ? " (primary)" : ""}
+                {location.is_primary ? " — primary" : ""}
               </li>
             ))
           )}

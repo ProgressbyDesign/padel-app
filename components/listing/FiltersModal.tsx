@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Plane, X } from "lucide-react";
 import type { CoachListingFilters } from "../../lib/coachListing";
 import type { CourtEnvironmentFilter, MinCourtsFilter } from "../../lib/venueFilters";
@@ -55,10 +55,12 @@ export default function FiltersModal(props: FiltersModalProps) {
 
   const [coachDraft, setCoachDraft] = useState(coachDefaults);
   const [venueDraft, setVenueDraft] = useState(venueDefaults);
-  const prevOpen = useRef(false);
+  const [wasOpen, setWasOpen] = useState(open);
 
-  useEffect(() => {
-    if (open && !prevOpen.current) {
+  // Sync draft from applied filters when the modal opens (React render-time adjustment).
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       if (props.type === "coach") {
         setCoachDraft({
           level: props.filters.level,
@@ -73,8 +75,7 @@ export default function FiltersModal(props: FiltersModalProps) {
         });
       }
     }
-    prevOpen.current = open;
-  }, [open, props]);
+  }
 
   useEffect(() => {
     if (!open) return;

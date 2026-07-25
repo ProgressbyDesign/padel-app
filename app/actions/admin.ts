@@ -26,6 +26,16 @@ async function requireAdmin(): Promise<string | null> {
   return null;
 }
 
+function adminFailure(
+  error: { message?: string } | null | undefined,
+  fallback = "Something went wrong. Please try again."
+): AdminActionResult {
+  if (error?.message && process.env.NODE_ENV === "development") {
+    console.error("[data-quality]", error.message);
+  }
+  return { ok: false, message: fallback };
+}
+
 function isDataQuality(v: string): v is DataQualityStatus {
   return (DATA_QUALITY_OPTIONS as readonly string[]).includes(v);
 }
@@ -119,7 +129,7 @@ export async function updateVenueAdmin(
     })
     .eq("id", venueId);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin("/admin/data-quality/venues", `/admin/data-quality/venues/${venueId}`, "/admin/data-quality", "/admin/data-quality/review-queue");
   return { ok: true };
 }
@@ -148,7 +158,7 @@ export async function upsertVenueSocialAdmin(payload: {
       .from("venue_socials")
       .update({ platform, url, is_primary: payload.is_primary })
       .eq("id", payload.id);
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   } else {
     const { error } = await db.from("venue_socials").insert({
       venue_id: payload.venue_id,
@@ -156,7 +166,7 @@ export async function upsertVenueSocialAdmin(payload: {
       url,
       is_primary: payload.is_primary,
     });
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   }
 
   revalidateAdmin(`/admin/data-quality/venues/${payload.venue_id}`);
@@ -167,7 +177,7 @@ export async function deleteVenueSocialAdmin(id: string, venueId: string): Promi
   const authErr = await requireAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("venue_socials").delete().eq("id", id);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin(`/admin/data-quality/venues/${venueId}`);
   return { ok: true };
 }
@@ -219,7 +229,7 @@ export async function updateCoachAdmin(
     })
     .eq("id", coachId);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin("/admin/data-quality/coaches", `/admin/data-quality/coaches/${coachId}`, "/admin/data-quality", "/admin/data-quality/review-queue");
   return { ok: true };
 }
@@ -253,7 +263,7 @@ export async function linkCoachVenuesAdmin(
       .eq("coach_id", row.coach_id)
       .eq("venue_id", row.venue_id)
       .maybeSingle();
-    if (findErr) return { ok: false, message: findErr.message };
+    if (findErr) return adminFailure(findErr);
 
     if (existing) {
       const { error } = await db
@@ -261,10 +271,10 @@ export async function linkCoachVenuesAdmin(
         .update({ is_primary: row.is_primary })
         .eq("coach_id", row.coach_id)
         .eq("venue_id", row.venue_id);
-      if (error) return { ok: false, message: error.message };
+      if (error) return adminFailure(error);
     } else {
       const { error } = await db.from("coach_venues").insert(row);
-      if (error) return { ok: false, message: error.message };
+      if (error) return adminFailure(error);
     }
   }
   revalidateAdmin(
@@ -288,7 +298,7 @@ export async function unlinkCoachVenueAdmin(
     .delete()
     .eq("coach_id", coachId)
     .eq("venue_id", venueId);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin(`/admin/data-quality/coaches/${coachId}`, "/admin/data-quality/coach-venue-links");
   return { ok: true };
 }
@@ -305,10 +315,10 @@ export async function upsertCoachOutcomeAdmin(payload: {
   const db = getSupabaseAdmin();
   if (payload.id) {
     const { error } = await db.from("coach_outcomes").update({ outcome }).eq("id", payload.id);
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   } else {
     const { error } = await db.from("coach_outcomes").insert({ coach_id: payload.coach_id, outcome });
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   }
   revalidateAdmin(`/admin/data-quality/coaches/${payload.coach_id}`);
   return { ok: true };
@@ -321,7 +331,7 @@ export async function deleteCoachOutcomeAdmin(
   const authErr = await requireAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_outcomes").delete().eq("id", id);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin(`/admin/data-quality/coaches/${coachId}`);
   return { ok: true };
 }
@@ -347,7 +357,7 @@ export async function upsertCoachSocialAdmin(payload: {
       .from("coach_socials")
       .update({ platform, url, is_primary: payload.is_primary })
       .eq("id", payload.id);
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   } else {
     const { error } = await db.from("coach_socials").insert({
       coach_id: payload.coach_id,
@@ -355,7 +365,7 @@ export async function upsertCoachSocialAdmin(payload: {
       url,
       is_primary: payload.is_primary,
     });
-    if (error) return { ok: false, message: error.message };
+    if (error) return adminFailure(error);
   }
   revalidateAdmin(`/admin/data-quality/coaches/${payload.coach_id}`);
   return { ok: true };
@@ -368,7 +378,7 @@ export async function deleteCoachSocialAdmin(
   const authErr = await requireAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_socials").delete().eq("id", id);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
   revalidateAdmin(`/admin/data-quality/coaches/${coachId}`);
   return { ok: true };
 }
@@ -487,7 +497,7 @@ export async function setPrimaryCoachImageAdmin(
     .update({ is_primary: true })
     .eq("id", imageId)
     .eq("coach_id", coachId);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
 
   if (row.image_url?.trim()) {
     await db.from("coaches").update({ image_url: row.image_url.trim() }).eq("id", coachId);
@@ -516,7 +526,7 @@ export async function deleteCoachImageAdmin(
 
   const wasPrimary = row.is_primary === true;
   const { error } = await db.from("coach_images").delete().eq("id", id);
-  if (error) return { ok: false, message: error.message };
+  if (error) return adminFailure(error);
 
   if (wasPrimary) {
     await promoteNextPrimaryCoachImage(db, coachId);

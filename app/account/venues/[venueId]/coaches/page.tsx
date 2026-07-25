@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import VenueCoachesManager from "@/components/account/VenueCoachesManager";
 import { loadManagedVenueShell } from "@/lib/queries/managedVenueShell";
 import { loadVenueRelationshipBoard } from "@/lib/queries/coachVenueRelationships";
+import { loadVenueCoachAvailabilityHints } from "@/lib/queries/coachAvailability";
 
 export const metadata: Metadata = {
   title: "Venue coaches",
@@ -19,6 +20,14 @@ export default async function ManagedVenueCoachesPage({ params }: PageProps) {
   if (!shell) notFound();
 
   const board = await loadVenueRelationshipBoard(venueId);
+  const activeIds = board.current
+    .filter((row) => row.status === "active")
+    .map((row) => row.id);
+  const availabilityHints = await loadVenueCoachAvailabilityHints(
+    venueId,
+    activeIds
+  );
+  const availability = Object.fromEntries(availabilityHints.entries());
 
   return (
     <div className="space-y-6">
@@ -28,7 +37,11 @@ export default async function ManagedVenueCoachesPage({ params }: PageProps) {
           Invite coaches, review requests, and manage coaching relationships.
         </p>
       </div>
-      <VenueCoachesManager venueId={venueId} board={board} />
+      <VenueCoachesManager
+        venueId={venueId}
+        board={board}
+        availability={availability}
+      />
     </div>
   );
 }

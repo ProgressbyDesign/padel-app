@@ -18,29 +18,41 @@ export function useTopRatedCoaches(): TopRatedState {
   const [coaches, setCoaches] = useState<CoachListingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/coaches/top-rated");
-      const json = (await res.json()) as {
-        coaches?: CoachListingItem[];
-        error?: string;
-      };
-      if (!res.ok) throw new Error(json.error || "Request failed");
-      setCoaches(json.coaches ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load coaches");
-      setCoaches([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [requestId, setRequestId] = useState(0);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
 
-  return { coaches, loading, error, refetch: load };
+    async function run() {
+      try {
+        const res = await fetch("/api/coaches/top-rated");
+        const json = (await res.json()) as {
+          coaches?: CoachListingItem[];
+        };
+        if (!res.ok) throw new Error("Request failed");
+        if (cancelled) return;
+        setCoaches(json.coaches ?? []);
+        setError(null);
+        setLoading(false);
+      } catch {
+        if (cancelled) return;
+        setError("Failed to load coaches");
+        setCoaches([]);
+        setLoading(false);
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setRequestId((id) => id + 1);
+  }, []);
+
+  return { coaches, loading, error, refetch };
 }

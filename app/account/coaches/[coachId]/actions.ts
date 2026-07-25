@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   COACH_PROFILE_OUTCOME_OPTIONS,
+  isPlayerLevelValue,
   type CoachDetailsField,
   type CoachDetailsFormValues,
   type CoachDetailsUpdateState,
@@ -42,6 +43,7 @@ function validateValues(
   const role = values.role.trim();
   const description = values.description.trim();
   const phone = values.phone.trim();
+  const email = values.email.trim();
 
   if (!name || name.length < 2 || name.length > 120) {
     errors.name = "Name must be between 2 and 120 characters.";
@@ -54,6 +56,9 @@ function validateValues(
   }
   if (phone && (phone.length < 5 || phone.length > 40)) {
     errors.phone = "Phone must be between 5 and 40 characters.";
+  }
+  if (email && (email.length < 5 || email.length > 160 || !email.includes("@"))) {
+    errors.email = "Enter a valid public contact email, or leave it blank.";
   }
 
   if (values.experience_years.trim()) {
@@ -68,6 +73,13 @@ function validateValues(
     if (!Number.isInteger(price) || price < 0 || price > 10000) {
       errors.price_from = "Price must be a whole number from 0 to 10000.";
     }
+  }
+
+  const invalidLevels = values.player_levels.filter(
+    (value) => !isPlayerLevelValue(value)
+  );
+  if (invalidLevels.length > 0) {
+    errors.player_levels = "Remove unsupported player levels.";
   }
 
   const invalidOutcomes = values.outcomes.filter(
@@ -85,6 +97,7 @@ function revalidateCoachPaths(coachId: string) {
   revalidatePath(`/account/coaches/${coachId}`);
   revalidatePath(`/account/coaches/${coachId}/details`);
   revalidatePath(`/coach/${coachId}`);
+  revalidatePath("/coaches");
   revalidatePath("/account");
 }
 
@@ -99,10 +112,15 @@ export async function updateManagedCoachDetailsAction(
     description: String(formData.get("description") ?? ""),
     experience_years: String(formData.get("experience_years") ?? ""),
     phone: String(formData.get("phone") ?? ""),
+    email: String(formData.get("email") ?? ""),
     travel_available: formData.get("travel_available") === "true",
     price_from: String(formData.get("price_from") ?? ""),
     audience_adults: formData.get("audience_adults") === "true",
     audience_juniors: formData.get("audience_juniors") === "true",
+    player_levels: formData
+      .getAll("player_levels")
+      .map((value) => String(value))
+      .filter(Boolean),
     outcomes: formData
       .getAll("outcomes")
       .map((value) => String(value))
@@ -139,6 +157,7 @@ export async function updateManagedCoachDetailsAction(
   const priceRaw = values.price_from.trim();
   const experienceYears = experienceRaw ? Number(experienceRaw) : null;
   const priceFrom = priceRaw ? Number(priceRaw) : null;
+  const playerLevels = values.player_levels.filter(isPlayerLevelValue);
 
   const supabase = await createClient();
   const { error: coachError } = await supabase
@@ -149,6 +168,7 @@ export async function updateManagedCoachDetailsAction(
       description: optional(values.description),
       experience_years: experienceYears,
       phone: optional(values.phone),
+      email: optional(values.email),
       travel_available: values.travel_available,
       price_from: priceFrom,
     })
@@ -175,6 +195,7 @@ export async function updateManagedCoachDetailsAction(
       .update({
         audience_adults: values.audience_adults,
         audience_juniors: values.audience_juniors,
+        player_levels: playerLevels,
       })
       .eq("coach_id", coachId);
 
@@ -182,7 +203,7 @@ export async function updateManagedCoachDetailsAction(
       return {
         ...baseState,
         status: "error",
-        message: "Profile saved, but audience settings could not be updated.",
+        message: "Profile saved, but audience or level settings could not be updated.",
         fieldErrors: {},
       };
     }
@@ -193,13 +214,14 @@ export async function updateManagedCoachDetailsAction(
         coach_id: coachId,
         audience_adults: values.audience_adults,
         audience_juniors: values.audience_juniors,
+        player_levels: playerLevels,
       });
 
     if (attributeError) {
       return {
         ...baseState,
         status: "error",
-        message: "Profile saved, but audience settings could not be created.",
+        message: "Profile saved, but audience or level settings could not be created.",
         fieldErrors: {},
       };
     }
@@ -207,11 +229,11 @@ export async function updateManagedCoachDetailsAction(
 
   const desiredOutcomes = COACH_PROFILE_OUTCOME_OPTIONS.filter((option) =>
     values.outcomes.includes(option.value)
-  ).map((option) => option.label);
+  );
 
   const { data: existingOutcomes, error: outcomesLoadError } = await supabase
     .from("coach_outcomes")
-    .select("id, outcome")
+    .select("id, outcome, outcome_key")
     .eq("coach_id", coachId);
 
   if (outcomesLoadError) {
@@ -224,15 +246,46 @@ export async function updateManagedCoachDetailsAction(
   }
 
   const existing = existingOutcomes ?? [];
-  const desiredSet = new Set(desiredOutcomes.map((label) => label.toLowerCase()));
-  const toDelete = existing.filter(
-    (row) => !desiredSet.has(String(row.outcome).trim().toLowerCase())
+  const desiredKeys = new Set<string>(
+    desiredOutcomes.map((option) => option.value)
   );
-  const existingLabels = new Set(
-    existing.map((row) => String(row.outcome).trim().toLowerCase())
+
+  // Keep legacy free-text rows that are not mapped to controlled keys.
+  const controlledExisting = existing.filter((row) => {
+    const key = row.outcome_key ? String(row.outcome_key) : null;
+    if (key) return true;
+    const label = String(row.outcome).trim().toLowerCase();
+    return COACH_PROFILE_OUTCOME_OPTIONS.some(
+      (option) => option.label.toLowerCase() === label
+    );
+  });
+
+  const toDelete = controlledExisting.filter((row) => {
+    const key = row.outcome_key ? String(row.outcome_key) : null;
+    if (key) return !desiredKeys.has(key);
+    const label = String(row.outcome).trim().toLowerCase();
+    const match = COACH_PROFILE_OUTCOME_OPTIONS.find(
+      (option) => option.label.toLowerCase() === label
+    );
+    return match ? !desiredKeys.has(match.value) : false;
+  });
+
+  const existingKeys = new Set(
+    controlledExisting
+      .map((row) => {
+        if (row.outcome_key) return String(row.outcome_key);
+        const label = String(row.outcome).trim().toLowerCase();
+        return (
+          COACH_PROFILE_OUTCOME_OPTIONS.find(
+            (option) => option.label.toLowerCase() === label
+          )?.value ?? null
+        );
+      })
+      .filter(Boolean) as string[]
   );
+
   const toInsert = desiredOutcomes.filter(
-    (label) => !existingLabels.has(label.toLowerCase())
+    (option) => !existingKeys.has(option.value)
   );
 
   if (toDelete.length > 0) {
@@ -255,11 +308,27 @@ export async function updateManagedCoachDetailsAction(
     }
   }
 
+  // Sync outcome_key on remaining controlled rows that only have labels.
+  for (const row of controlledExisting) {
+    if (row.outcome_key) continue;
+    const label = String(row.outcome).trim().toLowerCase();
+    const match = COACH_PROFILE_OUTCOME_OPTIONS.find(
+      (option) => option.label.toLowerCase() === label
+    );
+    if (!match || !desiredKeys.has(match.value)) continue;
+    await supabase
+      .from("coach_outcomes")
+      .update({ outcome_key: match.value, outcome: match.label })
+      .eq("id", row.id)
+      .eq("coach_id", coachId);
+  }
+
   if (toInsert.length > 0) {
     const { error: insertError } = await supabase.from("coach_outcomes").insert(
-      toInsert.map((outcome) => ({
+      toInsert.map((option) => ({
         coach_id: coachId,
-        outcome,
+        outcome: option.label,
+        outcome_key: option.value,
       }))
     );
 
@@ -286,9 +355,11 @@ export async function updateManagedCoachDetailsAction(
       role: values.role.trim(),
       description: values.description.trim(),
       phone: values.phone.trim(),
+      email: values.email.trim(),
       experience_years:
         experienceYears === null ? "" : String(experienceYears),
       price_from: priceFrom === null ? "" : String(priceFrom),
+      player_levels: playerLevels,
       outcomes: values.outcomes.filter((value) =>
         COACH_PROFILE_OUTCOME_OPTIONS.some((option) => option.value === value)
       ),

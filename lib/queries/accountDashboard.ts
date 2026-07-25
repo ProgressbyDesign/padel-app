@@ -3,6 +3,7 @@ import "server-only";
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import type { MembershipRole } from "@/lib/auth/types";
 import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
+import { loadBookingAttention } from "@/lib/queries/coachBookings";
 import { createClient } from "@/lib/supabase/server";
 import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
 
@@ -82,6 +83,17 @@ export type AccountRelationshipAttention = {
   }>;
 };
 
+export type AccountBookingAttention = {
+  playerAwaiting: number;
+  playerAcceptedUpcoming: number;
+  coachNewRequests: Array<{ coachId: string; coachName: string; count: number }>;
+  coachAcceptedUpcoming: Array<{
+    coachId: string;
+    coachName: string;
+    count: number;
+  }>;
+};
+
 export type AccountDashboardData = {
   account: {
     id: string;
@@ -93,6 +105,7 @@ export type AccountDashboardData = {
   coachApplication: AccountCoachApplicationSummary;
   venueApplication: AccountVenueApplicationSummary;
   relationshipAttention: AccountRelationshipAttention;
+  bookingAttention: AccountBookingAttention;
 };
 
 function one<T>(value: T | T[] | null): T | null {
@@ -183,23 +196,40 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     ]);
 
   if (profileResult.error) {
-    throw new Error(`Unable to load account profile: ${profileResult.error.message}`);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[account] profile:", profileResult.error.message);
+    }
+    throw new Error("Unable to load account profile.");
   }
   if (coachResult.error) {
-    throw new Error(`Unable to load coach memberships: ${coachResult.error.message}`);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[account] coach memberships:", coachResult.error.message);
+    }
+    throw new Error("Unable to load coach memberships.");
   }
   if (venueResult.error) {
-    throw new Error(`Unable to load venue memberships: ${venueResult.error.message}`);
+    if (process.env.NODE_ENV === "development") {
+      console.error("[account] venue memberships:", venueResult.error.message);
+    }
+    throw new Error("Unable to load venue memberships.");
   }
   if (coachApplicationResult.error) {
-    throw new Error(
-      `Unable to load coach application: ${coachApplicationResult.error.message}`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        "[account] coach application:",
+        coachApplicationResult.error.message
+      );
+    }
+    throw new Error("Unable to load coach application.");
   }
   if (venueApplicationResult.error) {
-    throw new Error(
-      `Unable to load venue application: ${venueApplicationResult.error.message}`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        "[account] venue application:",
+        venueApplicationResult.error.message
+      );
+    }
+    throw new Error("Unable to load venue application.");
   }
 
   const profile = profileResult.data as ProfileRow | null;
@@ -277,14 +307,22 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     ]);
 
     if (coachPendingResult.error) {
-      throw new Error(
-        `Unable to load venue invitations: ${coachPendingResult.error.message}`
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "[account] venue invitations:",
+          coachPendingResult.error.message
+        );
+      }
+      throw new Error("Unable to load venue invitations.");
     }
     if (venuePendingResult.error) {
-      throw new Error(
-        `Unable to load coach requests: ${venuePendingResult.error.message}`
-      );
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "[account] coach requests:",
+          venuePendingResult.error.message
+        );
+      }
+      throw new Error("Unable to load coach requests.");
     }
 
     const invitationsByCoach = new Map<string, number>();
@@ -333,6 +371,8 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     }
   }
 
+  const bookingAttention = await loadBookingAttention(account.id);
+
   return {
     account: {
       id: account.id,
@@ -364,5 +404,6 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
         }
       : null,
     relationshipAttention,
+    bookingAttention,
   };
 }

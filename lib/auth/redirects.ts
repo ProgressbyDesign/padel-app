@@ -1,21 +1,7 @@
 import { headers } from "next/headers";
+import { safeInternalPath } from "@/lib/auth/safePath";
 
-export function safeInternalPath(
-  value: string | null | undefined,
-  fallback = "/account"
-): string {
-  const candidate = value?.trim();
-  if (
-    !candidate ||
-    !candidate.startsWith("/") ||
-    candidate.startsWith("//") ||
-    candidate.includes("\\") ||
-    /[\r\n]/.test(candidate)
-  ) {
-    return fallback;
-  }
-  return candidate;
-}
+export { safeInternalPath };
 
 function validOrigin(value: string | null | undefined): string | null {
   if (!value) return null;

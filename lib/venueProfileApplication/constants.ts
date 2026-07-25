@@ -30,13 +30,15 @@ export const EDITABLE_VENUE_APPLICATION_STATUSES = [
 export const VENUE_APPLICATION_MODES = [
   {
     value: "claim_existing",
-    label: "Find and claim an existing venue",
-    description: "The venue is already listed on Padel Pathways.",
+    label: "Claim an existing listing",
+    description:
+      "The venue is already on Padel Pathways. You are requesting ownership or management access.",
   },
   {
     value: "create_new",
-    label: "My venue is not listed",
-    description: "Propose a new venue listing for review.",
+    label: "Propose a new venue",
+    description:
+      "The venue is not listed yet. We will review the proposed details before creating it.",
   },
 ] as const;
 

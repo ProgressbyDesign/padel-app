@@ -3,6 +3,7 @@ import { LISTING_PAGE_SIZE } from "../constants/listings";
 import {
   COACH_LISTING_SELECT,
   coachesRowsToListingItems,
+  playerLevelValueForSkillFilter,
   sortCoachListing,
   type CoachListingItem,
   type CoachListingSort,
@@ -45,14 +46,19 @@ async function coachIdsMatchingOutcomeSearch(search: string): Promise<string[]> 
   const key = normalizeSearchKey(search);
   if (!key) return [];
 
-  const { data, error } = await supabase.from("coach_outcomes").select("coach_id, outcome").limit(300);
+  const { data, error } = await supabase
+    .from("coach_outcomes")
+    .select("coach_id, outcome, outcome_key")
+    .limit(300);
   if (error || !data?.length) return [];
 
   const seen = new Set<string>();
   const ids: string[] = [];
   for (const row of data) {
     const outcome = row.outcome?.trim() ?? "";
-    if (!outcome || searchMatchScore(search, outcome) <= 0) continue;
+    const outcomeKey = (row as { outcome_key?: string | null }).outcome_key?.trim() ?? "";
+    const haystack = `${outcome} ${outcomeKey}`.trim();
+    if (!haystack || searchMatchScore(search, haystack) <= 0) continue;
     const id = String(row.coach_id);
     if (!seen.has(id)) {
       seen.add(id);
@@ -87,6 +93,54 @@ async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
   return [...new Set(links.map((l) => String((l as { coach_id: string }).coach_id)))];
 }
 
+/** Coach IDs with structured locations matching city/country text. */
+async function coachIdsMatchingCoachLocationSearch(search: string): Promise<string[]> {
+  const supabase = await createClient();
+  const key = normalizeSearchKey(search);
+  if (!key) return [];
+
+  const pattern = `%${key}%`;
+  const { data, error } = await supabase
+    .from("coach_locations")
+    .select("coach_id, city, country")
+    .or(`city.ilike.${JSON.stringify(pattern)},country.ilike.${JSON.stringify(pattern)}`)
+    .limit(400);
+
+  if (error || !data?.length) {
+    const fallback = await supabase
+      .from("coach_locations")
+      .select("coach_id, city, country")
+      .ilike("city", pattern)
+      .limit(400);
+    if (fallback.error || !fallback.data?.length) return [];
+    return [
+      ...new Set(fallback.data.map((row) => String((row as { coach_id: string }).coach_id))),
+    ];
+  }
+
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const row of data) {
+    const city = (row as { city?: string | null }).city ?? "";
+    const country = (row as { country?: string | null }).country ?? "";
+    if (searchMatchScore(search, city, country) <= 0) continue;
+    const id = String((row as { coach_id: string }).coach_id);
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+async function coachIdsMatchingLocationSearch(search: string): Promise<string[]> {
+  const [venueIds, locationIds] = await Promise.all([
+    coachIdsMatchingVenueSearch(search),
+    coachIdsMatchingCoachLocationSearch(search),
+  ]);
+  return [...new Set([...venueIds, ...locationIds])];
+}
+
 function applyCoachFilters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: PostgrestFilterBuilder<any, any, any, any, any>,
@@ -112,15 +166,15 @@ function applyCoachFilters(
     if (locationCoachIds.length === 0) {
       return { query, empty: true as const };
     }
-    if (coachKey) {
-      query = query.in("id", locationCoachIds);
-    } else {
-      query = query.in("id", locationCoachIds);
-    }
+    query = query.in("id", locationCoachIds);
   }
 
   if (input.level && input.level !== "all") {
-    query = query.eq("level", input.level);
+    const playerLevel = playerLevelValueForSkillFilter(input.level);
+    // Prefer structured player_levels; soft-fallback to legacy coaches.level.
+    query = query.or(
+      `level.eq.${input.level},coach_attributes.player_levels.cs.{"${playerLevel}"}`
+    );
   }
 
   if (input.travelOnly) {
@@ -172,7 +226,7 @@ export async function fetchCoachListingPage(
   const location =
     (input.location ?? "").trim() || (input.search ?? "").trim();
   const coachGoal = (input.coach ?? "").trim();
-  const locationCoachIds = location ? await coachIdsMatchingVenueSearch(location) : null;
+  const locationCoachIds = location ? await coachIdsMatchingLocationSearch(location) : null;
   const goalCoachIds = coachGoal ? await coachIdsMatchingOutcomeSearch(coachGoal) : null;
 
   const countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });

@@ -45,6 +45,7 @@ export type Venue = {
   latitude?: number | string | null;
   longitude?: number | string | null;
   google_place_id?: string | null;
+  is_approved?: boolean | null;
 };
 
 export type VenueTypeFilter = "premium_training" | "casual" | "resort";

@@ -5,10 +5,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Circle,
-  ImageIcon,
-  Link2,
-  PenSquare,
+  ExternalLink,
 } from "lucide-react";
+import { buildCoachCompletion } from "@/lib/coachProfileCompletion";
+import { formatCoachCardPrice } from "@/lib/formatCoachPrice";
 import { loadManagedCoachOverview } from "@/lib/queries/managedCoach";
 
 export const metadata: Metadata = {
@@ -25,90 +25,98 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
   const result = await loadManagedCoachOverview(coachId);
   if (!result) notFound();
 
-  const { coach, imageCount, socialCount, venueCount, audienceAdults, audienceJuniors, outcomes, primaryLocation } =
-    result;
+  const {
+    coach,
+    membershipRole,
+    imageCount,
+    socialCount,
+    venueCount,
+    achievementCount,
+    audienceAdults,
+    audienceJuniors,
+    playerLevels,
+    outcomes,
+    primaryLocation,
+    hasPrimaryLocation,
+    availabilityStatus,
+    nextAvailableAt,
+    pendingBookingCount,
+  } = result;
+
   const base = `/account/coaches/${encodeURIComponent(coach.id)}`;
-  const hasAudience = audienceAdults || audienceJuniors;
-  const hasPrimaryImage = imageCount > 0 || Boolean(coach.image_url?.trim());
+  const completion = buildCoachCompletion(coach.id, {
+    name: coach.name,
+    role: coach.role,
+    description: coach.description,
+    experience_years: coach.experience_years,
+    phone: coach.phone,
+    email: coach.email,
+    price_from: coach.price_from,
+    image_url: coach.image_url,
+    is_approved: coach.is_approved,
+    hasPrimaryLocation,
+    audienceAdults,
+    audienceJuniors,
+    playerLevels,
+    outcomes,
+    imageCount,
+    socialCount,
+    achievementCount,
+    activeVenueCount: venueCount,
+    availabilityLive: availabilityStatus === "live",
+    pendingBookingCount,
+  });
 
-  const checklist = [
-    {
-      id: "name-role",
-      label: "Name and role",
-      done: Boolean(coach.name?.trim() && coach.role?.trim()),
-      href: `${base}/details`,
-    },
-    {
-      id: "description",
-      label: "Coaching description",
-      done: Boolean(coach.description?.trim() && coach.description.trim().length >= 40),
-      href: `${base}/details`,
-    },
-    {
-      id: "experience",
-      label: "Experience",
-      done: coach.experience_years !== null,
-      href: `${base}/details`,
-    },
-    {
-      id: "audience",
-      label: "Audience",
-      done: hasAudience,
-      href: `${base}/details`,
-    },
-    {
-      id: "outcomes",
-      label: "Outcomes",
-      done: outcomes.length > 0,
-      href: `${base}/details`,
-    },
-    {
-      id: "image",
-      label: "Primary image",
-      done: hasPrimaryImage,
-      href: `${base}/images`,
-    },
-    {
-      id: "price",
-      label: "Hourly price",
-      done: coach.price_from !== null,
-      href: `${base}/details`,
-    },
-    {
-      id: "social",
-      label: "Social link",
-      done: socialCount > 0,
-      href: `${base}/socials`,
-    },
-    {
-      id: "venue",
-      label: "Linked venue",
-      done: venueCount > 0,
-      href: `${base}/venues`,
-    },
-  ] as const;
-
-  const completedCount = checklist.filter((item) => item.done).length;
+  const priceLine = formatCoachCardPrice(coach.price_from);
 
   return (
     <div className="space-y-8">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
-        <div>
-          <h2 className="text-2xl font-bold text-primary">Overview</h2>
-          <p className="mt-1 text-sm text-primary/60">
-            Current listing status for this coach profile.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-primary">Overview</h2>
+            <p className="mt-1 text-sm text-primary/60">
+              Complete your profile to help players understand your coaching and
+              request the right sessions.
+            </p>
+          </div>
+          <Link
+            href={`/coach/${encodeURIComponent(coach.id)}`}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-primary/15 px-4 py-2 text-sm font-semibold text-primary/80 hover:bg-surface"
+          >
+            Public preview
+            <ExternalLink className="h-4 w-4" aria-hidden />
+          </Link>
         </div>
 
-        <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+        {completion.badges.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {completion.badges.map((badge) => (
+              <li
+                key={badge.id}
+                className="rounded-lg border border-primary/10 bg-surface px-2.5 py-1 text-xs font-semibold text-primary/80"
+              >
+                {badge.label}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-2xl bg-surface p-4">
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-              Experience
+              Status
             </dt>
             <dd className="mt-2 font-semibold text-primary">
-              {coach.experience_years === null
-                ? "Not set"
-                : `${coach.experience_years} years`}
+              {coach.is_approved ? "Approved" : "Not approved"}
+            </dd>
+          </div>
+          <div className="rounded-2xl bg-surface p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Membership
+            </dt>
+            <dd className="mt-2 font-semibold capitalize text-primary">
+              {membershipRole}
             </dd>
           </div>
           <div className="rounded-2xl bg-surface p-4">
@@ -116,34 +124,45 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
               Primary location
             </dt>
             <dd className="mt-2 font-semibold text-primary">
-              {primaryLocation || "Not linked yet"}
+              {primaryLocation || "Not set"}
             </dd>
-          </div>
-          <div className="rounded-2xl bg-surface p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-              Images
-            </dt>
-            <dd className="mt-2 font-semibold text-primary">{imageCount}</dd>
-          </div>
-          <div className="rounded-2xl bg-surface p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-              Social links
-            </dt>
-            <dd className="mt-2 font-semibold text-primary">{socialCount}</dd>
-          </div>
-          <div className="rounded-2xl bg-surface p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-              Linked venues
-            </dt>
-            <dd className="mt-2 font-semibold text-primary">{venueCount}</dd>
           </div>
           <div className="rounded-2xl bg-surface p-4">
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
               Price from
             </dt>
+            <dd className="mt-2 font-semibold text-primary">{priceLine.text}</dd>
+          </div>
+          <div className="rounded-2xl bg-surface p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Availability
+            </dt>
             <dd className="mt-2 font-semibold text-primary">
-              {coach.price_from === null ? "Not set" : `€${coach.price_from}`}
+              {availabilityStatus === "live"
+                ? "Live"
+                : availabilityStatus === "private"
+                  ? "Private"
+                  : "Not set"}
             </dd>
+            {nextAvailableAt ? (
+              <p className="mt-1 text-xs text-primary/55">Upcoming session set</p>
+            ) : null}
+          </div>
+          <div className="rounded-2xl bg-surface p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+              Pending bookings
+            </dt>
+            <dd className="mt-2 font-semibold text-primary">
+              {pendingBookingCount}
+            </dd>
+            {pendingBookingCount > 0 ? (
+              <Link
+                href={`${base}/bookings`}
+                className="mt-2 inline-block text-xs font-semibold text-primary/70 hover:text-primary"
+              >
+                Review requests
+              </Link>
+            ) : null}
           </div>
         </dl>
       </section>
@@ -152,70 +171,53 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
         <div>
           <h2 className="text-2xl font-bold text-primary">Profile completeness</h2>
           <p className="mt-1 text-sm text-primary/60">
-            Complete your profile to give players more confidence and improve your
-            chances of appearing in relevant searches.
+            Focus on essential details first, then trust signals and booking
+            readiness. This is not a search ranking score.
           </p>
           <p className="mt-3 text-sm font-semibold text-primary">
-            {completedCount} of {checklist.length} checklist items complete
+            {completion.completedWeighted} of {completion.weightedTotal} core
+            items complete
           </p>
         </div>
 
-        <ul className="mt-6 space-y-3">
-          {checklist.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={item.href}
-                className="flex items-center gap-3 rounded-2xl border border-primary/10 px-4 py-3 transition hover:bg-surface"
-              >
-                {item.done ? (
-                  <CheckCircle2
-                    className="h-5 w-5 shrink-0 text-emerald-600"
-                    aria-hidden
-                  />
-                ) : (
-                  <Circle className="h-5 w-5 shrink-0 text-primary/30" aria-hidden />
-                )}
-                <span className="flex-1 text-sm font-semibold text-primary">
-                  {item.label}
-                </span>
-                <ArrowRight className="h-4 w-4 text-primary/40" aria-hidden />
-              </Link>
-            </li>
+        <div className="mt-6 space-y-6">
+          {completion.groups.map((group) => (
+            <div key={group.id}>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+                {group.title}
+              </h3>
+              <ul className="mt-3 space-y-2">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-3 rounded-2xl border border-primary/10 px-4 py-3 transition hover:bg-surface"
+                    >
+                      {item.done ? (
+                        <CheckCircle2
+                          className="h-5 w-5 shrink-0 text-emerald-600"
+                          aria-hidden
+                        />
+                      ) : (
+                        <Circle
+                          className="h-5 w-5 shrink-0 text-primary/30"
+                          aria-hidden
+                        />
+                      )}
+                      <span className="flex-1 text-sm font-semibold text-primary">
+                        {item.label}
+                      </span>
+                      <ArrowRight
+                        className="h-4 w-4 text-primary/40"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Link
-          href={`${base}/details`}
-          className="rounded-[24px] border border-primary/10 bg-white p-5 transition hover:border-primary/20 hover:bg-surface"
-        >
-          <PenSquare className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Details</h3>
-          <p className="mt-1 text-sm text-primary/60">Profile fields and attributes.</p>
-        </Link>
-        <Link
-          href={`${base}/images`}
-          className="rounded-[24px] border border-primary/10 bg-white p-5 transition hover:border-primary/20 hover:bg-surface"
-        >
-          <ImageIcon className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Images</h3>
-          <p className="mt-1 text-sm text-primary/60">
-            {imageCount === 0 ? "No images yet" : `${imageCount} image${imageCount === 1 ? "" : "s"}`}
-          </p>
-        </Link>
-        <Link
-          href={`${base}/socials`}
-          className="rounded-[24px] border border-primary/10 bg-white p-5 transition hover:border-primary/20 hover:bg-surface"
-        >
-          <Link2 className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Social links</h3>
-          <p className="mt-1 text-sm text-primary/60">
-            {socialCount === 0
-              ? "No links yet"
-              : `${socialCount} link${socialCount === 1 ? "" : "s"}`}
-          </p>
-        </Link>
+        </div>
       </section>
     </div>
   );

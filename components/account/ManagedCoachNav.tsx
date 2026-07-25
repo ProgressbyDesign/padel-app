@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Award,
   Building2,
+  CalendarCheck2,
+  CalendarClock,
   ImageIcon,
   LayoutDashboard,
   Link2,
+  MapPin,
   PenSquare,
 } from "lucide-react";
 
@@ -25,6 +29,13 @@ const NAV_ITEMS = [
       pathname.startsWith(`${base}/details`),
   },
   {
+    href: "/locations",
+    label: "Locations",
+    icon: MapPin,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/locations`),
+  },
+  {
     href: "/images",
     label: "Images",
     icon: ImageIcon,
@@ -39,11 +50,32 @@ const NAV_ITEMS = [
       pathname.startsWith(`${base}/socials`),
   },
   {
+    href: "/achievements",
+    label: "Achievements",
+    icon: Award,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/achievements`),
+  },
+  {
     href: "/venues",
     label: "Venues",
     icon: Building2,
     match: (pathname: string, base: string) =>
       pathname.startsWith(`${base}/venues`),
+  },
+  {
+    href: "/availability",
+    label: "Availability",
+    icon: CalendarClock,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/availability`),
+  },
+  {
+    href: "/bookings",
+    label: "Bookings",
+    icon: CalendarCheck2,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/bookings`),
   },
 ] as const;
 
@@ -64,7 +96,7 @@ export default function ManagedCoachNav({ coachId }: { coachId: string }) {
               <Link
                 href={href}
                 aria-current={isCurrent ? "page" : undefined}
-                className={`inline-flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
+                className={`inline-flex min-h-11 w-full items-center gap-2.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
                   isCurrent
                     ? "bg-primary text-accent"
                     : "bg-white text-primary/70 hover:bg-surface hover:text-primary"

@@ -3,6 +3,7 @@ import { createClient } from "../../../lib/supabase/server";
 import CoachProfilePage from "../../../components/CoachProfilePage";
 import { fetchCoachPdpById } from "../../../lib/fetchCoachPdp";
 import type { Venue } from "../../../lib/venueFilters";
+import { loadPublicCoachAvailability } from "../../../lib/queries/coachAvailability";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -33,12 +34,15 @@ export default async function CoachPdpPage({ params }: PageProps) {
     notFound();
   }
 
-  const { data: links } = await supabase
-    .from("coach_venues")
-    .select("venue_id, is_primary, status")
-    .eq("coach_id", id)
-    .in("status", ["active", "unverified"])
-    .order("is_primary", { ascending: false });
+  const [{ data: links }, availabilityGroups] = await Promise.all([
+    supabase
+      .from("coach_venues")
+      .select("venue_id, is_primary, status")
+      .eq("coach_id", id)
+      .in("status", ["active", "unverified"])
+      .order("is_primary", { ascending: false }),
+    loadPublicCoachAvailability(id, 14),
+  ]);
 
   const venueIds = Array.from(
     new Set(
@@ -55,5 +59,11 @@ export default async function CoachPdpPage({ params }: PageProps) {
     venues = venueIds.map((vid) => byId.get(vid)).filter((v): v is Venue => Boolean(v));
   }
 
-  return <CoachProfilePage coach={coach} venues={venues} />;
+  return (
+    <CoachProfilePage
+      coach={coach}
+      venues={venues}
+      availabilityGroups={availabilityGroups}
+    />
+  );
 }

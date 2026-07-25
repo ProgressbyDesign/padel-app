@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { updateManagedCoachDetailsAction } from "@/app/account/coaches/[coachId]/actions";
 import {
+  COACH_PROFILE_LEVEL_OPTIONS,
   COACH_PROFILE_OUTCOME_OPTIONS,
   type CoachDetailsFormValues,
   type CoachDetailsUpdateState,
@@ -23,6 +24,7 @@ function CoachDetailsFields({
   fieldErrors: CoachDetailsUpdateState["fieldErrors"];
 }) {
   const [outcomes, setOutcomes] = useState(values.outcomes);
+  const [playerLevels, setPlayerLevels] = useState(values.player_levels);
   const [travelAvailable, setTravelAvailable] = useState(
     values.travel_available
   );
@@ -39,6 +41,14 @@ function CoachDetailsFields({
     );
   }
 
+  function toggleLevel(value: string) {
+    setPlayerLevels((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+  }
+
   return (
     <>
       <input type="hidden" name="travel_available" value={String(travelAvailable)} />
@@ -46,6 +56,9 @@ function CoachDetailsFields({
       <input type="hidden" name="audience_juniors" value={String(audienceJuniors)} />
       {outcomes.map((outcome) => (
         <input key={outcome} type="hidden" name="outcomes" value={outcome} />
+      ))}
+      {playerLevels.map((level) => (
+        <input key={level} type="hidden" name="player_levels" value={level} />
       ))}
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -99,7 +112,7 @@ function CoachDetailsFields({
         </label>
 
         <label className="block text-sm font-medium text-primary">
-          Phone
+          Public phone
           <input
             className={inputClass}
             name="phone"
@@ -110,6 +123,27 @@ function CoachDetailsFields({
           {fieldErrors.phone ? (
             <span className="mt-1.5 block text-sm text-red-700">
               {fieldErrors.phone}
+            </span>
+          ) : null}
+        </label>
+
+        <label className="block text-sm font-medium text-primary sm:col-span-2">
+          Public contact email
+          <input
+            className={inputClass}
+            type="email"
+            name="email"
+            defaultValue={values.email}
+            autoComplete="email"
+            aria-invalid={Boolean(fieldErrors.email)}
+          />
+          <span className="mt-1.5 block text-xs font-normal text-primary/50">
+            Shown on your public profile when provided. This is not your account
+            login email.
+          </span>
+          {fieldErrors.email ? (
+            <span className="mt-1.5 block text-sm text-red-700">
+              {fieldErrors.email}
             </span>
           ) : null}
         </label>
@@ -125,6 +159,9 @@ function CoachDetailsFields({
             defaultValue={values.price_from}
             aria-invalid={Boolean(fieldErrors.price_from)}
           />
+          <span className="mt-1.5 block text-xs font-normal text-primary/50">
+            Shown as “From €X” for a session. Indicative only.
+          </span>
           {fieldErrors.price_from ? (
             <span className="mt-1.5 block text-sm text-red-700">
               {fieldErrors.price_from}
@@ -146,7 +183,7 @@ function CoachDetailsFields({
       </div>
 
       <label className="block text-sm font-medium text-primary">
-        Description
+        Coaching introduction
         <textarea
           className={`${inputClass} min-h-36 resize-y`}
           name="description"
@@ -185,6 +222,30 @@ function CoachDetailsFields({
             Juniors
           </button>
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="text-sm font-medium text-primary">
+          Player levels
+        </legend>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {COACH_PROFILE_LEVEL_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={playerLevels.includes(option.value)}
+              onClick={() => toggleLevel(option.value)}
+              className={`rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition ${
+                playerLevels.includes(option.value) ? chipSelected : chipIdle
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {fieldErrors.player_levels ? (
+          <p className="mt-2 text-sm text-red-700">{fieldErrors.player_levels}</p>
+        ) : null}
       </fieldset>
 
       <fieldset>
@@ -247,11 +308,6 @@ export default function CoachDetailsForm({
         values={state.values}
         fieldErrors={state.fieldErrors}
       />
-
-      <p className="text-xs text-primary/50">
-        Your account login email is separate from any public coach email and is
-        not edited here.
-      </p>
 
       <button
         type="submit"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { Building2, MapPin, Search, UserRound, X } from "lucide-react";
 import {
@@ -90,16 +90,20 @@ export default function MarketplaceSearchModal({
   onSubmit,
 }: MarketplaceSearchModalProps) {
   const [shown, setShown] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
-  useEffect(() => setMounted(true), []);
+  if (!open && shown) {
+    setShown(false);
+  }
 
   useEffect(() => {
-    if (open) {
-      const r = requestAnimationFrame(() => setShown(true));
-      return () => cancelAnimationFrame(r);
-    }
-    setShown(false);
+    if (!open) return;
+    const r = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(r);
   }, [open]);
 
   useEffect(() => {

@@ -287,6 +287,23 @@ export default function CoachApplicationWizard({
     });
   }
 
+  const duplicateLocationIndexes = (() => {
+    const seen = new Map<string, number>();
+    const dupes = new Set<number>();
+    locations.forEach((location, index) => {
+      const key = `${location.country.trim().toLowerCase()}::${location.city.trim().toLowerCase()}`;
+      if (!location.city.trim()) return;
+      const first = seen.get(key);
+      if (first !== undefined) {
+        dupes.add(first);
+        dupes.add(index);
+      } else {
+        seen.set(key, index);
+      }
+    });
+    return dupes;
+  })();
+
   if (submitted) {
     const dateLabel = submittedAt
       ? new Date(submittedAt).toLocaleString(undefined, {
@@ -294,40 +311,63 @@ export default function CoachApplicationWizard({
           timeStyle: "short",
         })
       : "Just now";
+    const coachId = initial.application.coach_id;
+    const isApproved = initial.application.status === "approved";
 
     return (
       <section className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
-          Application submitted
+          {isApproved ? "Application approved" : "Application submitted"}
         </p>
         <h2 className="mt-3 text-2xl font-bold text-primary">
-          Thanks — your application is with our team
+          {isApproved
+            ? "Your coach profile is ready to manage"
+            : "Submitted — we will review shortly"}
         </h2>
         <p className="mt-3 text-sm leading-6 text-primary/65">
-          Submitted {dateLabel}. We will review your coaching profile and follow
-          up by email when there is an update.
+          {isApproved
+            ? "Approval seeds your coach profile from this application. Finish images, venues, and availability next."
+            : `Submitted ${dateLabel}. We email updates to your verified account address. Editing is locked while under review.`}
         </p>
-        <a
-          href="/account"
-          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
-        >
-          Back to account
-        </a>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {isApproved && coachId ? (
+            <a
+              href={`/account/coaches/${coachId}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
+            >
+              Open coach profile
+            </a>
+          ) : null}
+          <a
+            href="/account"
+            className={`inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+              isApproved && coachId
+                ? "border border-primary/15 text-primary hover:bg-surface"
+                : "bg-primary text-accent hover:bg-primary/90"
+            }`}
+          >
+            Back to account
+          </a>
+        </div>
       </section>
     );
   }
 
   return (
     <div className="space-y-6">
-      {initial.application.status === "changes_requested" &&
-      initial.application.review_note ? (
+      {initial.application.status === "changes_requested" ? (
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800/70">
             Changes requested
           </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
-            {initial.application.review_note}
+          <p className="mt-2 text-sm leading-6">
+            Update the highlighted feedback below, then resubmit from Review.
           </p>
+          {initial.application.review_note ? (
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
+              {initial.application.review_note}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <div className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
@@ -374,13 +414,18 @@ export default function CoachApplicationWizard({
         </ol>
       </div>
 
+      {pending ? (
+        <p className="rounded-xl border border-primary/10 bg-surface px-4 py-3 text-sm text-primary/70" role="status">
+          Saving…
+        </p>
+      ) : null}
       {error ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}
         </p>
       ) : null}
-      {message ? (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      {message && !pending ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
           {message}
         </p>
       ) : null}
@@ -409,7 +454,7 @@ export default function CoachApplicationWizard({
               {verifiedEmail || "Not available"}
             </p>
             <p className="mt-1.5 text-xs text-primary/50">
-              Shown from your account. It is not stored again on this application.
+              From your account — used for application updates.
             </p>
           </div>
 
@@ -497,7 +542,7 @@ export default function CoachApplicationWizard({
               onClick={() => saveStepOne({ nextStep: 2 })}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90 disabled:opacity-60"
             >
-              Save and continue
+              {pending ? "Saving…" : "Save and continue"}
             </button>
             <button
               type="button"
@@ -505,7 +550,7 @@ export default function CoachApplicationWizard({
               onClick={() => saveStepOne({ exit: true })}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface disabled:opacity-60"
             >
-              Save and exit
+              {pending ? "Saving…" : "Save and exit"}
             </button>
           </div>
         </section>
@@ -513,9 +558,19 @@ export default function CoachApplicationWizard({
 
       {step === 2 ? (
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
+          <p className="text-sm leading-6 text-primary/65">
+            Add cities where you coach. Mark one as primary — it appears first on
+            your public profile.
+          </p>
           {fieldErrors.locations ? (
             <p className="text-sm text-red-700" role="alert">
               {fieldErrors.locations}
+            </p>
+          ) : null}
+          {duplicateLocationIndexes.size > 0 ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+              Duplicate city and country pairs are highlighted. Remove or change
+              one before saving.
             </p>
           ) : null}
 
@@ -525,14 +580,26 @@ export default function CoachApplicationWizard({
               const suggestions =
                 CITY_SUGGESTIONS_BY_COUNTRY[country] ?? [];
               const listId = `city-suggestions-${index}`;
+              const isDuplicate = duplicateLocationIndexes.has(index);
               return (
                 <li
                   key={`location-${index}`}
-                  className="rounded-2xl border border-primary/10 bg-surface/60 p-4"
+                  className={`rounded-2xl border p-4 ${
+                    location.is_primary
+                      ? "border-primary/30 bg-primary/[0.04]"
+                      : isDuplicate
+                        ? "border-amber-300 bg-amber-50/70"
+                        : "border-primary/10 bg-surface/60"
+                  }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-primary">
                       Location {index + 1}
+                      {location.is_primary ? (
+                        <span className="ml-2 text-xs font-semibold uppercase tracking-[0.08em] text-primary/50">
+                          Primary
+                        </span>
+                      ) : null}
                     </p>
                     {locations.length > 1 ? (
                       <button
@@ -581,7 +648,7 @@ export default function CoachApplicationWizard({
                           updateLocation(index, { city: event.target.value })
                         }
                         aria-invalid={Boolean(
-                          fieldErrors[`locations.${index}.city`]
+                          fieldErrors[`locations.${index}.city`] || isDuplicate
                         )}
                       />
                       <datalist id={listId}>
@@ -593,18 +660,28 @@ export default function CoachApplicationWizard({
                         <span className="mt-1.5 block text-sm text-red-700">
                           {fieldErrors[`locations.${index}.city`]}
                         </span>
+                      ) : isDuplicate ? (
+                        <span className="mt-1.5 block text-sm text-amber-800">
+                          Same city and country as another location.
+                        </span>
                       ) : null}
                     </label>
                   </div>
 
-                  <label className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary">
+                  <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-primary/10 bg-white px-3.5 py-3 text-sm text-primary">
                     <input
                       type="radio"
+                      className="mt-1"
                       name="primary-location"
                       checked={location.is_primary}
                       onChange={() => setPrimaryLocation(index)}
                     />
-                    Primary location
+                    <span>
+                      <span className="font-semibold">Use as primary location</span>
+                      <span className="mt-0.5 block text-xs text-primary/55">
+                        Shown first to players on your profile.
+                      </span>
+                    </span>
                   </label>
                 </li>
               );
@@ -731,10 +808,9 @@ export default function CoachApplicationWizard({
           </fieldset>
 
           <label className="block text-sm font-medium text-primary">
-            Tell players what they can expect from training with you
+            Introduction
             <span className="mt-1 block text-xs font-normal text-primary/55">
-              Briefly describe your coaching style, how your sessions are
-              structured and what players can expect to improve.
+              Style, session structure, and what players improve.
             </span>
             <textarea
               className={`${inputClass} min-h-36 resize-y`}
@@ -784,21 +860,27 @@ export default function CoachApplicationWizard({
 
       {step === 4 ? (
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
+          <p className="text-sm leading-6 text-primary/65">
+            Check everything below. After submit, your application is locked until
+            review finishes.
+          </p>
           <ReviewBlock
             title="About you"
             onEdit={() => goToStep(1)}
             lines={[
-              fullName || "Name not set",
-              verifiedEmail || "Email not available",
-              phone || "Phone not set",
-              COACHING_ROLES.find((role) => role.value === coachingRole)?.label ??
-                "Role not set",
+              `Name: ${fullName || "Not set"}`,
+              `Email: ${verifiedEmail || "Not available"}`,
+              `Phone: ${phone || "Not set"}`,
+              `Role: ${
+                COACHING_ROLES.find((role) => role.value === coachingRole)?.label ??
+                "Not set"
+              }`,
               coachingRole === "other" && coachingRoleOther
-                ? `Other: ${coachingRoleOther}`
+                ? `Other role: ${coachingRoleOther}`
                 : null,
-              experienceYears
-                ? `${experienceYears} years experience`
-                : "Experience not set",
+              `Experience: ${
+                experienceYears ? `${experienceYears} years` : "Not set"
+              }`,
             ]}
           />
           <ReviewBlock
@@ -807,57 +889,58 @@ export default function CoachApplicationWizard({
             lines={
               locations.length === 0
                 ? ["No locations yet"]
-                : locations.map(
-                    (location) =>
-                      `${location.city || "City"}, ${location.country}${
-                        location.is_primary ? " (primary)" : ""
-                      }`
-                  )
+                : [
+                    ...locations.map(
+                      (location) =>
+                        `${location.city || "City"}, ${location.country}${
+                          location.is_primary ? " — primary" : ""
+                        }`
+                    ),
+                    duplicateLocationIndexes.size > 0
+                      ? "Warning: duplicate city/country pairs still listed."
+                      : null,
+                  ]
             }
           />
           <ReviewBlock
-            title="Player levels"
+            title="Coaching"
             onEdit={() => goToStep(3)}
-            lines={
-              playerLevels.length === 0
-                ? ["None selected"]
-                : playerLevels.map(
-                    (value) =>
-                      PLAYER_LEVELS.find((level) => level.value === value)
-                        ?.label ?? value
-                  )
-            }
-          />
-          <ReviewBlock
-            title="Audiences"
-            onEdit={() => goToStep(3)}
-            lines={
-              audiences.length === 0
-                ? ["None selected"]
-                : audiences.map(
-                    (value) =>
-                      AUDIENCES.find((item) => item.value === value)?.label ??
-                      value
-                  )
-            }
-          />
-          <ReviewBlock
-            title="Coaching outcomes"
-            onEdit={() => goToStep(3)}
-            lines={
-              outcomes.length === 0
-                ? ["None selected"]
-                : outcomes.map(
-                    (value) =>
-                      COACHING_OUTCOMES.find((item) => item.value === value)
-                        ?.label ?? value
-                  )
-            }
-          />
-          <ReviewBlock
-            title="Introduction"
-            onEdit={() => goToStep(3)}
-            lines={[description || "Not written yet"]}
+            lines={[
+              `Levels: ${
+                playerLevels.length
+                  ? playerLevels
+                      .map(
+                        (value) =>
+                          PLAYER_LEVELS.find((level) => level.value === value)
+                            ?.label ?? value
+                      )
+                      .join(", ")
+                  : "None selected"
+              }`,
+              `Audiences: ${
+                audiences.length
+                  ? audiences
+                      .map(
+                        (value) =>
+                          AUDIENCES.find((item) => item.value === value)?.label ??
+                          value
+                      )
+                      .join(", ")
+                  : "None selected"
+              }`,
+              `Outcomes: ${
+                outcomes.length
+                  ? outcomes
+                      .map(
+                        (value) =>
+                          COACHING_OUTCOMES.find((item) => item.value === value)
+                            ?.label ?? value
+                      )
+                      .join(", ")
+                  : "None selected"
+              }`,
+              `Introduction: ${description || "Not written yet"}`,
+            ]}
           />
 
           <div className="space-y-3 rounded-2xl border border-primary/10 bg-surface/50 p-4">
