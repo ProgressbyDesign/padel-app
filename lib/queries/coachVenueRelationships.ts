@@ -230,6 +230,34 @@ function sanitizeSearchTerm(term: string): string {
     .trim();
 }
 
+async function managedVenueIdsForUser(
+  userId: string | null | undefined,
+  venueIds: string[]
+): Promise<Set<string>> {
+  if (!userId || venueIds.length === 0) return new Set();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("venue_memberships")
+    .select("venue_id")
+    .eq("user_id", userId)
+    .in("venue_id", venueIds);
+  return new Set((data ?? []).map((row) => String(row.venue_id)));
+}
+
+async function managedCoachIdsForUser(
+  userId: string | null | undefined,
+  coachIds: string[]
+): Promise<Set<string>> {
+  if (!userId || coachIds.length === 0) return new Set();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("coach_memberships")
+    .select("coach_id")
+    .eq("user_id", userId)
+    .in("coach_id", coachIds);
+  return new Set((data ?? []).map((row) => String(row.coach_id)));
+}
+
 export async function searchVenuesForCoachRelationship(
   coachId: string,
   term: string
@@ -241,19 +269,24 @@ export async function searchVenuesForCoachRelationship(
   const pattern = `%${safe}%`;
   const quoted = `"${pattern.replace(/"/g, "")}"`;
 
-  const [{ data: venues, error }, { data: links }] = await Promise.all([
-    supabase
-      .from("venues")
-      .select("id, name, city, country, image_url")
-      .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
-      .order("name", { ascending: true })
-      .limit(12),
-    supabase
-      .from("coach_venues")
-      .select("venue_id, status")
-      .eq("coach_id", coachId)
-      .in("status", [...CURRENT_COACH_VENUE_STATUSES]),
-  ]);
+  const [{ data: authData }, { data: venues, error }, { data: links }] =
+    await Promise.all([
+      supabase.auth.getClaims(),
+      supabase
+        .from("venues")
+        .select("id, name, city, country, image_url")
+        .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
+        .order("name", { ascending: true })
+        .limit(12),
+      supabase
+        .from("coach_venues")
+        .select("venue_id, status")
+        .eq("coach_id", coachId)
+        .in("status", [...CURRENT_COACH_VENUE_STATUSES]),
+    ]);
+
+  const userId =
+    typeof authData?.claims?.sub === "string" ? authData.claims.sub : null;
 
   if (error) {
     const fallback = await supabase
@@ -263,15 +296,30 @@ export async function searchVenuesForCoachRelationship(
       .order("name", { ascending: true })
       .limit(12);
     if (fallback.error) return [];
-    return mapVenueSearch(fallback.data ?? [], links ?? []);
+    const managedIds = await managedVenueIdsForUser(
+      userId,
+      (fallback.data ?? []).map((row) => String(row.id))
+    );
+    return mapVenueSearch(fallback.data ?? [], links ?? [], managedIds);
   }
 
-  return mapVenueSearch(venues ?? [], links ?? []);
+  const managedIds = await managedVenueIdsForUser(
+    userId,
+    (venues ?? []).map((row) => String(row.id))
+  );
+  return mapVenueSearch(venues ?? [], links ?? [], managedIds);
 }
 
 function mapVenueSearch(
-  venues: { id: string; name: string | null; city: string | null; country: string | null; image_url: string | null }[],
-  links: { venue_id: string; status: string }[]
+  venues: {
+    id: string;
+    name: string | null;
+    city: string | null;
+    country: string | null;
+    image_url: string | null;
+  }[],
+  links: { venue_id: string; status: string }[],
+  managedIds: Set<string>
 ): CoachVenueSearchVenue[] {
   const byVenue = new Map(
     links.map((link) => [
@@ -288,6 +336,7 @@ function mapVenueSearch(
       country: venue.country,
       image_url: venue.image_url,
       existingStatus: byVenue.get(venue.id) ?? null,
+      managedByCurrentUser: managedIds.has(venue.id),
     }));
 }
 
@@ -301,11 +350,13 @@ export async function searchCoachesForVenueRelationship(
   const supabase = await createClient();
   const pattern = `%${safe}%`;
 
-  const [{ data: coaches, error }, { data: links }] = await Promise.all([
-    supabase
-      .from("coaches")
-      .select(
-        `
+  const [{ data: authData }, { data: coaches, error }, { data: links }] =
+    await Promise.all([
+      supabase.auth.getClaims(),
+      supabase
+        .from("coaches")
+        .select(
+          `
         id,
         name,
         role,
@@ -316,18 +367,25 @@ export async function searchCoachesForVenueRelationship(
           venues ( city, country )
         )
       `
-      )
-      .ilike("name", pattern)
-      .order("name", { ascending: true })
-      .limit(12),
-    supabase
-      .from("coach_venues")
-      .select("coach_id, status")
-      .eq("venue_id", venueId)
-      .in("status", [...CURRENT_COACH_VENUE_STATUSES]),
-  ]);
+        )
+        .ilike("name", pattern)
+        .order("name", { ascending: true })
+        .limit(12),
+      supabase
+        .from("coach_venues")
+        .select("coach_id, status")
+        .eq("venue_id", venueId)
+        .in("status", [...CURRENT_COACH_VENUE_STATUSES]),
+    ]);
 
   if (error) return [];
+
+  const userId =
+    typeof authData?.claims?.sub === "string" ? authData.claims.sub : null;
+  const managedIds = await managedCoachIdsForUser(
+    userId,
+    (coaches ?? []).map((row) => String(row.id))
+  );
 
   const byCoach = new Map(
     (links ?? []).map((link) => [
@@ -361,14 +419,16 @@ export async function searchCoachesForVenueRelationship(
         .map((part) => part?.trim())
         .filter(Boolean)
         .join(", ");
+      const coachId = String(coach.id);
 
       return {
-        id: String(coach.id),
+        id: coachId,
         name: String(coach.name).trim(),
         role: (coach.role as string | null) ?? null,
         image_url: (coach.image_url as string | null) ?? null,
         location: location || null,
-        existingStatus: byCoach.get(String(coach.id)) ?? null,
+        existingStatus: byCoach.get(coachId) ?? null,
+        managedByCurrentUser: managedIds.has(coachId),
       };
     });
 }

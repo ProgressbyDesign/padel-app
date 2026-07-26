@@ -31,6 +31,7 @@ export default function VenueDetailPage({
   availabilityCards = [],
 }: VenueDetailPageProps) {
   const description = getVenueDescriptionForPdp(venue);
+  const hasCoaches = coaches.length > 0;
 
   return (
     <div className="min-h-full bg-surface">
@@ -53,7 +54,10 @@ export default function VenueDetailPage({
             <CourtDetailsSection venue={venue} />
             <FacilitiesGrid venue={venue} />
             <CoachesSection coaches={coaches} />
-            <VenuePublicCoachAvailabilitySection cards={availabilityCards} />
+            <VenuePublicCoachAvailabilitySection
+              cards={availabilityCards}
+              hasCoaches={hasCoaches}
+            />
             <VenueContactSection venue={venue} />
             <ReviewsSection venue={venue} />
             <VenueMapSection venue={venue} />

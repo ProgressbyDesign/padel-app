@@ -25,6 +25,7 @@ import type {
   CoachVenueBoard,
   CoachVenueRelationship,
   CoachVenueSearchCoach,
+  RelationshipActionResult,
 } from "@/lib/coachVenues/types";
 import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
 
@@ -55,6 +56,7 @@ export default function VenueCoachesManager({
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorLink, setErrorLink] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<CoachVenueSearchCoach[]>([]);
@@ -75,6 +77,7 @@ export default function VenueCoachesManager({
         else {
           setResults([]);
           setError(res.message);
+          setErrorLink(null);
         }
       });
     }, 300);
@@ -84,22 +87,32 @@ export default function VenueCoachesManager({
     };
   }, [venueId, term]);
 
-  function applyResult(result: { ok: boolean; message: string }) {
+  function applyResult(result: RelationshipActionResult, coachIdForLink?: string) {
     if (result.ok) {
       setFeedback(result.message);
       setError(null);
+      setErrorLink(null);
       router.refresh();
     } else {
       setError(result.message);
+      if (result.alreadyConnected && coachIdForLink) {
+        setErrorLink(
+          `/account/venues/${encodeURIComponent(venueId)}/coaches/${encodeURIComponent(coachIdForLink)}/availability`
+        );
+      } else {
+        setErrorLink(null);
+      }
     }
   }
 
   function run(
-    action: () => Promise<{ ok: boolean; message: string }>,
-    clearSelection = false
+    action: () => Promise<RelationshipActionResult>,
+    clearSelection = false,
+    coachIdForLink?: string
   ) {
     setFeedback(null);
     setError(null);
+    setErrorLink(null);
     startTransition(async () => {
       const result = await action();
       if (result.ok && clearSelection) {
@@ -107,7 +120,7 @@ export default function VenueCoachesManager({
         setTerm("");
         setResults([]);
       }
-      applyResult(result);
+      applyResult(result, coachIdForLink);
     });
   }
 
@@ -120,7 +133,15 @@ export default function VenueCoachesManager({
             error ? "bg-red-50 text-red-900" : "bg-emerald-50 text-emerald-900"
           }`}
         >
-          {error ?? feedback}
+          <p>{error ?? feedback}</p>
+          {error && errorLink ? (
+            <Link
+              href={errorLink}
+              className="mt-2 inline-block text-sm font-semibold text-primary underline"
+            >
+              View availability
+            </Link>
+          ) : null}
         </div>
       )}
 
@@ -197,14 +218,26 @@ export default function VenueCoachesManager({
               <span className="font-semibold text-primary">{selected.name}</span> to
               coach at this venue?
             </p>
+            {selected.managedByCurrentUser ? (
+              <p className="mt-2 text-xs font-semibold text-emerald-800">
+                You manage both profiles. This coach will be connected
+                immediately.
+              </p>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               <ActionButton
                 pending={pending}
                 onClick={() =>
-                  run(() => inviteCoachToVenue(venueId, selected.id), true)
+                  run(
+                    () => inviteCoachToVenue(venueId, selected.id),
+                    true,
+                    selected.id
+                  )
                 }
               >
-                Send invitation
+                {selected.managedByCurrentUser
+                  ? "Connect coach"
+                  : "Send invitation"}
               </ActionButton>
               <ActionButton
                 tone="secondary"

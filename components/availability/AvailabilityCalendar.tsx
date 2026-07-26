@@ -26,21 +26,34 @@ export type CalendarSlot = {
   state?: "available" | "requested" | "confirmed" | "reserved";
   requestedCount?: number;
   href?: string;
+  coachId?: string;
+  coachName?: string;
+  coachImageUrl?: string | null;
+  relationshipId?: string;
 };
 
 type Props = {
   slots: CalendarSlot[];
   timezone: string;
   context: CalendarContext;
+  /** Preferred multi-coach selection key: `${relationshipId ?? ""}|${startsAt}` */
+  selectedKey?: string | null;
+  /** @deprecated Prefer selectedKey for multi-coach calendars */
   selectedStartsAt?: string | null;
   onSelect?: (slot: CalendarSlot) => void;
   startDate?: string;
   numberOfDays?: number;
   selectable?: boolean;
+  emptyMessage?: string;
 };
 
 const HOUR_PX = 56;
 const MIN_SLOT_PX = 28;
+const DEFAULT_EMPTY_MESSAGE = "No sessions are available this week.";
+
+export function calendarSlotKey(slot: Pick<CalendarSlot, "relationshipId" | "startsAt">) {
+  return `${slot.relationshipId ?? ""}|${slot.startsAt}`;
+}
 
 function minutesFromMidnight(iso: string, timeZone: string): number {
   const hm = hmInTimeZone(iso, timeZone);
@@ -85,7 +98,8 @@ function slotAccessibleName(slot: CalendarSlot, context: CalendarContext) {
     minute: "2-digit",
     hourCycle: "h23",
   });
-  const parts = [time, slotPriceLabel(slot)];
+  const head = slot.coachName ? `${time} with ${slot.coachName}` : time;
+  const parts = [head, slotPriceLabel(slot)];
   const state = slotStateLabel(slot, context);
   if (state) parts.push(state);
   return parts.join(", ");
@@ -100,15 +114,33 @@ function dayColumnDates(startYmd: string, numberOfDays: number) {
   return Array.from({ length: numberOfDays }, (_, i) => addLocalDays(startYmd, i));
 }
 
+function groupSlotsByStartMinute(
+  daySlots: CalendarSlot[],
+  timezone: string
+): Array<{ startMin: number; slots: CalendarSlot[] }> {
+  const groups = new Map<number, CalendarSlot[]>();
+  for (const slot of daySlots) {
+    const startMin = minutesFromMidnight(slot.startsAt, timezone);
+    const list = groups.get(startMin) ?? [];
+    list.push(slot);
+    groups.set(startMin, list);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([startMin, slots]) => ({ startMin, slots }));
+}
+
 export default function AvailabilityCalendar({
   slots,
   timezone,
   context,
+  selectedKey = null,
   selectedStartsAt = null,
   onSelect,
   startDate: startDateProp,
   numberOfDays = 7,
   selectable = context === "public",
+  emptyMessage = DEFAULT_EMPTY_MESSAGE,
 }: Props) {
   const todayYmd = todayYmdInTimeZone(timezone);
   const [rangeStart, setRangeStart] = useState(
@@ -139,7 +171,11 @@ export default function AvailabilityCalendar({
       if (list) list.push(slot);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      list.sort((a, b) => {
+        const byStart = a.startsAt.localeCompare(b.startsAt);
+        if (byStart !== 0) return byStart;
+        return (a.relationshipId ?? "").localeCompare(b.relationshipId ?? "");
+      });
     }
     return map;
   }, [days, visibleSlots, timezone]);
@@ -190,6 +226,11 @@ export default function AvailabilityCalendar({
     onSelect?.(slot);
   }
 
+  function isSlotSelected(slot: CalendarSlot) {
+    if (selectedKey != null) return selectedKey === calendarSlotKey(slot);
+    return selectedStartsAt === slot.startsAt;
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -221,7 +262,7 @@ export default function AvailabilityCalendar({
 
       {visibleSlots.length === 0 ? (
         <p className="rounded-2xl border border-primary/10 bg-surface/50 px-4 py-8 text-center text-sm text-primary/55">
-          No sessions available in this week
+          {emptyMessage}
         </p>
       ) : (
         <>
@@ -248,12 +289,12 @@ export default function AvailabilityCalendar({
                   </h3>
                   <ul className="mt-2 space-y-2">
                     {daySlots.map((slot) => (
-                      <li key={`${slot.startsAt}-${slot.endsAt}`}>
+                      <li key={calendarSlotKey(slot)}>
                         <AgendaSlot
                           slot={slot}
                           context={context}
                           selectable={selectable}
-                          selected={selectedStartsAt === slot.startsAt}
+                          selected={isSlotSelected(slot)}
                           onSelect={handleSelect}
                         />
                       </li>
@@ -321,6 +362,7 @@ export default function AvailabilityCalendar({
               {days.map((dateYmd) => {
                 const daySlots = slotsByDate.get(dateYmd) ?? [];
                 const isToday = dateYmd === todayYmd;
+                const startGroups = groupSlotsByStartMinute(daySlots, timezone);
                 return (
                   <div
                     key={`col-${dateYmd}`}
@@ -336,27 +378,37 @@ export default function AvailabilityCalendar({
                         style={{ top: ((mins - minMinutes) / 60) * HOUR_PX }}
                       />
                     ))}
-                    {daySlots.map((slot) => {
-                      const startMin = minutesFromMidnight(slot.startsAt, timezone);
-                      const endMin = minutesFromMidnight(slot.endsAt, timezone);
+                    {startGroups.map(({ startMin, slots: groupSlots }) => {
+                      const maxEndMin = Math.max(
+                        ...groupSlots.map((slot) =>
+                          minutesFromMidnight(slot.endsAt, timezone)
+                        )
+                      );
                       const top = ((startMin - minMinutes) / 60) * HOUR_PX;
                       const height = Math.max(
-                        ((endMin - startMin) / 60) * HOUR_PX,
-                        MIN_SLOT_PX
+                        ((maxEndMin - startMin) / 60) * HOUR_PX,
+                        MIN_SLOT_PX * groupSlots.length
                       );
                       return (
                         <div
-                          key={`${slot.startsAt}-${slot.endsAt}`}
-                          className="absolute inset-x-1 z-10"
+                          key={`group-${startMin}`}
+                          className="absolute inset-x-1 z-10 flex flex-col gap-0.5"
                           style={{ top, height }}
                         >
-                          <GridSlot
-                            slot={slot}
-                            context={context}
-                            selectable={selectable}
-                            selected={selectedStartsAt === slot.startsAt}
-                            onSelect={handleSelect}
-                          />
+                          {groupSlots.map((slot) => (
+                            <div
+                              key={calendarSlotKey(slot)}
+                              className="min-h-0 flex-1"
+                            >
+                              <GridSlot
+                                slot={slot}
+                                context={context}
+                                selectable={selectable}
+                                selected={isSlotSelected(slot)}
+                                onSelect={handleSelect}
+                              />
+                            </div>
+                          ))}
                         </div>
                       );
                     })}
@@ -402,6 +454,11 @@ function AgendaSlot({
     <>
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="font-semibold">{timeLabel}</span>
+        {slot.coachName ? (
+          <span className="max-w-[10rem] truncate text-xs font-medium opacity-80">
+            {slot.coachName}
+          </span>
+        ) : null}
         <span className="text-xs font-medium opacity-70">{price}</span>
       </span>
       {stateLabel ? (
@@ -492,6 +549,11 @@ function GridSlot({
       <span className="block truncate text-[11px] font-bold leading-tight">
         {timeLabel}
       </span>
+      {slot.coachName ? (
+        <span className="mt-0.5 block truncate text-[10px] font-medium leading-tight opacity-80">
+          {slot.coachName}
+        </span>
+      ) : null}
       <span className="mt-0.5 block truncate text-[10px] font-medium leading-tight opacity-80">
         {price}
       </span>

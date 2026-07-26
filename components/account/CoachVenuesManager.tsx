@@ -27,10 +27,13 @@ import type {
   CoachVenueBoard,
   CoachVenueRelationship,
   CoachVenueSearchVenue,
+  RelationshipActionResult,
 } from "@/lib/coachVenues/types";
 
 type LocalVenueSelection = CoachVenueSearchVenue & {
   error?: string | null;
+  relationshipId?: string;
+  alreadyConnected?: boolean;
 };
 
 function locationLabel(row: CoachVenueRelationship) {
@@ -142,25 +145,45 @@ export default function CoachVenuesManager({
     setError(null);
     startTransition(async () => {
       const remaining: LocalVenueSelection[] = [];
-      let successCount = 0;
+      let connectedCount = 0;
+      let requestedCount = 0;
 
       for (const venue of selections) {
-        const result = await requestCoachVenueRelationship(coachId, venue.id);
+        const result: RelationshipActionResult =
+          await requestCoachVenueRelationship(coachId, venue.id);
         if (result.ok) {
-          successCount += 1;
+          if (result.activatedImmediately) connectedCount += 1;
+          else requestedCount += 1;
         } else {
-          remaining.push({ ...venue, error: result.message });
+          remaining.push({
+            ...venue,
+            error: result.message,
+            relationshipId: result.relationshipId,
+            alreadyConnected: result.alreadyConnected,
+          });
         }
       }
 
       setSelections(remaining);
 
+      const successCount = connectedCount + requestedCount;
       if (successCount > 0) {
-        setFeedback(
-          successCount === 1
-            ? "Sent 1 venue request."
-            : `Sent ${successCount} venue requests.`
-        );
+        const parts: string[] = [];
+        if (connectedCount > 0) {
+          parts.push(
+            connectedCount === 1
+              ? "Connected 1 venue."
+              : `Connected ${connectedCount} venues.`
+          );
+        }
+        if (requestedCount > 0) {
+          parts.push(
+            requestedCount === 1
+              ? "Sent 1 venue request."
+              : `Sent ${requestedCount} venue requests.`
+          );
+        }
+        setFeedback(parts.join(" "));
         router.refresh();
       }
 
@@ -209,13 +232,32 @@ export default function CoachVenuesManager({
                     <p className="mt-1 text-sm text-primary/55">
                       {searchLocationLabel(venue)}
                     </p>
-                    <p className="mt-2 text-xs font-semibold text-emerald-800">
-                      Ready to request
-                    </p>
-                    {venue.error ? (
-                      <p className="mt-2 text-xs text-red-800" role="alert">
-                        {venue.error}
+                    {venue.managedByCurrentUser ? (
+                      <p className="mt-2 text-xs font-semibold text-emerald-800">
+                        You manage both profiles. This venue will be connected
+                        immediately.
                       </p>
+                    ) : (
+                      <p className="mt-2 text-xs font-semibold text-emerald-800">
+                        Ready to request
+                      </p>
+                    )}
+                    {venue.error ? (
+                      <div className="mt-2 space-y-1" role="alert">
+                        <p className="text-xs text-red-800">{venue.error}</p>
+                        {venue.alreadyConnected ? (
+                          <Link
+                            href={
+                              venue.relationshipId
+                                ? `/account/coaches/${encodeURIComponent(coachId)}/availability/${encodeURIComponent(venue.relationshipId)}`
+                                : `/account/coaches/${encodeURIComponent(coachId)}/availability`
+                            }
+                            className="inline-block text-xs font-semibold text-primary underline"
+                          >
+                            View availability
+                          </Link>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                   <ActionButton

@@ -74,6 +74,57 @@ function groupPercent(done: number, total: number): number {
   return Math.round((done / total) * 100);
 }
 
+const WEIGHT_PRIORITY: CompletionItem["weight"][] = [
+  "essential",
+  "trust",
+  "booking",
+  "optional",
+];
+
+const COMPLETION_ACTION_LABELS: Record<string, string> = {
+  "name-role": "Add your name and role",
+  description: "Write a coaching introduction",
+  experience: "Add your experience",
+  "primary-location": "Set a primary location",
+  audiences: "Choose adults / juniors",
+  "player-levels": "Select player levels",
+  outcomes: "Add coaching outcomes",
+  "primary-image": "Add a primary profile image",
+  contact: "Add a public contact method",
+  "trust-venue": "Connect a confirmed venue",
+  socials: "Add a social link",
+  achievements: "Add an achievement",
+  "additional-image": "Add another profile image",
+  "booking-venue": "Connect an active venue",
+  availability: "Set up availability",
+  pricing: "Configure pricing",
+  "future-session": "Add a future session",
+  core: "Add name, city and country",
+  address: "Add an address",
+  courts: "Add courts and court type",
+  "venue-type": "Set venue type",
+  hours: "Set opening hours",
+  image: "Add a primary image",
+  gallery: "Add gallery images",
+  "coaching-desc": "Add a coaching description",
+  coaches: "Connect active coaches",
+  "coach-availability": "Make coach availability visible",
+};
+
+export function nextRecommendedCompletionItem(
+  items: CompletionItem[]
+): CompletionItem | null {
+  for (const weight of WEIGHT_PRIORITY) {
+    const next = items.find((item) => item.weight === weight && !item.done);
+    if (next) return next;
+  }
+  return null;
+}
+
+export function completionItemActionLabel(item: CompletionItem): string {
+  return COMPLETION_ACTION_LABELS[item.id] ?? `Improve: ${item.label}`;
+}
+
 export function computeCompletionScores(groups: CompletionGroup[]): {
   groupScores: CompletionGroupScore[];
   overallPercent: number;

@@ -13,6 +13,7 @@ import type {
   DerivedSlot,
   PublicCoachAvailabilityCard,
   PublicVenueAvailabilityGroup,
+  VenueCombinedAvailabilityPreviewSlot,
 } from "@/lib/coachAvailability/types";
 import {
   normalizeTimeHm,
@@ -654,6 +655,112 @@ export async function loadAvailabilityMetaForRelationships(
   }
 
   return map;
+}
+
+function rangesOverlap(
+  slot: { startsAt: string; endsAt: string },
+  ranges: Array<{ startsAt: string; endsAt: string }>
+) {
+  const startMs = new Date(slot.startsAt).getTime();
+  const endMs = new Date(slot.endsAt).getTime();
+  return ranges.some((range) => {
+    const rangeStart = new Date(range.startsAt).getTime();
+    const rangeEnd = new Date(range.endsAt).getTime();
+    return startMs < rangeEnd && rangeStart < endMs;
+  });
+}
+
+/** Venue-manager combined calendar: all active coaches, reserved for accepted bookings (no requester PII). */
+export async function loadVenueCombinedAvailabilityPreview(
+  venueId: string,
+  days = 14
+): Promise<{
+  slots: VenueCombinedAvailabilityPreviewSlot[];
+  hasActiveCoaches: boolean;
+}> {
+  const supabase = await createClient();
+  const { data: links, error } = await supabase
+    .from("coach_venues")
+    .select(
+      `
+      id,
+      coach_id,
+      coaches ( id, name, role, image_url )
+    `
+    )
+    .eq("venue_id", venueId)
+    .eq("status", "active");
+
+  if (error || !links?.length) {
+    return { slots: [], hasActiveCoaches: false };
+  }
+
+  const rangeFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const rangeTo = new Date(
+    Date.now() + (days + 2) * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const slots: VenueCombinedAvailabilityPreviewSlot[] = [];
+
+  for (const link of links as Record<string, unknown>[]) {
+    const relationshipId = String(link.id);
+    const coachId = String(link.coach_id);
+    const coaches = link.coaches as
+      | Record<string, unknown>
+      | Record<string, unknown>[]
+      | null;
+    const coach = Array.isArray(coaches) ? coaches[0] : coaches;
+    const settings = await loadAvailabilitySettings(relationshipId);
+    if (!settings) continue;
+
+    const [rules, exceptions, acceptedRanges] = await Promise.all([
+      loadAvailabilityRules(relationshipId),
+      loadAvailabilityExceptions(relationshipId),
+      loadAcceptedBlockedRangesForCoach(coachId, rangeFrom, rangeTo),
+    ]);
+
+    // Keep accepted bookings visible as reserved (do not exclude via blockedRanges).
+    const derived = deriveAvailabilitySlots({
+      settings,
+      rules,
+      exceptions,
+      venueId,
+      venueName: "Venue",
+      days,
+    });
+
+    const coachName = String(coach?.name ?? "Coach");
+    const coachImageUrl = (coach?.image_url as string | null) ?? null;
+
+    for (const slot of derived) {
+      const reserved = rangesOverlap(slot, acceptedRanges);
+      slots.push({
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        timezone: slot.timezone,
+        venueId: slot.venueId,
+        venueName: slot.venueName,
+        priceAmountMinor: slot.priceAmountMinor,
+        currency: slot.currency,
+        state: reserved ? "reserved" : "available",
+        coachId,
+        coachName,
+        coachImageUrl,
+        relationshipId,
+      });
+    }
+  }
+
+  slots.sort((a, b) => {
+    const byStart = a.startsAt.localeCompare(b.startsAt);
+    if (byStart !== 0) return byStart;
+    return a.coachName.localeCompare(b.coachName);
+  });
+
+  return {
+    slots,
+    hasActiveCoaches: true,
+  };
 }
 
 export async function loadVenueCoachAvailabilityHints(

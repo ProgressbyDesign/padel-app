@@ -1,6 +1,8 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
-const DUPLICATE_MESSAGE =
+export const ACTIVE_CONNECTED_MESSAGE =
+  "This coach is already connected to this venue.";
+export const DUPLICATE_MESSAGE =
   "This coach and venue already have a current relationship or request.";
 const PRIMARY_CONFLICT_MESSAGE =
   "Another venue is currently set as primary. Refresh and try again.";
