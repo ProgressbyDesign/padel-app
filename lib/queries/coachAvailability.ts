@@ -28,6 +28,8 @@ const SETTINGS_SELECT = `
   timezone,
   default_slot_duration_minutes,
   is_public,
+  currency,
+  default_hourly_rate_minor,
   created_at,
   updated_at
 `;
@@ -42,6 +44,7 @@ const RULE_SELECT = `
   valid_from,
   valid_until,
   is_active,
+  price_override_minor,
   created_at,
   updated_at
 `;
@@ -53,6 +56,7 @@ const EXCEPTION_SELECT = `
   starts_at,
   ends_at,
   slot_duration_minutes,
+  price_override_minor,
   created_at,
   updated_at
 `;
@@ -63,6 +67,11 @@ function asSettings(row: Record<string, unknown>): AvailabilitySettings {
     timezone: String(row.timezone),
     default_slot_duration_minutes: Number(row.default_slot_duration_minutes),
     is_public: Boolean(row.is_public),
+    currency: (row.currency as string | null) ?? null,
+    default_hourly_rate_minor:
+      row.default_hourly_rate_minor == null
+        ? null
+        : Number(row.default_hourly_rate_minor),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -79,6 +88,10 @@ function asRule(row: Record<string, unknown>): AvailabilityRule {
     valid_from: String(row.valid_from),
     valid_until: (row.valid_until as string | null) ?? null,
     is_active: Boolean(row.is_active),
+    price_override_minor:
+      row.price_override_minor == null
+        ? null
+        : Number(row.price_override_minor),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -95,6 +108,10 @@ function asException(row: Record<string, unknown>): AvailabilityException {
       row.slot_duration_minutes == null
         ? null
         : Number(row.slot_duration_minutes),
+    price_override_minor:
+      row.price_override_minor == null
+        ? null
+        : Number(row.price_override_minor),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
@@ -536,6 +553,7 @@ export async function loadPublicVenueCoachAvailability(
       days,
       blockedRanges,
     });
+    if (slots.length === 0) continue;
 
     cards.push({
       coachId: String(link.coach_id),
@@ -546,10 +564,11 @@ export async function loadPublicVenueCoachAvailability(
       nextSlot: slots[0] ?? null,
       isPublic: true,
       relationshipId,
+      days: groupSlotsByLocalDate(slots, settings.timezone),
     });
   }
 
-  return cards.filter((card) => card.nextSlot);
+  return cards;
 }
 
 export async function loadAvailabilityMetaForRelationships(

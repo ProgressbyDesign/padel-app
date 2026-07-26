@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Sora } from "next/font/google";
 import SiteChrome from "../components/SiteChrome";
-import { getAuthenticatedAccount } from "../lib/auth/session";
+import { loadOptionalAccountNavContext } from "../lib/workspace/resolve";
 import "./globals.css";
 
 const sora = Sora({
@@ -28,12 +28,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const account = await getAuthenticatedAccount();
+  const accountNav = await loadOptionalAccountNavContext();
 
   return (
     <html lang="en" className={`${sora.variable} ${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface text-primary">
-        <SiteChrome authenticated={Boolean(account)}>{children}</SiteChrome>
+        <SiteChrome accountNav={accountNav}>{children}</SiteChrome>
       </body>
     </html>
   );

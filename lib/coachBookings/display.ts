@@ -1,3 +1,4 @@
+import { formatMoney } from "@/lib/coachAvailability/pricing";
 import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
 import {
   BOOKING_STATUS_LABELS,
@@ -5,6 +6,15 @@ import {
   type BookingStatus,
 } from "@/lib/coachBookings/constants";
 import type { CoachBookingRequest } from "@/lib/coachBookings/types";
+
+export function formatBookingSessionPrice(
+  priceAmountMinor: number | null | undefined,
+  currency: string | null | undefined
+): string {
+  const money = formatMoney(priceAmountMinor, currency);
+  if (money === "Price to be agreed with coach") return money;
+  return `Session price: ${money}`;
+}
 
 export function formatBookingWhen(booking: CoachBookingRequest): string {
   return formatInTimeZone(booking.starts_at, booking.timezone, {

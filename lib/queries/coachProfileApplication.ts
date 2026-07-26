@@ -2,12 +2,16 @@ import "server-only";
 
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import {
+  ACTIVE_APPLICATION_STATUSES,
+  isApplicationCountry,
+  isCoachApplicationMode,
   isEditableApplicationStatus,
   type CoachApplicationStatus,
 } from "@/lib/coachProfileApplication/constants";
 import type {
   CoachApplicationLocationRow,
   CoachApplicationWithLocations,
+  CoachClaimTargetSummary,
   CoachProfileApplicationRow,
 } from "@/lib/coachProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +21,9 @@ const APPLICATION_SELECT = `
   user_id,
   status,
   current_step,
+  application_mode,
+  target_coach_id,
+  applicant_email,
   full_name,
   phone,
   coaching_role,
@@ -37,22 +44,40 @@ const APPLICATION_SELECT = `
   updated_at
 `;
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidCoachApplicationUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
 function asApplication(
   row: Record<string, unknown>
 ): CoachProfileApplicationRow {
+  const modeRaw = row.application_mode;
   return {
     id: String(row.id),
     user_id: String(row.user_id),
     status: row.status as CoachApplicationStatus,
     current_step: Number(row.current_step),
+    application_mode: isCoachApplicationMode(
+      typeof modeRaw === "string" ? modeRaw : null
+    )
+      ? (modeRaw as CoachProfileApplicationRow["application_mode"])
+      : "create_new",
+    target_coach_id: (row.target_coach_id as string | null) ?? null,
+    applicant_email: (row.applicant_email as string | null) ?? null,
     full_name: (row.full_name as string | null) ?? null,
     phone: (row.phone as string | null) ?? null,
-    coaching_role: (row.coaching_role as CoachProfileApplicationRow["coaching_role"]) ?? null,
+    coaching_role:
+      (row.coaching_role as CoachProfileApplicationRow["coaching_role"]) ?? null,
     coaching_role_other: (row.coaching_role_other as string | null) ?? null,
     experience_years: (row.experience_years as number | null) ?? null,
     description: (row.description as string | null) ?? null,
-    player_levels: (row.player_levels as CoachProfileApplicationRow["player_levels"]) ?? [],
-    audiences: (row.audiences as CoachProfileApplicationRow["audiences"]) ?? [],
+    player_levels:
+      (row.player_levels as CoachProfileApplicationRow["player_levels"]) ?? [],
+    audiences:
+      (row.audiences as CoachProfileApplicationRow["audiences"]) ?? [],
     outcomes: (row.outcomes as CoachProfileApplicationRow["outcomes"]) ?? [],
     terms_accepted_at: (row.terms_accepted_at as string | null) ?? null,
     privacy_accepted_at: (row.privacy_accepted_at as string | null) ?? null,
@@ -77,33 +102,184 @@ function asLocation(row: Record<string, unknown>): CoachApplicationLocationRow {
   };
 }
 
+async function withTargetCoach(
+  application: CoachProfileApplicationRow
+): Promise<CoachApplicationWithLocations> {
+  const locations = await loadApplicationLocations(application.id);
+  const targetCoach = application.target_coach_id
+    ? await loadTargetCoachSummary(application.target_coach_id)
+    : null;
+  return { application, locations, targetCoach };
+}
+
+export async function loadTargetCoachSummary(
+  coachId: string
+): Promise<CoachClaimTargetSummary | null> {
+  if (!isValidCoachApplicationUuid(coachId)) return null;
+  const supabase = await createClient();
+  const { data: coach, error } = await supabase
+    .from("coaches")
+    .select("id, name, role, image_url, is_claimed")
+    .eq("id", coachId)
+    .maybeSingle();
+  if (error || !coach) return null;
+
+  const [{ data: locations }, { data: venueLinks }] = await Promise.all([
+    supabase
+      .from("coach_locations")
+      .select("country, city, is_primary")
+      .eq("coach_id", coachId)
+      .order("is_primary", { ascending: false }),
+    supabase
+      .from("coach_venues")
+      .select("is_primary, status, venues ( name, city, country )")
+      .eq("coach_id", coachId)
+      .in("status", ["active", "unverified"])
+      .order("is_primary", { ascending: false })
+      .limit(3),
+  ]);
+
+  const primaryLoc = (locations ?? []).find((row) => row.is_primary) ??
+    (locations ?? [])[0];
+  let primaryLocation: string | null = null;
+  if (primaryLoc) {
+    primaryLocation = [primaryLoc.city, primaryLoc.country]
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  let venueName: string | null = null;
+  for (const link of venueLinks ?? []) {
+    const venue = link.venues as {
+      name?: string | null;
+      city?: string | null;
+      country?: string | null;
+    } | null;
+    if (venue?.name?.trim()) {
+      venueName = venue.name.trim();
+      if (!primaryLocation) {
+        primaryLocation = [venue.city, venue.country]
+          .filter(Boolean)
+          .join(", ");
+      }
+      break;
+    }
+  }
+
+  return {
+    id: String(coach.id),
+    name: (coach.name as string | null) ?? null,
+    role: (coach.role as string | null) ?? null,
+    image_url: (coach.image_url as string | null) ?? null,
+    primaryLocation,
+    venueName,
+    is_claimed: Boolean(coach.is_claimed),
+  };
+}
+
+export async function loadClaimTargetCoach(
+  coachId: string
+): Promise<CoachClaimTargetSummary | null> {
+  const summary = await loadTargetCoachSummary(coachId);
+  if (!summary || summary.is_claimed) return null;
+  return summary;
+}
+
+export async function searchClaimableCoaches(
+  term: string,
+  userId: string
+): Promise<CoachClaimTargetSummary[]> {
+  const q = term.trim();
+  if (q.length < 2) return [];
+  const supabase = await createClient();
+  const safe = q.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
+  if (safe.length < 2) return [];
+  const pattern = `%${safe}%`;
+  const quoted = `"${pattern.replace(/"/g, "")}"`;
+
+  const { data: memberships } = await supabase
+    .from("coach_memberships")
+    .select("coach_id")
+    .eq("user_id", userId);
+  const excluded = new Set(
+    (memberships ?? []).map((row) => String(row.coach_id))
+  );
+
+  const { data, error } = await supabase
+    .from("coaches")
+    .select("id, name, role, image_url, is_claimed")
+    .eq("is_claimed", false)
+    .or(`name.ilike.${quoted},role.ilike.${quoted}`)
+    .order("name", { ascending: true })
+    .limit(24);
+
+  let rows = data;
+  if (error) {
+    const fallback = await supabase
+      .from("coaches")
+      .select("id, name, role, image_url, is_claimed")
+      .eq("is_claimed", false)
+      .ilike("name", pattern)
+      .order("name", { ascending: true })
+      .limit(24);
+    if (fallback.error) return [];
+    rows = fallback.data;
+  }
+
+  const candidates = (rows ?? [])
+    .filter((row) => !excluded.has(String(row.id)))
+    .slice(0, 12);
+
+  const results: CoachClaimTargetSummary[] = [];
+  for (const row of candidates) {
+    const summary = await loadTargetCoachSummary(String(row.id));
+    if (summary && !summary.is_claimed) results.push(summary);
+  }
+
+  // Also try location-based matches when name search is thin
+  if (results.length < 6) {
+    const { data: locMatches } = await supabase
+      .from("coach_locations")
+      .select("coach_id, city, country")
+      .or(`city.ilike.${quoted},country.ilike.${quoted}`)
+      .limit(20);
+    for (const loc of locMatches ?? []) {
+      const id = String(loc.coach_id);
+      if (excluded.has(id) || results.some((r) => r.id === id)) continue;
+      const summary = await loadClaimTargetCoach(id);
+      if (summary) results.push(summary);
+      if (results.length >= 12) break;
+    }
+  }
+
+  return results.slice(0, 12);
+}
+
 export async function loadCurrentCoachApplication(): Promise<CoachApplicationWithLocations | null> {
-  const account = await requireAuthenticatedAccount("/account/applications/coach");
+  const account = await requireAuthenticatedAccount(
+    "/account/applications/coach"
+  );
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("coach_profile_applications")
     .select(APPLICATION_SELECT)
     .eq("user_id", account.id)
-    .in("status", [
-      "draft",
-      "submitted",
-      "under_review",
-      "changes_requested",
-      "approved",
-    ])
+    .in("status", [...ACTIVE_APPLICATION_STATUSES])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!error && data) {
-    const application = asApplication(data as Record<string, unknown>);
-    const locations = await loadApplicationLocations(application.id);
-    return { application, locations };
-  }
+  if (error || !data) return null;
+  return withTargetCoach(asApplication(data as Record<string, unknown>));
+}
 
-  // Fallback: latest declined/withdrawn for account overview context
-  const latest = await supabase
+export async function loadLatestCoachApplication(): Promise<CoachApplicationWithLocations | null> {
+  const account = await requireAuthenticatedAccount(
+    "/account/applications/coach"
+  );
+  const supabase = await createClient();
+  const { data, error } = await supabase
     .from("coach_profile_applications")
     .select(APPLICATION_SELECT)
     .eq("user_id", account.id)
@@ -111,10 +287,12 @@ export async function loadCurrentCoachApplication(): Promise<CoachApplicationWit
     .limit(1)
     .maybeSingle();
 
-  if (latest.error || !latest.data) return null;
-  const application = asApplication(latest.data as Record<string, unknown>);
-  const locations = await loadApplicationLocations(application.id);
-  return { application, locations };
+  if (error || !data) return null;
+  return withTargetCoach(asApplication(data as Record<string, unknown>));
+}
+
+export async function loadActiveCoachApplication(): Promise<CoachApplicationWithLocations | null> {
+  return loadCurrentCoachApplication();
 }
 
 export async function loadUserCoachApplications(): Promise<
@@ -180,3 +358,5 @@ export async function loadOwnedApplication(
   if (error || !data) return null;
   return asApplication(data as Record<string, unknown>);
 }
+
+export { isApplicationCountry };

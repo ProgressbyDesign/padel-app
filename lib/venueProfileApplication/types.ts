@@ -14,6 +14,7 @@ export type VenueProfileApplicationRow = {
   application_mode: VenueApplicationMode | null;
   relationship_to_venue: VenueRelationshipValue | null;
   target_venue_id: string | null;
+  applicant_email: string | null;
   proposed_venue_name: string | null;
   proposed_country: VenueApplicationCountry | null;
   proposed_city: string | null;

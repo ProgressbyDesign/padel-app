@@ -1,3 +1,4 @@
+import type { PricingSource } from "@/lib/coachAvailability/pricing";
 import type { BookingStatus, PlayerLevel } from "@/lib/coachBookings/constants";
 
 export type BookingCoachSummary = {
@@ -32,6 +33,9 @@ export type CoachBookingRequest = {
   requester_phone: string | null;
   player_level: PlayerLevel | null;
   message: string | null;
+  price_amount_minor: number | null;
+  currency: string | null;
+  pricing_source: PricingSource | null;
   responded_at: string | null;
   cancelled_at: string | null;
   completed_at: string | null;
@@ -59,6 +63,8 @@ export type BookingSlotContext = {
   timezone: string;
   durationMinutes: number;
   priceFrom: number | null;
+  priceAmountMinor: number | null;
+  currency: string | null;
   coachName: string;
   coachRole: string | null;
   coachImageUrl: string | null;

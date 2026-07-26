@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
-  createCoachApplicationDraft,
   saveCoachApplicationStepOne,
   saveCoachApplicationStepThree,
   setCoachApplicationStep,
@@ -11,9 +12,18 @@ import {
 } from "@/app/account/applications/coach/actions";
 import { replaceCoachApplicationLocations } from "@/app/account/applications/coach/location-actions";
 import {
+  ErrorSummary,
+  RequiredIndicator,
+  RequiredLegend,
+  fieldAccessibility,
+  focusFirstInvalidField,
+} from "@/components/forms/FormField";
+import WithdrawCoachApplicationButton from "@/components/account/applications/WithdrawCoachApplicationButton";
+import {
   APPLICATION_COUNTRIES,
   AUDIENCES,
   CITY_SUGGESTIONS_BY_COUNTRY,
+  COACH_APPLICATION_MODE_LABELS,
   COACH_APPLICATION_STEPS,
   COACH_APPLICATION_TOTAL_STEPS,
   COACHING_OUTCOMES,
@@ -92,6 +102,9 @@ export default function CoachApplicationWizard({
   );
   const [description, setDescription] = useState(
     initial.application.description ?? ""
+  );
+  const [introductionEnabled, setIntroductionEnabled] = useState(
+    Boolean(initial.application.description?.trim())
   );
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -194,6 +207,7 @@ export default function CoachApplicationWizard({
       if (result.status === "error") {
         setError(result.message);
         setFieldErrors(result.fieldErrors);
+        focusFirstInvalidField(result.fieldErrors);
         return;
       }
       setMessage(result.message);
@@ -224,6 +238,7 @@ export default function CoachApplicationWizard({
       if (result.status === "error") {
         setError(result.message);
         setFieldErrors(result.fieldErrors);
+        focusFirstInvalidField(result.fieldErrors);
         return;
       }
       setMessage(result.message);
@@ -246,7 +261,7 @@ export default function CoachApplicationWizard({
           player_levels: playerLevels,
           audiences,
           outcomes,
-          description,
+          description: introductionEnabled ? description : "",
         },
         nextStep: options.nextStep,
         exit: options.exit,
@@ -254,6 +269,7 @@ export default function CoachApplicationWizard({
       if (result.status === "error") {
         setError(result.message);
         setFieldErrors(result.fieldErrors);
+        focusFirstInvalidField(result.fieldErrors);
         return;
       }
       setMessage(result.message);
@@ -278,6 +294,7 @@ export default function CoachApplicationWizard({
       if (result.status === "error") {
         setError(result.message);
         setFieldErrors(result.fieldErrors);
+        focusFirstInvalidField(result.fieldErrors);
         return;
       }
       setSubmitted(true);
@@ -338,8 +355,8 @@ export default function CoachApplicationWizard({
               Open coach profile
             </a>
           ) : null}
-          <a
-            href="/account"
+          <Link
+            href="/account/personal"
             className={`inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
               isApproved && coachId
                 ? "border border-primary/15 text-primary hover:bg-surface"
@@ -347,7 +364,7 @@ export default function CoachApplicationWizard({
             }`}
           >
             Back to account
-          </a>
+          </Link>
         </div>
       </section>
     );
@@ -355,6 +372,40 @@ export default function CoachApplicationWizard({
 
   return (
     <div className="space-y-6">
+      {initial.application.application_mode === "claim_existing" &&
+      initial.targetCoach ? (
+        <section className="rounded-[24px] border border-primary/10 bg-surface/50 p-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
+            {COACH_APPLICATION_MODE_LABELS.claim_existing}
+          </p>
+          <div className="mt-3 flex gap-3">
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-primary/10">
+              {initial.targetCoach.image_url ? (
+                <Image
+                  src={initial.targetCoach.image_url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="56px"
+                />
+              ) : null}
+            </div>
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-primary">
+                Claiming {initial.targetCoach.name || "coach profile"}
+              </p>
+              <p className="mt-1 text-sm text-primary/60">
+                {[
+                  initial.targetCoach.primaryLocation,
+                  initial.targetCoach.venueName,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "Existing public profile"}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
       {initial.application.status === "changes_requested" ? (
         <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-amber-950">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800/70">
@@ -370,6 +421,11 @@ export default function CoachApplicationWizard({
           ) : null}
         </div>
       ) : null}
+      <div className="flex flex-wrap gap-3">
+        <WithdrawCoachApplicationButton
+          applicationId={initial.application.id}
+        />
+      </div>
       <div className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -419,7 +475,8 @@ export default function CoachApplicationWizard({
           Saving…
         </p>
       ) : null}
-      {error ? (
+      <ErrorSummary errors={fieldErrors} title={error ?? undefined} />
+      {error && Object.keys(fieldErrors).length === 0 ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}
         </p>
@@ -429,20 +486,28 @@ export default function CoachApplicationWizard({
           {message}
         </p>
       ) : null}
+      <RequiredLegend />
 
       {step === 1 ? (
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
-          <label className="block text-sm font-medium text-primary">
+          <label
+            className="block text-sm font-medium text-primary"
+            htmlFor="full_name"
+          >
             Full name
+            <RequiredIndicator />
             <input
               className={inputClass}
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
               autoComplete="name"
-              aria-invalid={Boolean(fieldErrors.full_name)}
+              {...fieldAccessibility("full_name", fieldErrors.full_name)}
             />
             {fieldErrors.full_name ? (
-              <span className="mt-1.5 block text-sm text-red-700">
+              <span
+                id="full_name-error"
+                className="mt-1.5 block text-sm text-red-700"
+              >
                 {fieldErrors.full_name}
               </span>
             ) : null}
@@ -458,8 +523,12 @@ export default function CoachApplicationWizard({
             </p>
           </div>
 
-          <label className="block text-sm font-medium text-primary">
+          <label
+            className="block text-sm font-medium text-primary"
+            htmlFor="phone"
+          >
             Phone
+            <RequiredIndicator />
             <input
               className={inputClass}
               value={phone}
@@ -467,18 +536,19 @@ export default function CoachApplicationWizard({
               autoComplete="tel"
               inputMode="tel"
               placeholder="+34 …"
-              aria-invalid={Boolean(fieldErrors.phone)}
+              {...fieldAccessibility("phone", fieldErrors.phone)}
             />
             {fieldErrors.phone ? (
-              <span className="mt-1.5 block text-sm text-red-700">
+              <span id="phone-error" className="mt-1.5 block text-sm text-red-700">
                 {fieldErrors.phone}
               </span>
             ) : null}
           </label>
 
-          <fieldset>
+          <fieldset id="coaching_role" tabIndex={-1}>
             <legend className="text-sm font-medium text-primary">
               Coaching role
+              <RequiredIndicator />
             </legend>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {COACHING_ROLES.map((role) => (
@@ -496,29 +566,45 @@ export default function CoachApplicationWizard({
               ))}
             </div>
             {fieldErrors.coaching_role ? (
-              <p className="mt-2 text-sm text-red-700">{fieldErrors.coaching_role}</p>
+              <p id="coaching_role-error" className="mt-2 text-sm text-red-700">
+                {fieldErrors.coaching_role}
+              </p>
             ) : null}
           </fieldset>
 
           {coachingRole === "other" ? (
-            <label className="block text-sm font-medium text-primary">
+            <label
+              className="block text-sm font-medium text-primary"
+              htmlFor="coaching_role_other"
+            >
               Describe your role
+              <RequiredIndicator />
               <input
                 className={inputClass}
                 value={coachingRoleOther}
                 onChange={(event) => setCoachingRoleOther(event.target.value)}
-                aria-invalid={Boolean(fieldErrors.coaching_role_other)}
+                {...fieldAccessibility(
+                  "coaching_role_other",
+                  fieldErrors.coaching_role_other
+                )}
               />
               {fieldErrors.coaching_role_other ? (
-                <span className="mt-1.5 block text-sm text-red-700">
+                <span
+                  id="coaching_role_other-error"
+                  className="mt-1.5 block text-sm text-red-700"
+                >
                   {fieldErrors.coaching_role_other}
                 </span>
               ) : null}
             </label>
           ) : null}
 
-          <label className="block text-sm font-medium text-primary">
+          <label
+            className="block text-sm font-medium text-primary"
+            htmlFor="experience_years"
+          >
             Years of coaching experience
+            <RequiredIndicator />
             <input
               className={inputClass}
               type="number"
@@ -526,10 +612,16 @@ export default function CoachApplicationWizard({
               max={60}
               value={experienceYears}
               onChange={(event) => setExperienceYears(event.target.value)}
-              aria-invalid={Boolean(fieldErrors.experience_years)}
+              {...fieldAccessibility(
+                "experience_years",
+                fieldErrors.experience_years
+              )}
             />
             {fieldErrors.experience_years ? (
-              <span className="mt-1.5 block text-sm text-red-700">
+              <span
+                id="experience_years-error"
+                className="mt-1.5 block text-sm text-red-700"
+              >
                 {fieldErrors.experience_years}
               </span>
             ) : null}
@@ -807,27 +899,55 @@ export default function CoachApplicationWizard({
             ) : null}
           </fieldset>
 
-          <label className="block text-sm font-medium text-primary">
-            Introduction
-            <span className="mt-1 block text-xs font-normal text-primary/55">
+          <div>
+            <p className="text-sm font-medium text-primary">
+              Introduction{" "}
+              <span className="font-normal text-primary/55">(optional)</span>
+            </p>
+            <p className="mt-1 text-xs text-primary/55">
               Style, session structure, and what players improve.
-            </span>
-            <textarea
-              className={`${inputClass} min-h-36 resize-y`}
-              value={description}
-              maxLength={500}
-              onChange={(event) => setDescription(event.target.value)}
-              aria-invalid={Boolean(fieldErrors.description)}
-            />
-            <span className="mt-1.5 block text-xs text-primary/50">
-              {Math.max(0, 500 - description.length)} characters remaining
-            </span>
-            {fieldErrors.description ? (
-              <span className="mt-1.5 block text-sm text-red-700">
-                {fieldErrors.description}
-              </span>
-            ) : null}
-          </label>
+            </p>
+            {!introductionEnabled ? (
+              <button
+                type="button"
+                onClick={() => setIntroductionEnabled(true)}
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-dashed border-primary/25 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
+              >
+                Add an introduction
+              </button>
+            ) : (
+              <div className="mt-3">
+                <textarea
+                  className={`${inputClass} min-h-36 resize-y`}
+                  value={description}
+                  maxLength={500}
+                  onChange={(event) => setDescription(event.target.value)}
+                  {...fieldAccessibility("description", fieldErrors.description)}
+                />
+                <span className="mt-1.5 block text-xs text-primary/50">
+                  {Math.max(0, 500 - description.length)} characters remaining
+                </span>
+                {fieldErrors.description ? (
+                  <span
+                    id="description-error"
+                    className="mt-1.5 block text-sm text-red-700"
+                  >
+                    {fieldErrors.description}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIntroductionEnabled(false);
+                    setDescription("");
+                  }}
+                  className="mt-3 text-sm font-semibold text-primary/65 transition hover:text-primary"
+                >
+                  Remove introduction
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button
@@ -868,6 +988,15 @@ export default function CoachApplicationWizard({
             title="About you"
             onEdit={() => goToStep(1)}
             lines={[
+              `Application: ${
+                COACH_APPLICATION_MODE_LABELS[
+                  initial.application.application_mode
+                ]
+              }`,
+              initial.application.application_mode === "claim_existing" &&
+              initial.targetCoach
+                ? `Claiming: ${initial.targetCoach.name || "coach profile"}`
+                : null,
               `Name: ${fullName || "Not set"}`,
               `Email: ${verifiedEmail || "Not available"}`,
               `Phone: ${phone || "Not set"}`,
@@ -939,7 +1068,11 @@ export default function CoachApplicationWizard({
                       .join(", ")
                   : "None selected"
               }`,
-              `Introduction: ${description || "Not written yet"}`,
+              `Introduction: ${
+                introductionEnabled && description.trim()
+                  ? description
+                  : "Not added (optional)"
+              }`,
             ]}
           />
 
@@ -1044,36 +1177,12 @@ function ReviewBlock({
 }
 
 export function StartCoachApplicationButton() {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
   return (
-    <div>
-      {error ? (
-        <p className="mb-3 text-sm text-red-700" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          setError(null);
-          startTransition(async () => {
-            const result = await createCoachApplicationDraft();
-            if (result.status === "error") {
-              setError(result.message);
-              return;
-            }
-            router.push("/account/applications/coach");
-            router.refresh();
-          });
-        }}
-        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90 disabled:opacity-60"
-      >
-        {pending ? "Starting…" : "Start coach application"}
-      </button>
-    </div>
+    <Link
+      href="/account/applications/coach"
+      className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
+    >
+      Start coach application
+    </Link>
   );
 }

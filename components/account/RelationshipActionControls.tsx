@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import {
+  forwardRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 
 type Props = {
   label: string;
@@ -70,23 +75,25 @@ export function ConfirmActionButton({
   );
 }
 
-export function ActionButton({
-  children,
-  onClick,
-  pending,
-  tone = "primary",
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  pending?: boolean;
-  tone?: "primary" | "secondary";
-}) {
+export const ActionButton = forwardRef<
+  HTMLButtonElement,
+  {
+    children: ReactNode;
+    onClick: () => void;
+    pending?: boolean;
+    tone?: "primary" | "secondary";
+  }
+>(function ActionButton(
+  { children, onClick, pending, tone = "primary" },
+  ref
+) {
   const styles =
     tone === "primary"
       ? "bg-primary text-accent hover:bg-primary/90"
       : "border border-primary/15 text-primary/80 hover:bg-surface";
   return (
     <button
+      ref={ref}
       type="button"
       disabled={pending}
       aria-disabled={pending}
@@ -96,7 +103,7 @@ export function ActionButton({
       {children}
     </button>
   );
-}
+});
 
 export function StatusBadge({
   children,

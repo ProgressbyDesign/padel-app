@@ -152,7 +152,14 @@ export async function resetPasswordAction(
 
 export async function logoutAction(): Promise<void> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.warn(
+      "[auth] signOut failed:",
+      error instanceof Error ? error.message : error
+    );
+  }
   await clearPasswordRecoverySession();
   revalidatePath("/", "layout");
   redirect("/login");

@@ -13,11 +13,12 @@ import {
   ConfirmActionButton,
 } from "@/components/account/RelationshipActionControls";
 import {
+  formatBookingSessionPrice,
   formatBookingWhen,
   playerLevelLabel,
   statusTone,
 } from "@/lib/coachBookings/display";
-import { BOOKING_STATUS_LABELS } from "@/lib/coachBookings/constants";
+import { BOOKING_STATUS_LABELS, PAYMENT_COPY } from "@/lib/coachBookings/constants";
 import type { CoachBookingRequest } from "@/lib/coachBookings/types";
 
 export default function CoachBookingCard({
@@ -62,9 +63,16 @@ export default function CoachBookingCard({
           {booking.venue?.name ?? "Venue"} · {formatBookingWhen(booking)} ·{" "}
           {booking.timezone}
         </p>
+        <p className="mt-1 text-sm text-primary/55">
+          {formatBookingSessionPrice(
+            booking.price_amount_minor,
+            booking.currency
+          )}
+        </p>
         <p className="mt-1 text-xs text-primary/45">
           Requested {new Date(booking.created_at).toLocaleString()}
         </p>
+        <p className="mt-1 text-xs text-primary/45">{PAYMENT_COPY}</p>
         <p
           className={`mt-3 inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusTone(
             booking.status

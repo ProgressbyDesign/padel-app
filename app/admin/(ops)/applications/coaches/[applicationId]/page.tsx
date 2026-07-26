@@ -4,6 +4,7 @@ import CoachApplicationReviewPanel from "@/components/admin/CoachApplicationRevi
 import {
   APPLICATION_STATUS_LABELS,
   AUDIENCES,
+  COACH_APPLICATION_MODE_LABELS,
   COACHING_OUTCOMES,
   PLAYER_LEVELS,
   coachingRoleLabel,
@@ -19,7 +20,8 @@ export default async function CoachApplicationDetailPage({
   const { applicationId } = await params;
   const detail = await getCoachApplicationDetail(applicationId);
   if (!detail) notFound();
-  const { application, locations } = detail;
+  const { application, locations, targetCoach } = detail;
+  const isClaim = application.application_mode === "claim_existing";
 
   return (
     <div>
@@ -32,7 +34,7 @@ export default async function CoachApplicationDetailPage({
       <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
-            Coach application
+            {isClaim ? "Coach profile claim" : "New coach application"}
           </p>
           <h1 className="mt-2">{application.full_name || "Unnamed applicant"}</h1>
           <p className="mt-2 break-all text-xs text-primary/45">{application.id}</p>
@@ -52,23 +54,98 @@ export default async function CoachApplicationDetailPage({
             </Section>
           ) : null}
 
-          <Section title="Applicant">
+          <Section title="Request details">
             <dl className="grid gap-5 sm:grid-cols-2">
-              <Detail label="Full name" value={application.full_name} />
-              <Detail label="Phone" value={application.phone} />
-              <Detail label="Role" value={coachingRoleLabel(application.coaching_role)} />
-              <Detail label="Other role" value={application.coaching_role_other} />
               <Detail
-                label="Experience"
-                value={
-                  application.experience_years === null
-                    ? null
-                    : `${application.experience_years} years`
-                }
+                label="Application type"
+                value={COACH_APPLICATION_MODE_LABELS[application.application_mode]}
               />
               <Detail label="Applicant user ID" value={application.user_id} mono />
             </dl>
           </Section>
+
+          {isClaim ? (
+            <Section title="Existing vs proposed">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="rounded-xl border border-primary/10 bg-surface/40 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary/40">
+                    Existing profile
+                  </p>
+                  <dl className="mt-4 grid gap-4">
+                    <Detail label="Name" value={targetCoach?.name} />
+                    <Detail label="Role" value={targetCoach?.role} />
+                    <Detail label="Location" value={targetCoach?.primaryLocation} />
+                    <Detail label="Venue" value={targetCoach?.venueName} />
+                    <Detail
+                      label="Claimed status"
+                      value={
+                        targetCoach
+                          ? targetCoach.is_claimed
+                            ? "Already claimed"
+                            : "Unclaimed"
+                          : null
+                      }
+                    />
+                    <Detail
+                      label="Target coach ID"
+                      value={application.target_coach_id}
+                      mono
+                    />
+                  </dl>
+                </div>
+                <div className="rounded-xl border border-primary/10 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary/40">
+                    Proposed from application
+                  </p>
+                  <dl className="mt-4 grid gap-4">
+                    <Detail label="Full name" value={application.full_name} />
+                    <Detail label="Phone" value={application.phone} />
+                    <Detail
+                      label="Role"
+                      value={coachingRoleLabel(application.coaching_role)}
+                    />
+                    <Detail
+                      label="Other role"
+                      value={application.coaching_role_other}
+                    />
+                    <Detail
+                      label="Experience"
+                      value={
+                        application.experience_years === null
+                          ? null
+                          : `${application.experience_years} years`
+                      }
+                    />
+                    <Detail
+                      label="Introduction"
+                      value={application.description}
+                      multiline
+                    />
+                  </dl>
+                </div>
+              </div>
+            </Section>
+          ) : (
+            <Section title="Applicant">
+              <dl className="grid gap-5 sm:grid-cols-2">
+                <Detail label="Full name" value={application.full_name} />
+                <Detail label="Phone" value={application.phone} />
+                <Detail
+                  label="Role"
+                  value={coachingRoleLabel(application.coaching_role)}
+                />
+                <Detail label="Other role" value={application.coaching_role_other} />
+                <Detail
+                  label="Experience"
+                  value={
+                    application.experience_years === null
+                      ? null
+                      : `${application.experience_years} years`
+                  }
+                />
+              </dl>
+            </Section>
+          )}
 
           <Section title="Locations">
             {locations.length ? (
@@ -112,7 +189,13 @@ export default async function CoachApplicationDetailPage({
                   .map((value) => optionLabel(COACHING_OUTCOMES, value))
                   .join(", ")}
               />
-              <Detail label="Description" value={application.description} multiline />
+              {!isClaim ? (
+                <Detail
+                  label="Description"
+                  value={application.description}
+                  multiline
+                />
+              ) : null}
             </div>
           </Section>
 
@@ -139,7 +222,10 @@ export default async function CoachApplicationDetailPage({
           </Section>
         </div>
 
-        <CoachApplicationReviewPanel application={application} />
+        <CoachApplicationReviewPanel
+          application={application}
+          targetCoach={targetCoach}
+        />
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ const COACH_PDP_NESTED_SELECT = `
     travel_available,
     image_url,
     is_approved,
+    is_claimed,
 
     coach_attributes (
       audience_adults,

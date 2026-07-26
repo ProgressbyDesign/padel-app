@@ -4,13 +4,14 @@ import { usePathname } from "next/navigation";
 import AccountFooter from "./account/AccountFooter";
 import AppFooter from "./AppFooter";
 import AppHeader from "./AppHeader";
+import type { AccountNavContext } from "@/lib/workspace/resolve";
 
 export default function SiteChrome({
   children,
-  authenticated,
+  accountNav,
 }: {
   children: React.ReactNode;
-  authenticated: boolean;
+  accountNav: AccountNavContext | null;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
@@ -22,7 +23,7 @@ export default function SiteChrome({
 
   return (
     <>
-      <AppHeader authenticated={authenticated} />
+      <AppHeader accountNav={accountNav} />
       <main className="flex-1">{children}</main>
       {isAccount ? <AccountFooter /> : <AppFooter />}
     </>

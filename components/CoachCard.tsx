@@ -36,6 +36,8 @@ export type CoachCardProps = {
   badgeLabel?: string | null;
   distanceMiles?: number | null;
   showArrowCta?: boolean;
+  /** When set, shows a light “Is this your profile?” claim link under the card. */
+  claimHref?: string | null;
 };
 
 function formatRating(rating: number): string {
@@ -295,8 +297,24 @@ function FeaturedCoachCard({
 }
 
 export default function CoachCard(props: CoachCardProps) {
-  if (props.variant === "featured") {
-    return <FeaturedCoachCard {...props} />;
-  }
-  return <ListingCoachCard {...props} />;
+  const card =
+    props.variant === "featured" ? (
+      <FeaturedCoachCard {...props} />
+    ) : (
+      <ListingCoachCard {...props} />
+    );
+
+  if (!props.claimHref) return card;
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <div className="min-h-0 flex-1">{card}</div>
+      <Link
+        href={props.claimHref}
+        className="text-center text-xs font-semibold text-primary/55 underline-offset-2 transition hover:text-primary hover:underline"
+      >
+        Is this your profile?
+      </Link>
+    </div>
+  );
 }

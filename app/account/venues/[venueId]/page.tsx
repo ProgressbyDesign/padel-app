@@ -11,6 +11,7 @@ import {
   PenSquare,
   Star,
 } from "lucide-react";
+import CompletionProgressRings from "@/components/account/CompletionProgressRings";
 import { buildVenueCompletion } from "@/lib/coachProfileCompletion";
 import { loadManagedVenueOverview } from "@/lib/queries/managedVenue";
 import { getStructuredOpeningHours } from "@/lib/openingHours";
@@ -171,11 +172,19 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
             Focus on essential details first, then trust signals and coach
             readiness. This is not a search ranking score.
           </p>
-          <p className="mt-3 text-sm font-semibold text-primary">
-            {completion.completedWeighted} of {completion.weightedTotal} core
-            items complete
-          </p>
         </div>
+
+        <div className="mt-6">
+          <CompletionProgressRings
+            overallPercent={completion.overallPercent}
+            groupScores={completion.groupScores}
+          />
+        </div>
+
+        <p className="mt-6 text-sm font-semibold text-primary">
+          {completion.completedWeighted} of {completion.weightedTotal} core
+          items complete
+        </p>
 
         <div className="mt-6 space-y-6">
           {completion.groups.map((group) => (

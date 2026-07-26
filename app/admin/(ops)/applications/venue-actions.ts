@@ -20,6 +20,7 @@ type VenueApplicationMutationRow = {
   application_mode: "claim_existing" | "create_new" | null;
   relationship_to_venue: "owner" | "manager" | "authorised_representative" | null;
   target_venue_id: string | null;
+  applicant_email: string | null;
   proposed_venue_name: string | null;
   proposed_country: string | null;
   proposed_city: string | null;
@@ -44,7 +45,7 @@ async function loadApplication(
   const { data, error } = await supabase
     .from("venue_profile_applications")
     .select(
-      "id, user_id, status, application_mode, relationship_to_venue, target_venue_id, proposed_venue_name, proposed_country, proposed_city, proposed_address, proposed_website, phone"
+      "id, user_id, status, application_mode, relationship_to_venue, target_venue_id, applicant_email, proposed_venue_name, proposed_country, proposed_city, proposed_address, proposed_website, phone"
     )
     .eq("id", applicationId)
     .maybeSingle();
@@ -63,6 +64,7 @@ function revalidateVenueApplication(applicationId: string) {
   revalidatePath("/admin/applications/venues");
   revalidatePath(`/admin/applications/venues/${applicationId}`);
   revalidatePath("/account");
+  revalidatePath("/account/personal");
   revalidatePath("/account/applications");
   revalidatePath("/account/applications/venue");
 }
@@ -78,6 +80,38 @@ function cleanNote(note: string): string | null {
 
 function validRole(role: string): role is ApprovedMembershipRole {
   return role === "owner" || role === "manager";
+}
+
+async function notifyVenueApplicant(input: {
+  application: VenueApplicationMutationRow;
+  status: "changes_requested" | "approved" | "declined";
+  note?: string | null;
+  venueName?: string | null;
+}) {
+  const email = input.application.applicant_email?.trim() || "";
+  if (!email) {
+    const { logSkippedRecipient } = await import(
+      "@/lib/notifications/resolveRecipientEmail"
+    );
+    logSkippedRecipient("application-email", "no reliable applicant email", {
+      applicationId: input.application.id,
+      userId: input.application.user_id,
+      status: input.status,
+      venueName: input.venueName ?? input.application.proposed_venue_name,
+      note: input.note ?? null,
+    });
+    return;
+  }
+  const { sendVenueApplicationStatusEmail } = await import(
+    "@/lib/notifications/applicationEmails"
+  );
+  void sendVenueApplicationStatusEmail({
+    to: email,
+    status: input.status,
+    mode: input.application.application_mode,
+    venueName: input.venueName ?? input.application.proposed_venue_name,
+    note: input.note,
+  });
 }
 
 export async function startVenueApplicationReview(
@@ -128,6 +162,11 @@ export async function requestVenueApplicationChanges(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The change request could not be saved." };
   revalidateVenueApplication(applicationId);
+  void notifyVenueApplicant({
+    application,
+    status: "changes_requested",
+    note: reviewNote,
+  });
   return { ok: true, message: "Changes requested." };
 }
 
@@ -155,6 +194,11 @@ export async function declineVenueApplication(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The application could not be declined." };
   revalidateVenueApplication(applicationId);
+  void notifyVenueApplicant({
+    application,
+    status: "declined",
+    note: reviewNote,
+  });
   return { ok: true, message: "Application declined." };
 }
 
@@ -190,6 +234,11 @@ async function approveWithVenue(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The application could not be approved." };
   revalidateVenueApplication(applicationId);
+  void notifyVenueApplicant({
+    application,
+    status: "approved",
+    venueName: application.proposed_venue_name,
+  });
   return { ok: true, message: "Application approved.", entityId: venueId };
 }
 
@@ -324,6 +373,11 @@ export async function createAndApproveVenueApplication(input: {
     };
   }
   revalidateVenueApplication(input.applicationId);
+  void notifyVenueApplicant({
+    application,
+    status: "approved",
+    venueName: name,
+  });
   return { ok: true, message: "Venue created and application approved.", entityId: venueId };
 }
 

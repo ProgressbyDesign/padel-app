@@ -10,6 +10,7 @@ import type {
   BookingSlotContext,
   CoachBookingRequest,
 } from "@/lib/coachBookings/types";
+import type { PricingSource } from "@/lib/coachAvailability/pricing";
 import {
   deriveAvailabilitySlots,
 } from "@/lib/coachAvailability/slots";
@@ -29,6 +30,12 @@ export {
   loadRequestedCountsForRelationship,
 } from "@/lib/queries/coachBookingBlocks";
 
+const PRICING_SOURCES = new Set<PricingSource>([
+  "default_hourly_rate",
+  "rule_override",
+  "exception_override",
+]);
+
 const BOOKING_SELECT = `
   id,
   coach_venue_id,
@@ -44,6 +51,9 @@ const BOOKING_SELECT = `
   requester_phone,
   player_level,
   message,
+  price_amount_minor,
+  currency,
+  pricing_source,
   responded_at,
   cancelled_at,
   completed_at,
@@ -65,6 +75,12 @@ const BOOKING_SELECT = `
     country
   )
 `;
+
+function asPricingSource(value: unknown): PricingSource | null {
+  return typeof value === "string" && PRICING_SOURCES.has(value as PricingSource)
+    ? (value as PricingSource)
+    : null;
+}
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -99,6 +115,10 @@ export function asCoachBookingRequest(
     player_level:
       levelRaw && isPlayerLevel(levelRaw) ? (levelRaw as PlayerLevel) : null,
     message: (row.message as string | null) ?? null,
+    price_amount_minor:
+      row.price_amount_minor == null ? null : Number(row.price_amount_minor),
+    currency: (row.currency as string | null) ?? null,
+    pricing_source: asPricingSource(row.pricing_source),
     responded_at: (row.responded_at as string | null) ?? null,
     cancelled_at: (row.cancelled_at as string | null) ?? null,
     completed_at: (row.completed_at as string | null) ?? null,
@@ -207,6 +227,8 @@ export async function validateBookableSlot(input: {
     timezone: match.timezone,
     durationMinutes,
     priceFrom: coach?.price_from == null ? null : Number(coach.price_from),
+    priceAmountMinor: match.priceAmountMinor,
+    currency: match.currency,
     coachName: String(coach?.name ?? "Coach"),
     coachRole: (coach?.role as string | null) ?? null,
     coachImageUrl: (coach?.image_url as string | null) ?? null,

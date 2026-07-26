@@ -8,6 +8,7 @@ import { ConfirmActionButton } from "@/components/account/RelationshipActionCont
 import { PAYMENT_COPY } from "@/lib/coachBookings/constants";
 import {
   formatBookingDateTime,
+  formatBookingSessionPrice,
   playerLevelLabel,
   playerStatusLabel,
   statusTone,
@@ -85,6 +86,15 @@ export default function PlayerBookingDetail({
           <div>
             <dt className="text-primary/45">Timezone</dt>
             <dd className="font-semibold text-primary">{booking.timezone}</dd>
+          </div>
+          <div>
+            <dt className="text-primary/45">Price</dt>
+            <dd className="font-semibold text-primary">
+              {formatBookingSessionPrice(
+                booking.price_amount_minor,
+                booking.currency
+              )}
+            </dd>
           </div>
           {level ? (
             <div>

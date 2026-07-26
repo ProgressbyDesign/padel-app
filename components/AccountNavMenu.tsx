@@ -1,0 +1,240 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { logoutAction } from "@/app/actions/auth";
+import { setWorkspacePreference } from "@/app/account/workspace/actions";
+import type { AccountNavContext } from "@/lib/workspace/resolve";
+
+function initialsFrom(context: AccountNavContext): string {
+  const name = context.fullName?.trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    const letters = parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "");
+    if (letters.join("")) return letters.join("");
+  }
+  const email = context.email.trim();
+  if (email) return email[0]?.toUpperCase() ?? "A";
+  return "A";
+}
+
+export default function AccountNavMenu({
+  account,
+  overlay,
+  onNavigate,
+  variant = "desktop",
+}: {
+  account: AccountNavContext;
+  overlay?: boolean;
+  onNavigate?: () => void;
+  variant?: "desktop" | "mobile";
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const triggerId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    function onPointer(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    onNavigate?.();
+  }
+
+  function prefer(
+    type: "personal" | "coach" | "venue" | "admin",
+    entityId?: string | null
+  ) {
+    startTransition(async () => {
+      await setWorkspacePreference({ type, entityId });
+    });
+  }
+
+  const itemClass =
+    "block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-primary/80 transition hover:bg-surface hover:text-primary disabled:opacity-60";
+
+  const menu = (
+    <div
+      id={menuId}
+      role="menu"
+      aria-labelledby={triggerId}
+      className={
+        variant === "desktop"
+          ? "absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-primary/10 bg-white p-2 shadow-[0_12px_40px_rgba(3,19,34,0.12)]"
+          : "mt-2 space-y-1 rounded-2xl border border-primary/10 bg-surface/40 p-2"
+      }
+    >
+      <p className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
+        Personal
+      </p>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={pending}
+        className={itemClass}
+        onClick={() => prefer("personal")}
+      >
+        Personal dashboard
+      </button>
+      <Link
+        href="/account/bookings"
+        role="menuitem"
+        className={itemClass}
+        onClick={close}
+      >
+        Session requests
+      </Link>
+      <Link
+        href="/account/applications"
+        role="menuitem"
+        className={itemClass}
+        onClick={close}
+      >
+        Applications
+      </Link>
+
+      {account.coaches.length > 0 ? (
+        <>
+          <p className="mt-2 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
+            Coach profiles
+          </p>
+          {account.coaches.map((coach) => (
+            <button
+              key={coach.id}
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className={itemClass}
+              onClick={() => prefer("coach", coach.id)}
+            >
+              {coach.name}
+            </button>
+          ))}
+        </>
+      ) : null}
+
+      {account.venues.length > 0 ? (
+        <>
+          <p className="mt-2 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
+            Venues
+          </p>
+          {account.venues.map((venue) => (
+            <button
+              key={venue.id}
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className={itemClass}
+              onClick={() => prefer("venue", venue.id)}
+            >
+              {venue.name}
+            </button>
+          ))}
+        </>
+      ) : null}
+
+      {account.isAdmin ? (
+        <>
+          <p className="mt-2 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
+            Admin
+          </p>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={pending}
+            className={itemClass}
+            onClick={() => prefer("admin")}
+          >
+            Admin workspace
+          </button>
+        </>
+      ) : null}
+
+      <div className="my-2 border-t border-primary/10" />
+      <Link href="/join" role="menuitem" className={itemClass} onClick={close}>
+        Add or claim a profile
+      </Link>
+      <form action={logoutAction}>
+        <button
+          type="submit"
+          role="menuitem"
+          disabled={pending}
+          className={itemClass}
+        >
+          Log out
+        </button>
+      </form>
+    </div>
+  );
+
+  if (variant === "mobile") {
+    return (
+      <div ref={rootRef}>
+        <button
+          type="button"
+          id={triggerId}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={menuId}
+          onClick={() => setOpen((value) => !value)}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-base font-medium text-primary/75 transition hover:bg-surface"
+        >
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-accent"
+            aria-hidden
+          >
+            {initialsFrom(account)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-primary">
+              {account.fullName || "My account"}
+            </span>
+            <span className="block truncate text-sm text-primary/55">
+              {account.email}
+            </span>
+          </span>
+        </button>
+        {open ? menu : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        id={triggerId}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={menuId}
+        aria-label="Account menu"
+        onClick={() => setOpen((value) => !value)}
+        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition ${
+          overlay
+            ? "bg-white/15 text-white hover:bg-white/25"
+            : "bg-primary text-accent hover:bg-primary/90"
+        }`}
+      >
+        {initialsFrom(account)}
+      </button>
+      {open ? menu : null}
+    </div>
+  );
+}

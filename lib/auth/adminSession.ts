@@ -37,7 +37,7 @@ export async function getAdminAccount(): Promise<AdminAccount | null> {
 }
 
 export async function requireAdminAccount(
-  mode: "redirect" | "not-found" = "redirect"
+  mode: "redirect" | "not-found" | "access-denied" = "redirect"
 ): Promise<AdminAccount> {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
@@ -56,7 +56,8 @@ export async function requireAdminAccount(
     .maybeSingle();
 
   if (profileError || !profile || profile.role !== "admin") {
-    notFound();
+    if (mode === "not-found") notFound();
+    redirect("/admin/access-denied");
   }
 
   return {

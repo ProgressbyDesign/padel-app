@@ -18,6 +18,7 @@ import {
   BOOKING_STATUSES,
 } from "@/lib/coachBookings/constants";
 import {
+  formatBookingSessionPrice,
   formatBookingWhen,
   statusTone,
 } from "@/lib/coachBookings/display";
@@ -144,6 +145,12 @@ export default function AdminBookingsPanel({
                     </p>
                     <p className="mt-1 text-sm text-primary/70">
                       {formatBookingWhen(booking)} · {booking.timezone}
+                    </p>
+                    <p className="mt-1 text-sm text-primary/55">
+                      {formatBookingSessionPrice(
+                        booking.price_amount_minor,
+                        booking.currency
+                      )}
                     </p>
                     <p
                       className={`mt-3 inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusTone(

@@ -221,9 +221,6 @@ export function validateStepThreeForSubmit(
   if (outcomes.length === 0) {
     errors.outcomes = "Select at least one coaching outcome.";
   }
-  if (!input.description.trim()) {
-    errors.description = "Write a short introduction for players.";
-  }
   return errors;
 }
 

@@ -1,10 +1,13 @@
 import type { AvailabilityExceptionType } from "@/lib/coachAvailability/constants";
+import type { PricingSource } from "@/lib/coachAvailability/pricing";
 
 export type AvailabilitySettings = {
   coach_venue_id: string;
   timezone: string;
   default_slot_duration_minutes: number;
   is_public: boolean;
+  currency: string | null;
+  default_hourly_rate_minor: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -19,6 +22,7 @@ export type AvailabilityRule = {
   valid_from: string;
   valid_until: string | null;
   is_active: boolean;
+  price_override_minor: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -30,6 +34,7 @@ export type AvailabilityException = {
   starts_at: string;
   ends_at: string;
   slot_duration_minutes: number | null;
+  price_override_minor: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -54,6 +59,13 @@ export type DerivedSlot = {
   venueId: string;
   venueName: string;
   coachVenueId: string;
+  priceAmountMinor: number | null;
+  currency: string | null;
+  pricingSource: PricingSource | null;
+  /** Present when slot came from an available exception (for coach diagnostics). */
+  fromException?: boolean;
+  ruleId?: string | null;
+  exceptionId?: string | null;
 };
 
 export type AvailabilityActionResult = {
@@ -83,4 +95,12 @@ export type PublicCoachAvailabilityCard = {
   nextSlot: DerivedSlot | null;
   isPublic: boolean;
   relationshipId: string;
+  days: Array<{
+    date: string;
+    label: string;
+    slots: DerivedSlot[];
+  }>;
 };
+
+/** Coach-centric public availability at a venue (day-grouped slots). */
+export type PublicCoachAvailabilityGroup = PublicCoachAvailabilityCard;

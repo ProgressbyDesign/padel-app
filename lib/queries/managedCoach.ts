@@ -46,6 +46,7 @@ export type ManagedCoachOverview = {
   availabilityStatus: "none" | "private" | "live";
   nextAvailableAt: string | null;
   availabilityComplete: boolean;
+  pricingConfigured: boolean;
   pendingBookingCount: number;
 };
 
@@ -103,7 +104,7 @@ export async function loadManagedCoachOverview(
       .eq("coach_id", coachId),
     supabase
       .from("coach_venues")
-      .select("venue_id")
+      .select("id, venue_id")
       .eq("coach_id", coachId)
       .eq("status", "active"),
     supabase
@@ -133,6 +134,22 @@ export async function loadManagedCoachOverview(
 
   if (coachResult.error || !coachResult.data) return null;
 
+  const relationshipIds = (venuesResult.data ?? []).map((row) =>
+    String(row.id)
+  );
+  let pricingConfigured = false;
+  if (relationshipIds.length > 0) {
+    const { data: pricingRows } = await supabase
+      .from("coach_venue_availability_settings")
+      .select("currency, default_hourly_rate_minor")
+      .in("coach_venue_id", relationshipIds);
+    pricingConfigured = (pricingRows ?? []).some(
+      (row) =>
+        Boolean(typeof row.currency === "string" && row.currency.trim()) &&
+        row.default_hourly_rate_minor != null
+    );
+  }
+
   const availability = await coachHasLivePublicAvailability(coachId);
   const locations = locationsResult.data ?? [];
   const hasPrimaryLocation =
@@ -160,6 +177,7 @@ export async function loadManagedCoachOverview(
     availabilityStatus: availability.status,
     nextAvailableAt: availability.nextSlotStartsAt,
     availabilityComplete: availability.status === "live",
+    pricingConfigured,
     pendingBookingCount: bookingsResult.data?.length ?? 0,
   };
 }
