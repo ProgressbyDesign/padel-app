@@ -9,6 +9,7 @@ import {
   PLAYER_LEVEL_LABELS,
   PLAYER_LEVELS,
 } from "@/lib/coachBookings/constants";
+import { formatBookingSessionPrice } from "@/lib/coachBookings/display";
 import type { BookingSlotContext } from "@/lib/coachBookings/types";
 import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
 
@@ -89,14 +90,12 @@ export default function BookingRequestForm({
               {slot.durationMinutes} minutes
             </dd>
           </div>
-          {slot.priceFrom != null ? (
-            <div className="sm:col-span-2">
-              <dt className="text-primary/45">Indicative price from</dt>
-              <dd className="font-semibold text-primary">
-                {slot.priceFrom} · indicative only
-              </dd>
-            </div>
-          ) : null}
+          <div className="sm:col-span-2">
+            <dt className="text-primary/45">Price</dt>
+            <dd className="font-semibold text-primary">
+              {formatBookingSessionPrice(slot.priceAmountMinor, slot.currency)}
+            </dd>
+          </div>
         </dl>
         <p className="mt-4 text-sm text-primary/60">{PAYMENT_COPY}</p>
       </section>

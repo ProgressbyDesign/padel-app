@@ -38,6 +38,8 @@ export type CoachListingItem = {
   locationLng?: number | string | null;
   /** Miles from user; set by addDistancesToCoaches */
   distance?: number;
+  /** When false, listing can offer a claim affordance */
+  isClaimed?: boolean;
 };
 
 export type CoachListingFilters = {
@@ -604,6 +606,9 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
     priceFrom: formatListingPriceFrom(profile.pricing.from),
     locationLat: coords.lat,
     locationLng: coords.lng,
+    isClaimed: Boolean(
+      (row as Coach & { is_claimed?: boolean | null }).is_claimed
+    ),
   };
 }
 

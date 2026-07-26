@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
+import AccountNavMenu from "@/components/AccountNavMenu";
 import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
+import type { AccountNavContext } from "@/lib/workspace/resolve";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -16,7 +18,11 @@ const nav = [
 
 const SCROLL_SOLID_AFTER = 72;
 
-export default function AppHeader({ authenticated }: { authenticated: boolean }) {
+export default function AppHeader({
+  accountNav,
+}: {
+  accountNav: AccountNavContext | null;
+}) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const [homeScrolled, setHomeScrolled] = useState(false);
@@ -48,9 +54,6 @@ export default function AppHeader({ authenticated }: { authenticated: boolean })
     : "text-primary/70 hover:bg-surface hover:text-primary";
 
   const linkActive = overlay ? "bg-white/15 text-white" : "bg-primary/10 text-primary";
-  const accountLink = authenticated
-    ? { href: "/account", label: "My account" }
-    : { href: "/login", label: "Log in" };
 
   return (
     <header className={`${headerPosition} z-50 transition-colors duration-300 ${headerSurface}`}>
@@ -72,24 +75,28 @@ export default function AppHeader({ authenticated }: { authenticated: boolean })
               </Link>
             );
           })}
-          <Link
-            href={accountLink.href}
-            className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${
-              isNavActive(accountLink.href, pathname) ? linkActive : linkIdle
-            }`}
-          >
-            {accountLink.label}
-          </Link>
-          <Link
-            href="/join"
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${
-              overlay
-                ? "bg-white text-primary shadow-md hover:bg-white/95"
-                : "bg-primary text-accent shadow-sm hover:bg-primary/90"
-            }`}
-          >
-            Join PadelPathways
-          </Link>
+          {accountNav ? (
+            <AccountNavMenu account={accountNav} overlay={overlay} />
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${linkIdle}`}
+              >
+                Log in
+              </Link>
+              <Link
+                href="/join"
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${
+                  overlay
+                    ? "bg-white text-primary shadow-md hover:bg-white/95"
+                    : "bg-primary text-accent shadow-sm hover:bg-primary/90"
+                }`}
+              >
+                Join PadelPathways
+              </Link>
+            </>
+          )}
         </nav>
 
         <button
@@ -128,24 +135,30 @@ export default function AppHeader({ authenticated }: { authenticated: boolean })
                 </Link>
               );
             })}
-            <Link
-              href={accountLink.href}
-              onClick={() => setMenuPath(null)}
-              className={`rounded-xl px-4 py-3 text-base font-medium transition ${
-                isNavActive(accountLink.href, pathname)
-                  ? "bg-primary/10 text-primary"
-                  : "text-primary/75 hover:bg-surface"
-              }`}
-            >
-              {accountLink.label}
-            </Link>
-            <Link
-              href="/join"
-              onClick={() => setMenuPath(null)}
-              className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-accent shadow-sm transition hover:bg-primary/90"
-            >
-              Join PadelPathways
-            </Link>
+            {accountNav ? (
+              <AccountNavMenu
+                account={accountNav}
+                variant="mobile"
+                onNavigate={() => setMenuPath(null)}
+              />
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMenuPath(null)}
+                  className="rounded-xl px-4 py-3 text-base font-medium text-primary/75 transition hover:bg-surface"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/join"
+                  onClick={() => setMenuPath(null)}
+                  className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-accent shadow-sm transition hover:bg-primary/90"
+                >
+                  Join PadelPathways
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       ) : null}
@@ -159,7 +172,6 @@ function isNavActive(href: string, pathname: string) {
     (href === "/venues" && (pathname === "/venues" || pathname.startsWith("/venue/"))) ||
     (href === "/coaches" && (pathname === "/coaches" || pathname.startsWith("/coach/"))) ||
     (href === "/about" && pathname.startsWith("/about")) ||
-    (href === "/account" && pathname.startsWith("/account")) ||
     (href === "/contact" && pathname.startsWith("/contact"))
   );
 }

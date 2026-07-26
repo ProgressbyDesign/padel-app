@@ -3,7 +3,6 @@
 import {
   Building2,
   CalendarCheck2,
-  ClipboardList,
   Database,
   LayoutDashboard,
   Link2,
@@ -19,7 +18,6 @@ import type { AdminAccount } from "@/lib/auth/adminSession";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/admin/applications", label: "Applications", icon: ClipboardList, exact: true },
   {
     href: "/admin/applications/coaches",
     label: "Coach applications",

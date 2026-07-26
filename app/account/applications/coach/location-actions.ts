@@ -29,6 +29,7 @@ function revalidateApplicationPaths() {
   revalidatePath("/account/applications");
   revalidatePath("/account/applications/coach");
   revalidatePath("/account");
+  revalidatePath("/account/personal");
 }
 
 /**
@@ -54,8 +55,10 @@ export async function replaceCoachApplicationLocations(input: {
   }
 
   const locations = normalizeLocationRows(input.locations);
+  const advancing = !input.exit && input.nextStep != null && input.nextStep > 2;
   const fieldErrors = validateLocations(locations, {
-    requireAtLeastOne: Boolean(input.requireAtLeastOne),
+    requireAtLeastOne:
+      input.requireAtLeastOne ?? advancing,
   });
   if (Object.keys(fieldErrors).length > 0) {
     return errorResult("Fix the location fields before continuing.", fieldErrors);

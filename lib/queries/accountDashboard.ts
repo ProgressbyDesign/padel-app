@@ -2,10 +2,20 @@ import "server-only";
 
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import type { MembershipRole } from "@/lib/auth/types";
-import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
+import {
+  ACTIVE_APPLICATION_STATUSES,
+  type CoachApplicationStatus,
+} from "@/lib/coachProfileApplication/constants";
 import { loadBookingAttention } from "@/lib/queries/coachBookings";
 import { createClient } from "@/lib/supabase/server";
 import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
+
+const ACTIVE_VENUE_APPLICATION_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "changes_requested",
+] as const satisfies readonly VenueApplicationStatus[];
 
 type ProfileRow = {
   full_name: string | null;
@@ -114,7 +124,7 @@ function one<T>(value: T | T[] | null): T | null {
 }
 
 export async function loadAccountDashboard(): Promise<AccountDashboardData> {
-  const account = await requireAuthenticatedAccount("/account");
+  const account = await requireAuthenticatedAccount("/account/personal");
   const supabase = await createClient();
 
   const [
@@ -167,13 +177,7 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
           "id, status, current_step, submitted_at, updated_at, review_note, coach_id"
         )
         .eq("user_id", account.id)
-        .in("status", [
-          "draft",
-          "submitted",
-          "under_review",
-          "changes_requested",
-          "approved",
-        ])
+        .in("status", [...ACTIVE_APPLICATION_STATUSES])
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -183,13 +187,7 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
           "id, status, current_step, submitted_at, updated_at, review_note, approved_venue_id"
         )
         .eq("user_id", account.id)
-        .in("status", [
-          "draft",
-          "submitted",
-          "under_review",
-          "changes_requested",
-          "approved",
-        ])
+        .in("status", [...ACTIVE_VENUE_APPLICATION_STATUSES])
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -371,7 +369,13 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     }
   }
 
-  const bookingAttention = await loadBookingAttention(account.id);
+  const bookingAttentionRaw = await loadBookingAttention(account.id);
+  const bookingAttention: AccountBookingAttention = {
+    playerAwaiting: bookingAttentionRaw.playerAwaiting,
+    playerAcceptedUpcoming: bookingAttentionRaw.playerAcceptedUpcoming,
+    coachNewRequests: [],
+    coachAcceptedUpcoming: [],
+  };
 
   return {
     account: {

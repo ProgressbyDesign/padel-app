@@ -20,6 +20,7 @@ const APPLICATION_SELECT = `
   application_mode,
   relationship_to_venue,
   target_venue_id,
+  applicant_email,
   proposed_venue_name,
   proposed_country,
   proposed_city,
@@ -52,6 +53,7 @@ function asApplication(row: Record<string, unknown>): VenueProfileApplicationRow
       (row.relationship_to_venue as VenueProfileApplicationRow["relationship_to_venue"]) ??
       null,
     target_venue_id: (row.target_venue_id as string | null) ?? null,
+    applicant_email: (row.applicant_email as string | null) ?? null,
     proposed_venue_name: (row.proposed_venue_name as string | null) ?? null,
     proposed_country:
       (row.proposed_country as VenueProfileApplicationRow["proposed_country"]) ??
@@ -105,28 +107,13 @@ export async function loadCurrentVenueApplication(): Promise<VenueApplicationWit
       "submitted",
       "under_review",
       "changes_requested",
-      "approved",
     ])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (!error && data) {
-    const application = asApplication(data as Record<string, unknown>);
-    const targetVenue = await loadTargetVenue(application.target_venue_id);
-    return { application, targetVenue };
-  }
-
-  const latest = await supabase
-    .from("venue_profile_applications")
-    .select(APPLICATION_SELECT)
-    .eq("user_id", account.id)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latest.error || !latest.data) return null;
-  const application = asApplication(latest.data as Record<string, unknown>);
+  if (error || !data) return null;
+  const application = asApplication(data as Record<string, unknown>);
   const targetVenue = await loadTargetVenue(application.target_venue_id);
   return { application, targetVenue };
 }

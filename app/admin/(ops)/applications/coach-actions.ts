@@ -2,11 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminAccount, type AdminAccount } from "@/lib/auth/adminSession";
-import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
+import type {
+  CoachApplicationMode,
+  CoachApplicationStatus,
+} from "@/lib/coachProfileApplication/constants";
+import { isCoachApplicationMode } from "@/lib/coachProfileApplication/constants";
 import {
   searchCoachesForAdminApproval,
   type AdminCoachSearchResult,
 } from "@/lib/admin/applicationQueries";
+import { logSkippedRecipient } from "@/lib/notifications/resolveRecipientEmail";
 import { createClient } from "@/lib/supabase/server";
 
 export type AdminApplicationActionResult = {
@@ -19,12 +24,16 @@ type CoachApplicationMutationRow = {
   id: string;
   user_id: string;
   status: CoachApplicationStatus;
+  application_mode: CoachApplicationMode;
+  target_coach_id: string | null;
+  applicant_email: string | null;
   full_name: string | null;
   phone: string | null;
   coaching_role: string | null;
   coaching_role_other: string | null;
   experience_years: number | null;
   description: string | null;
+  coach_id: string | null;
 };
 
 async function authorizeAdminAction(): Promise<AdminAccount> {
@@ -43,7 +52,7 @@ async function loadApplication(
   const { data, error } = await supabase
     .from("coach_profile_applications")
     .select(
-      "id, user_id, status, full_name, phone, coaching_role, coaching_role_other, experience_years, description"
+      "id, user_id, status, application_mode, target_coach_id, applicant_email, full_name, phone, coaching_role, coaching_role_other, experience_years, description, coach_id"
     )
     .eq("id", applicationId)
     .maybeSingle();
@@ -53,7 +62,14 @@ async function loadApplication(
     }
     throw new Error("Unable to load application.");
   }
-  return (data as CoachApplicationMutationRow | null) ?? null;
+  if (!data) return null;
+  const modeRaw = data.application_mode;
+  return {
+    ...(data as Omit<CoachApplicationMutationRow, "application_mode">),
+    application_mode: isCoachApplicationMode(modeRaw) ? modeRaw : "create_new",
+    target_coach_id: (data.target_coach_id as string | null) ?? null,
+    coach_id: (data.coach_id as string | null) ?? null,
+  };
 }
 
 function revalidateCoachApplication(applicationId: string) {
@@ -62,6 +78,7 @@ function revalidateCoachApplication(applicationId: string) {
   revalidatePath("/admin/applications/coaches");
   revalidatePath(`/admin/applications/coaches/${applicationId}`);
   revalidatePath("/account");
+  revalidatePath("/account/personal");
   revalidatePath("/account/applications");
   revalidatePath("/account/applications/coach");
 }
@@ -73,6 +90,32 @@ function canReview(status: CoachApplicationStatus): boolean {
 function cleanNote(note: string): string | null {
   const value = note.trim();
   return value.length > 0 && value.length <= 2000 ? value : null;
+}
+
+async function notifyApplicant(input: {
+  application: CoachApplicationMutationRow;
+  status: "changes_requested" | "approved" | "declined";
+  note?: string | null;
+  coachName?: string | null;
+}) {
+  const email = input.application.applicant_email?.trim() || "";
+  if (!email) {
+    logSkippedRecipient("application-email", "no reliable applicant email", {
+      applicationId: input.application.id,
+      userId: input.application.user_id,
+    });
+    return;
+  }
+  const { sendCoachApplicationStatusEmail } = await import(
+    "@/lib/notifications/applicationEmails"
+  );
+  void sendCoachApplicationStatusEmail({
+    to: email,
+    status: input.status,
+    mode: input.application.application_mode,
+    coachName: input.coachName ?? input.application.full_name,
+    note: input.note,
+  });
 }
 
 export async function startCoachApplicationReview(
@@ -127,6 +170,11 @@ export async function requestCoachApplicationChanges(
     return { ok: false, message: "The change request could not be saved." };
   }
   revalidateCoachApplication(applicationId);
+  void notifyApplicant({
+    application,
+    status: "changes_requested",
+    note: reviewNote,
+  });
   return { ok: true, message: "Changes requested." };
 }
 
@@ -157,7 +205,70 @@ export async function declineCoachApplication(
     return { ok: false, message: "The application could not be declined." };
   }
   revalidateCoachApplication(applicationId);
+  void notifyApplicant({
+    application,
+    status: "declined",
+    note: reviewNote,
+  });
   return { ok: true, message: "Application declined." };
+}
+
+async function approveWithCoachId(
+  application: CoachApplicationMutationRow,
+  coachId: string
+): Promise<AdminApplicationActionResult> {
+  if (!canReview(application.status)) {
+    return { ok: false, message: "This application cannot be approved from its current status." };
+  }
+  if (!coachId.trim()) return { ok: false, message: "Select a coach profile." };
+
+  const supabase = await createClient();
+  const { data: coach, error: coachError } = await supabase
+    .from("coaches")
+    .select("id, name, is_claimed")
+    .eq("id", coachId)
+    .maybeSingle();
+  if (coachError || !coach) return { ok: false, message: "Selected coach was not found." };
+
+  if (application.application_mode === "claim_existing" && coach.is_claimed) {
+    return {
+      ok: false,
+      message:
+        "This profile has already been claimed. Approval is disabled until the claim target is corrected.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("coach_profile_applications")
+    .update({ status: "approved", review_note: null, coach_id: coachId })
+    .eq("id", application.id)
+    .in("status", ["submitted", "under_review"])
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
+    return { ok: false, message: "The application could not be approved." };
+  }
+  revalidateCoachApplication(application.id);
+  void notifyApplicant({
+    application: { ...application, coach_id: coachId },
+    status: "approved",
+    coachName: (coach.name as string | null) ?? application.full_name,
+  });
+  return { ok: true, message: "Application approved.", entityId: coachId };
+}
+
+export async function approveCoachClaim(
+  applicationId: string
+): Promise<AdminApplicationActionResult> {
+  await authorizeAdminAction();
+  const application = await loadApplication(applicationId);
+  if (!application || application.application_mode !== "claim_existing") {
+    return { ok: false, message: "This is not a valid coach profile claim." };
+  }
+  if (!application.target_coach_id) {
+    return { ok: false, message: "The claimed coach profile is missing." };
+  }
+  return approveWithCoachId(application, application.target_coach_id);
 }
 
 export async function approveCoachApplicationWithExisting(
@@ -167,31 +278,13 @@ export async function approveCoachApplicationWithExisting(
   await authorizeAdminAction();
   const application = await loadApplication(applicationId);
   if (!application) return { ok: false, message: "Application not found." };
-  if (!canReview(application.status)) {
-    return { ok: false, message: "This application cannot be approved from its current status." };
+  if (application.application_mode === "claim_existing") {
+    return {
+      ok: false,
+      message: "Use Approve claim for profile claim applications.",
+    };
   }
-  if (!coachId.trim()) return { ok: false, message: "Select a coach profile." };
-
-  const supabase = await createClient();
-  const { data: coach, error: coachError } = await supabase
-    .from("coaches")
-    .select("id")
-    .eq("id", coachId)
-    .maybeSingle();
-  if (coachError || !coach) return { ok: false, message: "Selected coach was not found." };
-
-  const { data, error } = await supabase
-    .from("coach_profile_applications")
-    .update({ status: "approved", review_note: null, coach_id: coachId })
-    .eq("id", applicationId)
-    .in("status", ["submitted", "under_review"])
-    .select("id")
-    .maybeSingle();
-  if (error || !data) {
-    return { ok: false, message: "The application could not be approved." };
-  }
-  revalidateCoachApplication(applicationId);
-  return { ok: true, message: "Application approved.", entityId: coachId };
+  return approveWithCoachId(application, coachId);
 }
 
 export async function createAndApproveCoachApplication(input: {
@@ -205,6 +298,12 @@ export async function createAndApproveCoachApplication(input: {
   const admin = await authorizeAdminAction();
   const application = await loadApplication(input.applicationId);
   if (!application) return { ok: false, message: "Application not found." };
+  if (application.application_mode === "claim_existing") {
+    return {
+      ok: false,
+      message: "Claims must bind to the existing target coach — do not create a new profile.",
+    };
+  }
   if (!canReview(application.status)) {
     return { ok: false, message: "This application cannot be approved from its current status." };
   }
@@ -281,6 +380,11 @@ export async function createAndApproveCoachApplication(input: {
   }
 
   revalidateCoachApplication(input.applicationId);
+  void notifyApplicant({
+    application: { ...application, coach_id: coachId },
+    status: "approved",
+    coachName: name,
+  });
   return { ok: true, message: "Coach created and application approved.", entityId: coachId };
 }
 

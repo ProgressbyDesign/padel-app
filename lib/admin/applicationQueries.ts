@@ -4,8 +4,11 @@ import { requireAdminAccount } from "@/lib/auth/adminSession";
 import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
 import type {
   CoachApplicationLocationRow,
+  CoachClaimTargetSummary,
   CoachProfileApplicationRow,
 } from "@/lib/coachProfileApplication/types";
+import { isCoachApplicationMode } from "@/lib/coachProfileApplication/constants";
+import { loadTargetCoachSummary } from "@/lib/queries/coachProfileApplication";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ApprovedMembershipRole,
@@ -17,17 +20,18 @@ import type {
 } from "@/lib/venueProfileApplication/types";
 
 const COACH_APPLICATION_SELECT = `
-  id, user_id, status, current_step, full_name, phone, coaching_role,
-  coaching_role_other, experience_years, description, player_levels, audiences,
-  outcomes, terms_accepted_at, privacy_accepted_at, submitted_at, coach_id,
-  reviewed_at, reviewed_by_user_id, review_note, created_at, updated_at
+  id, user_id, status, current_step, application_mode, target_coach_id,
+  applicant_email, full_name, phone, coaching_role, coaching_role_other,
+  experience_years, description, player_levels, audiences, outcomes,
+  terms_accepted_at, privacy_accepted_at, submitted_at, coach_id, reviewed_at,
+  reviewed_by_user_id, review_note, created_at, updated_at
 `;
 
 const VENUE_APPLICATION_SELECT = `
   id, user_id, status, current_step, application_mode, relationship_to_venue,
-  target_venue_id, proposed_venue_name, proposed_country, proposed_city,
-  proposed_address, proposed_website, phone, supporting_note, terms_accepted_at,
-  privacy_accepted_at, submitted_at, approved_venue_id,
+  target_venue_id, applicant_email, proposed_venue_name, proposed_country,
+  proposed_city, proposed_address, proposed_website, phone, supporting_note,
+  terms_accepted_at, privacy_accepted_at, submitted_at, approved_venue_id,
   approved_membership_role, reviewed_at, reviewed_by_user_id, review_note,
   created_at, updated_at
 `;
@@ -66,6 +70,7 @@ export type AdminVenueSearchResult = {
 export type AdminCoachApplicationDetail = {
   application: AdminCoachApplication;
   locations: CoachApplicationLocationRow[];
+  targetCoach: CoachClaimTargetSummary | null;
 };
 
 export type AdminVenueApplicationDetail = {
@@ -76,11 +81,19 @@ export type AdminVenueApplicationDetail = {
 };
 
 function coachApplication(row: Record<string, unknown>): AdminCoachApplication {
+  const modeRaw = row.application_mode;
   return {
     id: String(row.id),
     user_id: String(row.user_id),
     status: row.status as CoachApplicationStatus,
     current_step: Number(row.current_step),
+    application_mode: isCoachApplicationMode(
+      typeof modeRaw === "string" ? modeRaw : null
+    )
+      ? (modeRaw as AdminCoachApplication["application_mode"])
+      : "create_new",
+    target_coach_id: (row.target_coach_id as string | null) ?? null,
+    applicant_email: (row.applicant_email as string | null) ?? null,
     full_name: (row.full_name as string | null) ?? null,
     phone: (row.phone as string | null) ?? null,
     coaching_role:
@@ -116,6 +129,7 @@ function venueApplication(row: Record<string, unknown>): AdminVenueApplication {
       (row.relationship_to_venue as AdminVenueApplication["relationship_to_venue"]) ??
       null,
     target_venue_id: (row.target_venue_id as string | null) ?? null,
+    applicant_email: (row.applicant_email as string | null) ?? null,
     proposed_venue_name: (row.proposed_venue_name as string | null) ?? null,
     proposed_country:
       (row.proposed_country as AdminVenueApplication["proposed_country"]) ?? null,
@@ -213,9 +227,16 @@ export async function getCoachApplicationDetail(
     throw new Error(`Unable to load application locations: ${locationResult.error.message}`);
   }
   if (!applicationResult.data) return null;
+  const application = coachApplication(
+    applicationResult.data as Record<string, unknown>
+  );
+  const targetCoach = application.target_coach_id
+    ? await loadTargetCoachSummary(application.target_coach_id)
+    : null;
   return {
-    application: coachApplication(applicationResult.data as Record<string, unknown>),
+    application,
     locations: (locationResult.data ?? []) as CoachApplicationLocationRow[],
+    targetCoach,
   };
 }
 

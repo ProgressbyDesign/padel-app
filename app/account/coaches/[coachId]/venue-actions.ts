@@ -82,6 +82,15 @@ export async function requestCoachVenueRelationship(
   }
 
   revalidateCoachVenuePaths(coachId, venueId);
+  const { notifyCoachVenueRelationship } = await import(
+    "@/lib/notifications/notifyRelationship"
+  );
+  void notifyCoachVenueRelationship({
+    kind: "coach_request",
+    coachId,
+    venueId,
+    recipient: "venue",
+  });
   return { ok: true, message: "Venue request sent." };
 }
 
@@ -128,7 +137,23 @@ export async function cancelCoachVenueRelationship(
   }
 
   revalidateCoachVenuePaths(relationship.coach_id, relationship.venue_id);
+  void afterCoachSideMutation(relationship, "cancelled");
   return { ok: true, message: "Request cancelled." };
+}
+
+async function afterCoachSideMutation(
+  relationship: { coach_id: string; venue_id: string },
+  kind: "accepted" | "declined" | "ended" | "cancelled"
+) {
+  const { notifyCoachVenueRelationship } = await import(
+    "@/lib/notifications/notifyRelationship"
+  );
+  void notifyCoachVenueRelationship({
+    kind,
+    coachId: relationship.coach_id,
+    venueId: relationship.venue_id,
+    recipient: "venue",
+  });
 }
 
 export async function endCoachVenueRelationship(
@@ -185,6 +210,10 @@ async function mutateCoachSideStatus(
   }
 
   revalidateCoachVenuePaths(relationship.coach_id, relationship.venue_id);
+  void afterCoachSideMutation(
+    relationship,
+    status === "active" ? "accepted" : status
+  );
   return { ok: true, message: successMessage };
 }
 

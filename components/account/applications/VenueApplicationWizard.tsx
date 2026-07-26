@@ -12,6 +12,13 @@ import {
   submitVenueApplication,
 } from "@/app/account/applications/venue/actions";
 import {
+  ErrorSummary,
+  RequiredIndicator,
+  RequiredLegend,
+  fieldAccessibility,
+  focusFirstInvalidField,
+} from "@/components/forms/FormField";
+import {
   VENUE_APPLICATION_COUNTRIES,
   VENUE_APPLICATION_MODES,
   VENUE_APPLICATION_STEPS,
@@ -194,11 +201,12 @@ export default function VenueApplicationWizard({
     if (result.status === "error") {
       setError(result.message);
       setFieldErrors(result.fieldErrors);
+      focusFirstInvalidField(result.fieldErrors);
       return;
     }
     setMessage(result.message);
     if (options.exit) {
-      router.push("/account/applications");
+      router.push("/account/personal");
       router.refresh();
       return;
     }
@@ -441,7 +449,8 @@ export default function VenueApplicationWizard({
         </ol>
       </div>
 
-      {error ? (
+      <ErrorSummary errors={fieldErrors} title={error ?? undefined} />
+      {error && Object.keys(fieldErrors).length === 0 ? (
         <p
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
@@ -450,10 +459,14 @@ export default function VenueApplicationWizard({
         </p>
       ) : null}
       {message ? (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <p
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+          role="status"
+        >
           {message}
         </p>
       ) : null}
+      <RequiredLegend />
 
       {step === 1 ? (
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
@@ -470,6 +483,7 @@ export default function VenueApplicationWizard({
           <fieldset>
             <legend className="text-sm font-medium text-primary">
               Your relationship to the venue
+              <RequiredIndicator />
             </legend>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {VENUE_RELATIONSHIPS.map((option) => (
@@ -499,8 +513,9 @@ export default function VenueApplicationWizard({
             relationship, managed from your coach profile after approval.
           </p>
 
-          <label className="block text-sm font-medium text-primary">
+          <label className="block text-sm font-medium text-primary" htmlFor="phone">
             Phone
+            <RequiredIndicator />
             <input
               className={inputClass}
               value={phone}
@@ -508,10 +523,10 @@ export default function VenueApplicationWizard({
               autoComplete="tel"
               inputMode="tel"
               placeholder="+34 …"
-              aria-invalid={Boolean(fieldErrors.phone)}
+              {...fieldAccessibility("phone", fieldErrors.phone)}
             />
             {fieldErrors.phone ? (
-              <span className="mt-1.5 block text-sm text-red-700">
+              <span id="phone-error" className="mt-1.5 block text-sm text-red-700">
                 {fieldErrors.phone}
               </span>
             ) : null}

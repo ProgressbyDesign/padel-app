@@ -76,6 +76,7 @@ export type CoachPdpQueryRow = {
   image_url?: string | null;
   specialty?: string | null;
   is_approved?: boolean | null;
+  is_claimed?: boolean | null;
   coach_venues?: CoachVenueLinkRow[] | null;
   coach_attributes?: CoachAttributesEmbed | CoachAttributesEmbed[];
   coach_achievements?: CoachAchievementEmbed[] | null;
@@ -144,6 +145,7 @@ export type CoachProfileView = {
   achievementsHero: CoachAchievement[];
   socials: CoachProfileSocial[];
   isApproved: boolean;
+  isClaimed: boolean;
   badges: CoachBadge[];
 };
 
@@ -367,6 +369,7 @@ export function rawCoachRowToProfileView(
   const coachId = String(coachRow.id ?? "").trim();
   const socials = resolveSocials(coachId, coachRow.coach_socials);
   const isApproved = Boolean(coachRow.is_approved);
+  const isClaimed = Boolean(coachRow.is_claimed);
   const activeVenueCount = (coachRow.coach_venues ?? []).length;
   const hasDescription =
     Boolean(coachRow.description?.trim()) &&
@@ -415,6 +418,7 @@ export function rawCoachRowToProfileView(
     achievementsHero,
     socials,
     isApproved,
+    isClaimed,
     badges,
   };
 }

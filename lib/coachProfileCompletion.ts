@@ -8,7 +8,8 @@ export type CoachCompletionInput = {
   experience_years: number | null;
   phone: string | null;
   email: string | null;
-  price_from: number | null;
+  /** @deprecated Pricing is tracked via pricingConfigured (availability settings). */
+  price_from?: number | null;
   image_url: string | null;
   is_approved: boolean | null;
   hasPrimaryLocation: boolean;
@@ -21,6 +22,8 @@ export type CoachCompletionInput = {
   achievementCount: number;
   activeVenueCount: number;
   availabilityLive: boolean;
+  pricingConfigured?: boolean;
+  hasFutureSession?: boolean;
   pendingBookingCount?: number;
 };
 
@@ -38,6 +41,14 @@ export type CompletionGroup = {
   items: CompletionItem[];
 };
 
+export type CompletionGroupScore = {
+  id: "essential" | "trust" | "booking";
+  title: string;
+  percent: number;
+  done: number;
+  total: number;
+};
+
 export type CoachBadge =
   | { id: "verified"; label: "Verified coach" }
   | { id: "complete"; label: "Complete profile" }
@@ -52,12 +63,54 @@ export type VenueBadge =
 
 const COMPLETE_THRESHOLD = 0.8;
 
+const GROUP_WEIGHTS = {
+  essential: 0.5,
+  trust: 0.2,
+  booking: 0.3,
+} as const;
+
+function groupPercent(done: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((done / total) * 100);
+}
+
+export function computeCompletionScores(groups: CompletionGroup[]): {
+  groupScores: CompletionGroupScore[];
+  overallPercent: number;
+} {
+  const groupScores: CompletionGroupScore[] = groups.map((group) => {
+    const done = group.items.filter((item) => item.done).length;
+    const total = group.items.length;
+    return {
+      id: group.id,
+      title: group.title,
+      percent: groupPercent(done, total),
+      done,
+      total,
+    };
+  });
+
+  const byId = Object.fromEntries(
+    groupScores.map((score) => [score.id, score.percent])
+  ) as Record<CompletionGroup["id"], number>;
+
+  const overallPercent = Math.round(
+    GROUP_WEIGHTS.essential * (byId.essential ?? 0) +
+      GROUP_WEIGHTS.trust * (byId.trust ?? 0) +
+      GROUP_WEIGHTS.booking * (byId.booking ?? 0)
+  );
+
+  return { groupScores, overallPercent };
+}
+
 export function buildCoachCompletion(
   coachId: string,
   input: CoachCompletionInput
 ): {
   groups: CompletionGroup[];
   items: CompletionItem[];
+  groupScores: CompletionGroupScore[];
+  overallPercent: number;
   completedEssential: number;
   essentialTotal: number;
   completedWeighted: number;
@@ -72,6 +125,9 @@ export function buildCoachCompletion(
   const hasDescription =
     Boolean(input.description?.trim()) &&
     (input.description?.trim().length ?? 0) >= 40;
+  const hasActiveVenue = input.activeVenueCount > 0;
+  const pricingConfigured = Boolean(input.pricingConfigured);
+  const hasFutureSession = Boolean(input.hasFutureSession);
 
   const items: CompletionItem[] = [
     {
@@ -138,16 +194,37 @@ export function buildCoachCompletion(
       weight: "trust",
     },
     {
-      id: "price",
-      label: "Price from",
-      done: input.price_from !== null,
-      href: `${base}/details`,
+      id: "trust-venue",
+      label: "Active confirmed venue",
+      done: hasActiveVenue,
+      href: `${base}/venues`,
       weight: "trust",
     },
     {
-      id: "venue",
+      id: "socials",
+      label: "Social link",
+      done: input.socialCount > 0,
+      href: `${base}/socials`,
+      weight: "trust",
+    },
+    {
+      id: "achievements",
+      label: "Achievement",
+      done: input.achievementCount > 0,
+      href: `${base}/achievements`,
+      weight: "trust",
+    },
+    {
+      id: "additional-image",
+      label: "Additional image",
+      done: input.imageCount > 1,
+      href: `${base}/images`,
+      weight: "trust",
+    },
+    {
+      id: "booking-venue",
       label: "Active venue",
-      done: input.activeVenueCount > 0,
+      done: hasActiveVenue,
       href: `${base}/venues`,
       weight: "booking",
     },
@@ -159,18 +236,18 @@ export function buildCoachCompletion(
       weight: "booking",
     },
     {
-      id: "socials",
-      label: "Social links",
-      done: input.socialCount > 0,
-      href: `${base}/socials`,
-      weight: "optional",
+      id: "pricing",
+      label: "Configured pricing",
+      done: pricingConfigured,
+      href: `${base}/availability`,
+      weight: "booking",
     },
     {
-      id: "achievements",
-      label: "Achievements",
-      done: input.achievementCount > 0,
-      href: `${base}/achievements`,
-      weight: "optional",
+      id: "future-session",
+      label: "At least one future session",
+      done: hasFutureSession,
+      href: `${base}/availability`,
+      weight: "booking",
     },
   ];
 
@@ -183,9 +260,7 @@ export function buildCoachCompletion(
     {
       id: "trust",
       title: "Trust signals",
-      items: items.filter(
-        (item) => item.weight === "trust" || item.weight === "optional"
-      ),
+      items: items.filter((item) => item.weight === "trust"),
     },
     {
       id: "booking",
@@ -194,7 +269,9 @@ export function buildCoachCompletion(
     },
   ];
 
-  const essential = items.filter((item) => item.weight === "essential");
+  const { groupScores, overallPercent } = computeCompletionScores(groups);
+
+  const essential = groups.find((group) => group.id === "essential")!.items;
   const weighted = items.filter((item) => item.weight !== "optional");
   const completedEssential = essential.filter((item) => item.done).length;
   const completedWeighted = weighted.filter((item) => item.done).length;
@@ -205,7 +282,7 @@ export function buildCoachCompletion(
   const badges: CoachBadge[] = [];
   if (input.is_approved) badges.push({ id: "verified", label: "Verified coach" });
   if (isComplete) badges.push({ id: "complete", label: "Complete profile" });
-  if (input.activeVenueCount > 0) {
+  if (hasActiveVenue) {
     badges.push({ id: "venue_confirmed", label: "Venue confirmed" });
   }
   if (input.availabilityLive) {
@@ -215,6 +292,8 @@ export function buildCoachCompletion(
   return {
     groups,
     items,
+    groupScores,
+    overallPercent,
     completedEssential,
     essentialTotal: essential.length,
     completedWeighted,
@@ -257,6 +336,8 @@ export function buildVenueCompletion(
 ): {
   groups: CompletionGroup[];
   items: CompletionItem[];
+  groupScores: CompletionGroupScore[];
+  overallPercent: number;
   isComplete: boolean;
   badges: VenueBadge[];
   completedWeighted: number;
@@ -323,14 +404,14 @@ export function buildVenueCompletion(
       label: "Gallery",
       done: input.imageCount > 1,
       href: `${base}/images`,
-      weight: "optional",
+      weight: "trust",
     },
     {
       id: "socials",
       label: "Social links",
       done: input.socialCount > 0,
       href: `${base}/socials`,
-      weight: "optional",
+      weight: "trust",
     },
     {
       id: "coaching-desc",
@@ -364,9 +445,7 @@ export function buildVenueCompletion(
     {
       id: "trust",
       title: "Trust and discovery",
-      items: items.filter(
-        (item) => item.weight === "trust" || item.weight === "optional"
-      ),
+      items: items.filter((item) => item.weight === "trust"),
     },
     {
       id: "booking",
@@ -374,6 +453,8 @@ export function buildVenueCompletion(
       items: items.filter((item) => item.weight === "booking"),
     },
   ];
+
+  const { groupScores, overallPercent } = computeCompletionScores(groups);
 
   const weighted = items.filter((item) => item.weight !== "optional");
   const completedWeighted = weighted.filter((item) => item.done).length;
@@ -392,6 +473,8 @@ export function buildVenueCompletion(
   return {
     groups,
     items,
+    groupScores,
+    overallPercent,
     isComplete,
     badges,
     completedWeighted,

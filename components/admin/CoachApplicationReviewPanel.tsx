@@ -4,25 +4,32 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   approveCoachApplicationWithExisting,
+  approveCoachClaim,
   createAndApproveCoachApplication,
   declineCoachApplication,
   requestCoachApplicationChanges,
   searchCoachesForApprovalAction,
   startCoachApplicationReview,
 } from "@/app/admin/(ops)/applications/coach-actions";
-import { coachingRoleLabel } from "@/lib/coachProfileApplication/constants";
+import {
+  COACH_APPLICATION_MODE_LABELS,
+  coachingRoleLabel,
+} from "@/lib/coachProfileApplication/constants";
 import type {
   AdminCoachApplication,
   AdminCoachSearchResult,
 } from "@/lib/admin/applicationQueries";
+import type { CoachClaimTargetSummary } from "@/lib/coachProfileApplication/types";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-primary/15 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-primary/35 focus:ring-2 focus:ring-primary/10";
 
 export default function CoachApplicationReviewPanel({
   application,
+  targetCoach,
 }: {
   application: AdminCoachApplication;
+  targetCoach: CoachClaimTargetSummary | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -46,6 +53,8 @@ export default function CoachApplicationReviewPanel({
   const [phone, setPhone] = useState(application.phone ?? "");
   const reviewable =
     application.status === "submitted" || application.status === "under_review";
+  const isClaim = application.application_mode === "claim_existing";
+  const claimAlreadyClaimed = Boolean(isClaim && targetCoach?.is_claimed);
 
   function run(
     action: () => Promise<{ ok: boolean; message: string; entityId?: string }>
@@ -80,12 +89,24 @@ export default function CoachApplicationReviewPanel({
     <aside className="space-y-5">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg">Review controls</h2>
-        {reviewable ? (
-          <div className="mb-4 rounded-xl border border-primary/10 bg-surface/60 p-3 text-xs leading-5 text-primary/65">
+        <p className="mt-2 text-sm text-primary/60">
+          Application type:{" "}
+          <span className="font-semibold text-primary">
+            {COACH_APPLICATION_MODE_LABELS[application.application_mode]}
+          </span>
+        </p>
+        {reviewable && !isClaim ? (
+          <div className="mb-4 mt-3 rounded-xl border border-primary/10 bg-surface/60 p-3 text-xs leading-5 text-primary/65">
             Approving seeds the coach profile from this application (name, role,
             description, experience, phone, locations, levels, audiences,
             outcomes). The database trigger also creates membership — you do not
             copy fields manually.
+          </div>
+        ) : null}
+        {reviewable && isClaim ? (
+          <div className="mb-4 mt-3 rounded-xl border border-primary/10 bg-surface/60 p-3 text-xs leading-5 text-primary/65">
+            Approving a claim binds membership to the existing target coach. Do
+            not create a new profile.
           </div>
         ) : null}
         {application.status === "approved" && application.coach_id ? (
@@ -176,7 +197,36 @@ export default function CoachApplicationReviewPanel({
         ) : null}
       </section>
 
-      {reviewable ? (
+      {reviewable && isClaim ? (
+        <section className="rounded-[24px] border border-primary/10 bg-white p-5">
+          <h2 className="text-lg">Approve profile claim</h2>
+          <p className="mt-2 text-sm leading-6 text-primary/55">
+            Binds this application to{" "}
+            <span className="font-semibold text-primary">
+              {targetCoach?.name || "the target coach"}
+            </span>{" "}
+            and lets the database trigger grant membership.
+          </p>
+          {claimAlreadyClaimed ? (
+            <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-950">
+              This profile has already been claimed. Approval is disabled until
+              the claim target is corrected.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={
+              pending || !application.target_coach_id || claimAlreadyClaimed
+            }
+            onClick={() => run(() => approveCoachClaim(application.id))}
+            className="mt-4 min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent disabled:opacity-40"
+          >
+            Approve claim
+          </button>
+        </section>
+      ) : null}
+
+      {reviewable && !isClaim ? (
         <>
           <section className="rounded-[24px] border border-primary/10 bg-white p-5">
             <h2 className="text-lg">Approve with existing coach</h2>

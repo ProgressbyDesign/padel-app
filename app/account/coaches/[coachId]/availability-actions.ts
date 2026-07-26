@@ -5,6 +5,10 @@ import {
   isValidSlotDuration,
 } from "@/lib/coachAvailability/constants";
 import { availabilityMutationErrorMessage } from "@/lib/coachAvailability/errors";
+import {
+  parseOptionalMoneyPair,
+  validateSessionOverrideMinor,
+} from "@/lib/coachAvailability/pricing";
 import type { AvailabilityActionResult } from "@/lib/coachAvailability/types";
 import {
   compareHm,
@@ -59,6 +63,7 @@ function revalidateAvailability(
   revalidatePath(`/account/venues/${venueId}/coaches`);
   revalidatePath(`/account/venues/${venueId}/coaches/${coachId}/availability`);
   revalidatePath(`/coach/${coachId}`);
+  revalidatePath(`/book/coach/${coachId}`);
   revalidatePath(`/venue/${venueId}`);
   revalidatePath("/admin/relationships");
 }
@@ -69,6 +74,8 @@ export async function saveCoachAvailabilitySettings(input: {
   timezone: string;
   defaultSlotDurationMinutes: number;
   isPublic: boolean;
+  currency: string;
+  defaultHourlyRate: string;
 }): Promise<AvailabilityActionResult> {
   const userId = await authorizeCoachOrAdmin(input.coachId);
   if (!userId) return { ok: false, message: "You do not have access to this coach." };
@@ -94,11 +101,21 @@ export async function saveCoachAvailabilitySettings(input: {
     };
   }
 
+  const pricing = parseOptionalMoneyPair({
+    currency: input.currency,
+    amount: input.defaultHourlyRate,
+  });
+  if (!pricing.ok) {
+    return { ok: false, message: pricing.message };
+  }
+
   const payload = {
     coach_venue_id: input.relationshipId,
     timezone: input.timezone,
     default_slot_duration_minutes: input.defaultSlotDurationMinutes,
     is_public: input.isPublic,
+    currency: pricing.currency,
+    default_hourly_rate_minor: pricing.minor,
   };
 
   const supabase = await createClient();
@@ -110,6 +127,8 @@ export async function saveCoachAvailabilitySettings(input: {
           timezone: payload.timezone,
           default_slot_duration_minutes: payload.default_slot_duration_minutes,
           is_public: payload.is_public,
+          currency: payload.currency,
+          default_hourly_rate_minor: payload.default_hourly_rate_minor,
         })
         .eq("coach_venue_id", input.relationshipId)
     : await supabase.from("coach_venue_availability_settings").insert(payload);
@@ -173,6 +192,7 @@ export async function createCoachAvailabilityRule(input: {
   validFrom: string;
   validUntil: string | null;
   isActive: boolean;
+  priceOverrideMinor?: number | null;
 }): Promise<AvailabilityActionResult> {
   const userId = await authorizeCoachOrAdmin(input.coachId);
   if (!userId) return { ok: false, message: "You do not have access to this coach." };
@@ -190,6 +210,10 @@ export async function createCoachAvailabilityRule(input: {
 
   const validationError = validateRuleFields(input);
   if (validationError) return { ok: false, message: validationError };
+
+  const priceOverrideMinor = input.priceOverrideMinor ?? null;
+  const overrideError = validateSessionOverrideMinor(priceOverrideMinor);
+  if (overrideError) return { ok: false, message: overrideError };
 
   const settings = await loadAvailabilitySettings(input.relationshipId);
   if (!settings) {
@@ -209,6 +233,7 @@ export async function createCoachAvailabilityRule(input: {
     valid_from: input.validFrom,
     valid_until: input.validUntil,
     is_active: input.isActive,
+    price_override_minor: priceOverrideMinor,
   });
 
   if (error) {
@@ -234,6 +259,7 @@ export async function updateCoachAvailabilityRule(input: {
   validFrom: string;
   validUntil: string | null;
   isActive: boolean;
+  priceOverrideMinor?: number | null;
 }): Promise<AvailabilityActionResult> {
   const userId = await authorizeCoachOrAdmin(input.coachId);
   if (!userId) return { ok: false, message: "You do not have access to this coach." };
@@ -252,6 +278,10 @@ export async function updateCoachAvailabilityRule(input: {
   const validationError = validateRuleFields(input);
   if (validationError) return { ok: false, message: validationError };
 
+  const priceOverrideMinor = input.priceOverrideMinor ?? null;
+  const overrideError = validateSessionOverrideMinor(priceOverrideMinor);
+  if (overrideError) return { ok: false, message: overrideError };
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_availability_rules")
@@ -263,6 +293,7 @@ export async function updateCoachAvailabilityRule(input: {
       valid_from: input.validFrom,
       valid_until: input.validUntil,
       is_active: input.isActive,
+      price_override_minor: priceOverrideMinor,
     })
     .eq("id", input.ruleId)
     .eq("coach_venue_id", input.relationshipId)
@@ -378,6 +409,7 @@ export async function createCoachAvailabilityException(input: {
   endTime: string;
   allDay?: boolean;
   slotDurationMinutes: number | null;
+  priceOverrideMinor?: number | null;
 }): Promise<AvailabilityActionResult> {
   const userId = await authorizeCoachOrAdmin(input.coachId);
   if (!userId) return { ok: false, message: "You do not have access to this coach." };
@@ -413,6 +445,11 @@ export async function createCoachAvailabilityException(input: {
   if (compareHm(startTime, endTime) >= 0 && !input.allDay) {
     return { ok: false, message: "End time must be after start time." };
   }
+
+  const priceOverrideMinor =
+    input.exceptionType === "unavailable" ? null : (input.priceOverrideMinor ?? null);
+  const overrideError = validateSessionOverrideMinor(priceOverrideMinor);
+  if (overrideError) return { ok: false, message: overrideError };
 
   if (input.exceptionType === "unavailable") {
     if (input.slotDurationMinutes != null) {
@@ -470,6 +507,7 @@ export async function createCoachAvailabilityException(input: {
     ends_at: endsAt.toISOString(),
     slot_duration_minutes:
       input.exceptionType === "unavailable" ? null : input.slotDurationMinutes,
+    price_override_minor: priceOverrideMinor,
   });
 
   if (error) {

@@ -1,10 +1,13 @@
 import Link from "next/link";
+import WithdrawCoachApplicationButton from "@/components/account/applications/WithdrawCoachApplicationButton";
 import {
   APPLICATION_STATUS_LABELS,
   AUDIENCES,
+  COACH_APPLICATION_MODE_LABELS,
   COACHING_OUTCOMES,
   PLAYER_LEVELS,
   coachingRoleLabel,
+  isWithdrawableApplicationStatus,
   optionLabel,
 } from "@/lib/coachProfileApplication/constants";
 import type { CoachApplicationWithLocations } from "@/lib/coachProfileApplication/types";
@@ -16,19 +19,27 @@ export default function CoachApplicationReadOnly({
   data: CoachApplicationWithLocations;
   verifiedEmail: string;
 }) {
-  const { application, locations } = data;
+  const { application, locations, targetCoach } = data;
   const statusLabel = APPLICATION_STATUS_LABELS[application.status];
   const coachHref = application.coach_id
     ? `/account/coaches/${application.coach_id}`
     : null;
+  const isClaim = application.application_mode === "claim_existing";
+  const canWithdraw = isWithdrawableApplicationStatus(application.status);
 
   const statusCopy =
     application.status === "submitted" || application.status === "under_review"
-      ? "Your application is with our team. Editing is locked until review finishes — we email updates to your verified address."
+      ? isClaim
+        ? "Your profile claim is with our team. Editing is locked until review finishes — we email updates to your verified address."
+        : "Your application is with our team. Editing is locked until review finishes — we email updates to your verified address."
       : application.status === "approved"
-        ? "Approved. Your coach profile was seeded from this application. Finish images, venues, and availability on your profile."
+        ? isClaim
+          ? "Approved. You can manage the claimed coach profile from your account."
+          : "Approved. Your coach profile was seeded from this application. Finish images, venues, and availability on your profile."
         : application.status === "declined"
-          ? "This application was declined. Contact Padel Pathways if you need guidance on next steps."
+          ? isClaim
+            ? "This profile claim was declined. Contact Padel Pathways if you need guidance on next steps."
+            : "This application was declined. Contact Padel Pathways if you need guidance on next steps."
           : application.status === "withdrawn"
             ? "This application was withdrawn."
             : application.status === "changes_requested"
@@ -37,6 +48,22 @@ export default function CoachApplicationReadOnly({
 
   return (
     <div className="space-y-6">
+      {isClaim && targetCoach ? (
+        <section className="rounded-[24px] border border-primary/10 bg-surface/50 p-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
+            {COACH_APPLICATION_MODE_LABELS.claim_existing}
+          </p>
+          <p className="mt-2 text-base font-semibold text-primary">
+            Claiming {targetCoach.name || "coach profile"}
+          </p>
+          <p className="mt-1 text-sm text-primary/60">
+            {[targetCoach.primaryLocation, targetCoach.venueName]
+              .filter(Boolean)
+              .join(" · ") || "Existing public profile"}
+          </p>
+        </section>
+      ) : null}
+
       <section className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Application status
@@ -189,12 +216,17 @@ export default function CoachApplicationReadOnly({
         </div>
       </section>
 
-      <Link
-        href="/account/applications"
-        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
-      >
-        Back to applications
-      </Link>
+      <div className="flex flex-wrap gap-3">
+        <Link
+          href="/account/applications"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
+        >
+          Back to applications
+        </Link>
+        {canWithdraw ? (
+          <WithdrawCoachApplicationButton applicationId={application.id} />
+        ) : null}
+      </div>
     </div>
   );
 }

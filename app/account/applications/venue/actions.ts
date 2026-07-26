@@ -45,10 +45,19 @@ async function requireUserId(): Promise<string | null> {
   return userId;
 }
 
+async function claimsEmail(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const email =
+    typeof data?.claims?.email === "string" ? data.claims.email.trim() : "";
+  return email || null;
+}
+
 function revalidateVenueApplicationPaths() {
   revalidatePath("/account/applications");
   revalidatePath("/account/applications/venue");
   revalidatePath("/account");
+  revalidatePath("/account/personal");
 }
 
 export async function createVenueApplicationDraft(): Promise<VenueApplicationActionResult> {
@@ -67,6 +76,13 @@ export async function createVenueApplicationDraft(): Promise<VenueApplicationAct
     );
   }
 
+  const applicantEmail = await claimsEmail();
+  if (!applicantEmail) {
+    return errorResult(
+      "Your account email is required to start an application."
+    );
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("venue_profile_applications")
@@ -74,6 +90,7 @@ export async function createVenueApplicationDraft(): Promise<VenueApplicationAct
       user_id: userId,
       status: "draft",
       current_step: 1,
+      applicant_email: applicantEmail,
     })
     .select("id")
     .single();
@@ -105,7 +122,10 @@ export async function saveVenueApplicationRole(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
-  const fieldErrors = validateVenueRoleDraft(input.values);
+  const advancing = !input.exit && input.nextStep != null && input.nextStep > 1;
+  const fieldErrors = advancing
+    ? validateVenueRoleForSubmit(input.values)
+    : validateVenueRoleDraft(input.values);
   if (Object.keys(fieldErrors).length > 0) {
     return errorResult("Fix the highlighted fields before continuing.", fieldErrors);
   }
@@ -155,7 +175,10 @@ export async function saveVenueApplicationVenue(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
-  const fieldErrors = validateVenueChoiceDraft(input.values);
+  const advancing = !input.exit && input.nextStep != null && input.nextStep > 2;
+  const fieldErrors = advancing
+    ? validateVenueChoiceForSubmit(input.values)
+    : validateVenueChoiceDraft(input.values);
   if (Object.keys(fieldErrors).length > 0) {
     return errorResult("Fix the highlighted fields before continuing.", fieldErrors);
   }
@@ -333,6 +356,7 @@ export async function submitVenueApplication(input: {
 
   const now = new Date().toISOString();
   const supabase = await createClient();
+  const applicantEmail = await claimsEmail();
   const { error } = await supabase
     .from("venue_profile_applications")
     .update({
@@ -340,6 +364,7 @@ export async function submitVenueApplication(input: {
       current_step: 4,
       terms_accepted_at: now,
       privacy_accepted_at: now,
+      ...(applicantEmail ? { applicant_email: applicantEmail } : {}),
     })
     .eq("id", application.id)
     .eq("user_id", userId);
@@ -348,6 +373,22 @@ export async function submitVenueApplication(input: {
     return errorResult(
       "We could not submit your application. Please try again shortly."
     );
+  }
+
+  const email = (applicantEmail || application.applicant_email || "").trim();
+  if (email) {
+    const { sendVenueApplicationStatusEmail } = await import(
+      "@/lib/notifications/applicationEmails"
+    );
+    void sendVenueApplicationStatusEmail({
+      to: email,
+      status: "submitted",
+      mode: application.application_mode,
+      venueName:
+        application.proposed_venue_name ||
+        application.target_venue_id ||
+        null,
+    });
   }
 
   revalidateVenueApplicationPaths();

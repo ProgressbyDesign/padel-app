@@ -1,5 +1,6 @@
 import type {
   AudienceValue,
+  CoachApplicationMode,
   CoachApplicationStatus,
   CoachingOutcomeValue,
   CoachingRoleValue,
@@ -21,11 +22,24 @@ export type CoachApplicationLocationRow = {
   created_at: string;
 };
 
+export type CoachClaimTargetSummary = {
+  id: string;
+  name: string | null;
+  role: string | null;
+  image_url: string | null;
+  primaryLocation: string | null;
+  venueName: string | null;
+  is_claimed: boolean;
+};
+
 export type CoachProfileApplicationRow = {
   id: string;
   user_id: string;
   status: CoachApplicationStatus;
   current_step: number;
+  application_mode: CoachApplicationMode;
+  target_coach_id: string | null;
+  applicant_email: string | null;
   full_name: string | null;
   phone: string | null;
   coaching_role: CoachingRoleValue | null;
@@ -49,6 +63,7 @@ export type CoachProfileApplicationRow = {
 export type CoachApplicationWithLocations = {
   application: CoachProfileApplicationRow;
   locations: CoachApplicationLocationRow[];
+  targetCoach: CoachClaimTargetSummary | null;
 };
 
 export type CoachApplicationActionStatus =

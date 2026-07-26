@@ -6,6 +6,7 @@ import { useState } from "react";
 import { cancelPlayerBookingRequest } from "@/app/account/bookings/actions";
 import { ConfirmActionButton } from "@/components/account/RelationshipActionControls";
 import {
+  formatBookingSessionPrice,
   formatBookingWhen,
   playerStatusLabel,
   statusTone,
@@ -38,6 +39,12 @@ export default function PlayerBookingCard({
           <p className="mt-1 text-sm text-primary/65">
             {booking.venue?.name ?? "Venue"} · {formatBookingWhen(booking)} ·{" "}
             {booking.timezone}
+          </p>
+          <p className="mt-1 text-sm text-primary/55">
+            {formatBookingSessionPrice(
+              booking.price_amount_minor,
+              booking.currency
+            )}
           </p>
           <p
             className={`mt-3 inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusTone(

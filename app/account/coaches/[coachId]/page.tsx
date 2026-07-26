@@ -7,6 +7,7 @@ import {
   Circle,
   ExternalLink,
 } from "lucide-react";
+import CompletionProgressRings from "@/components/account/CompletionProgressRings";
 import { buildCoachCompletion } from "@/lib/coachProfileCompletion";
 import { formatCoachCardPrice } from "@/lib/formatCoachPrice";
 import { loadManagedCoachOverview } from "@/lib/queries/managedCoach";
@@ -40,6 +41,7 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
     hasPrimaryLocation,
     availabilityStatus,
     nextAvailableAt,
+    pricingConfigured,
     pendingBookingCount,
   } = result;
 
@@ -64,6 +66,8 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
     achievementCount,
     activeVenueCount: venueCount,
     availabilityLive: availabilityStatus === "live",
+    pricingConfigured,
+    hasFutureSession: Boolean(nextAvailableAt),
     pendingBookingCount,
   });
 
@@ -174,11 +178,19 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
             Focus on essential details first, then trust signals and booking
             readiness. This is not a search ranking score.
           </p>
-          <p className="mt-3 text-sm font-semibold text-primary">
-            {completion.completedWeighted} of {completion.weightedTotal} core
-            items complete
-          </p>
         </div>
+
+        <div className="mt-6">
+          <CompletionProgressRings
+            overallPercent={completion.overallPercent}
+            groupScores={completion.groupScores}
+          />
+        </div>
+
+        <p className="mt-6 text-sm font-semibold text-primary">
+          {completion.completedWeighted} of {completion.weightedTotal} core
+          items complete
+        </p>
 
         <div className="mt-6 space-y-6">
           {completion.groups.map((group) => (
