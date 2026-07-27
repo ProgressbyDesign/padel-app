@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowRight,
+  Calendar,
   CheckCircle2,
   Circle,
   ExternalLink,
@@ -10,10 +11,13 @@ import {
   Link2,
   PenSquare,
   Star,
+  UserRound,
 } from "lucide-react";
 import CompletionProgressRings from "@/components/account/CompletionProgressRings";
+import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
 import { buildVenueCompletion } from "@/lib/coachProfileCompletion";
 import { loadManagedVenueOverview } from "@/lib/queries/managedVenue";
+import { loadVenueOpsOverview } from "@/lib/queries/venueOperations";
 import { getStructuredOpeningHours } from "@/lib/openingHours";
 
 export const metadata: Metadata = {
@@ -25,9 +29,26 @@ type PageProps = {
   params: Promise<{ venueId: string }>;
 };
 
+function formatNextSession(
+  startsAt: string,
+  timezone: string
+): string {
+  return formatInTimeZone(startsAt, timezone, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
 export default async function ManagedVenueOverviewPage({ params }: PageProps) {
   const { venueId } = await params;
-  const result = await loadManagedVenueOverview(venueId);
+  const [result, ops] = await Promise.all([
+    loadManagedVenueOverview(venueId),
+    loadVenueOpsOverview(venueId),
+  ]);
   if (!result) notFound();
 
   const {
@@ -61,6 +82,36 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
     hasCoachAvailability,
     isVerified: Boolean(venue.is_approved),
   });
+
+  const summary = ops?.summary;
+  const alerts = ops?.alerts ?? [];
+  const nextSession = ops?.nextSession ?? null;
+
+  const summaryCards: Array<{ label: string; value: string }> = summary
+    ? [
+        { label: "Active coaches", value: String(summary.activeCoaches) },
+        { label: "Public coaches", value: String(summary.publicCoaches) },
+        { label: "Hidden schedules", value: String(summary.hiddenSchedules) },
+        {
+          label: "Sessions this week",
+          value: String(summary.sessionsThisWeek),
+        },
+        {
+          label: "Confirmed sessions",
+          value: String(summary.confirmedFuture),
+        },
+        {
+          label: "Pending coach relationships",
+          value: String(summary.pendingRelationships),
+        },
+        {
+          label: "Next session",
+          value: nextSession
+            ? formatNextSession(nextSession.starts_at, nextSession.timezone)
+            : "None",
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-8">
@@ -164,6 +215,78 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
             : "No Google Place connection"}
         </div>
       </section>
+
+      {summaryCards.length > 0 ? (
+        <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
+          <div>
+            <h2 className="text-2xl font-bold text-primary">Operations</h2>
+            <p className="mt-1 text-sm text-primary/60">
+              Coaching schedule and booking activity for this venue.
+            </p>
+          </div>
+
+          <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div
+                key={card.label}
+                className="rounded-2xl border border-primary/10 bg-surface/60 p-4"
+              >
+                <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
+                  {card.label}
+                </dt>
+                <dd className="mt-2 text-lg font-bold text-primary">
+                  {card.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          {alerts.length > 0 ? (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+              <h3 className="text-sm font-bold text-amber-950">
+                Needs attention
+              </h3>
+              <ul className="mt-3 space-y-2">
+                {alerts.map((alert) => (
+                  <li key={alert.id}>
+                    <Link
+                      href={alert.href}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-white/70 px-3 py-2.5 text-sm font-semibold text-amber-950 transition hover:bg-white"
+                    >
+                      <span>{alert.message}</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href={`${base}/schedule`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent"
+            >
+              <Calendar className="h-4 w-4" aria-hidden />
+              View schedule
+            </Link>
+            <Link
+              href={`${base}/coaches`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/15 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-surface"
+            >
+              <UserRound className="h-4 w-4" aria-hidden />
+              Manage coaches
+            </Link>
+            <Link
+              href={`/venue/${encodeURIComponent(venue.id)}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/15 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-surface"
+            >
+              View public venue
+              <ExternalLink className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
         <div>

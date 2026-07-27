@@ -115,8 +115,11 @@ export type VenueCombinedAvailabilityPreviewSlot = {
   priceAmountMinor: number | null;
   currency: string | null;
   state?: "available" | "reserved";
+  visibility: "public" | "hidden";
   coachId: string;
   coachName: string;
+  coachRole: string | null;
   coachImageUrl: string | null;
   relationshipId: string;
+  durationMinutes: number;
 };

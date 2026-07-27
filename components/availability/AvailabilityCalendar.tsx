@@ -29,7 +29,11 @@ export type CalendarSlot = {
   coachId?: string;
   coachName?: string;
   coachImageUrl?: string | null;
+  coachRole?: string | null;
   relationshipId?: string;
+  durationMinutes?: number;
+  /** Venue management preview: public vs hidden schedule. */
+  visibility?: "public" | "hidden";
 };
 
 type Props = {
@@ -82,9 +86,16 @@ function slotStateLabel(slot: CalendarSlot, context: CalendarContext): string | 
   if (context === "public") return null;
   if (slot.state === "confirmed") return "Confirmed";
   if (slot.state === "reserved") return "Reserved";
-  if (slot.state === "requested" && (slot.requestedCount ?? 0) > 0) {
+  if (slot.state === "requested") {
+    if (context === "venue_preview") {
+      return "Request awaiting coach response";
+    }
     const n = slot.requestedCount ?? 0;
-    return n === 1 ? "1 request" : `${n} requests`;
+    if (n > 0) return n === 1 ? "1 request" : `${n} requests`;
+    return "Request awaiting coach response";
+  }
+  if (context === "venue_preview" && slot.visibility === "hidden") {
+    return "Hidden from public";
   }
   return null;
 }
@@ -105,8 +116,14 @@ function slotAccessibleName(slot: CalendarSlot, context: CalendarContext) {
   return parts.join(", ");
 }
 
+function isInspectOnlySlot(slot: CalendarSlot) {
+  return slot.state === "reserved" || slot.state === "confirmed" || slot.state === "requested";
+}
+
 function isBlockedSlot(slot: CalendarSlot, context: CalendarContext) {
   if (context === "public") return false;
+  // Venue operations calendar: reserved/requested remain inspectable when selectable.
+  if (context === "venue_preview") return false;
   return slot.state === "confirmed" || slot.state === "reserved";
 }
 
@@ -486,6 +503,7 @@ function AgendaSlot({
   }
 
   if (selectable && !blocked) {
+    const inspect = isInspectOnlySlot(slot);
     return (
       <button
         type="button"
@@ -495,7 +513,9 @@ function AgendaSlot({
         className={`${baseClass} ${
           selected
             ? "border-primary bg-primary text-accent"
-            : "border-primary/15 bg-surface text-primary hover:border-primary/30"
+            : inspect
+              ? "border-primary/10 bg-surface/70 text-primary/80 hover:border-primary/25"
+              : "border-primary/15 bg-surface text-primary hover:border-primary/30"
         }`}
       >
         {body}
@@ -582,6 +602,7 @@ function GridSlot({
   }
 
   if (selectable && !blocked) {
+    const inspect = isInspectOnlySlot(slot);
     return (
       <button
         type="button"
@@ -591,7 +612,9 @@ function GridSlot({
         className={`${baseClass} ${
           selected
             ? "border-primary bg-primary text-accent"
-            : "border-primary/20 bg-white text-primary hover:border-primary/40 hover:bg-surface"
+            : inspect
+              ? "border-primary/10 bg-primary/5 text-primary/80 hover:border-primary/25"
+              : "border-primary/20 bg-white text-primary hover:border-primary/40 hover:bg-surface"
         }`}
       >
         {inner}

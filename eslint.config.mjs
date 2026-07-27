@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local Cursor skill scripts (not app code)
+    ".cursor/**",
   ]),
 ]);
 

@@ -42,6 +42,8 @@ function revalidateVenueCoachPaths(coachId: string, venueId: string) {
   revalidatePath("/account");
   revalidatePath("/account/personal");
   revalidatePath(`/account/venues/${venueId}`);
+  revalidatePath(`/account/venues/${venueId}/schedule`);
+  revalidatePath(`/account/venues/${venueId}/sessions`);
   revalidatePath(`/account/venues/${venueId}/coaches`);
   revalidatePath(`/account/venues/${venueId}/coaches/${coachId}/availability`);
   revalidatePath(`/account/coaches/${coachId}`);

@@ -20,11 +20,16 @@ export default function VenueCombinedAvailabilityPreview({
     priceAmountMinor: slot.priceAmountMinor,
     currency: slot.currency,
     state: slot.state,
+    visibility: slot.visibility,
     coachId: slot.coachId,
     coachName: slot.coachName,
+    coachRole: slot.coachRole,
     coachImageUrl: slot.coachImageUrl,
     relationshipId: slot.relationshipId,
+    durationMinutes: slot.durationMinutes,
   }));
+
+  const hasHidden = slots.some((slot) => slot.visibility === "hidden");
 
   return (
     <section className="space-y-3 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
@@ -33,9 +38,15 @@ export default function VenueCombinedAvailabilityPreview({
           Available sessions at this venue
         </h2>
         <p className="mt-1 text-sm text-primary/60">
-          Combined schedule for active coaches. Reserved slots are booked —
-          requester details are not shown.
+          Combined schedule for active coaches. Public pages only show public
+          schedules. Reserved slots are booked — requester details are not shown.
         </p>
+        {hasHidden ? (
+          <p className="mt-2 text-sm text-amber-900/80">
+            Some schedules are configured but hidden from the public venue
+            calendar.
+          </p>
+        ) : null}
       </div>
 
       {!hasActiveCoaches ? (
@@ -50,7 +61,6 @@ export default function VenueCombinedAvailabilityPreview({
         <VenueAvailabilityCalendar
           slots={calendarSlots}
           context="venue_preview"
-          selectable={false}
           emptyMessage="No sessions are available this week."
         />
       )}

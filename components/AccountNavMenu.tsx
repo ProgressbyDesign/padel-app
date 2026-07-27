@@ -4,21 +4,8 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { logoutAction } from "@/app/actions/auth";
 import { setWorkspacePreference } from "@/app/account/workspace/actions";
+import AccountAvatar from "@/components/account/AccountAvatar";
 import type { AccountNavContext } from "@/lib/workspace/resolve";
-
-function initialsFrom(context: AccountNavContext): string {
-  const name = context.fullName?.trim();
-  if (name) {
-    const parts = name.split(/\s+/).filter(Boolean);
-    const letters = parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "");
-    if (letters.join("")) return letters.join("");
-  }
-  const email = context.email.trim();
-  if (email) return email[0]?.toUpperCase() ?? "A";
-  return "A";
-}
 
 export default function AccountNavMenu({
   account,
@@ -109,6 +96,14 @@ export default function AccountNavMenu({
       >
         Applications
       </Link>
+      <Link
+        href="/account/settings"
+        role="menuitem"
+        className={itemClass}
+        onClick={close}
+      >
+        Account settings
+      </Link>
 
       {account.coaches.length > 0 ? (
         <>
@@ -196,12 +191,12 @@ export default function AccountNavMenu({
           onClick={() => setOpen((value) => !value)}
           className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-base font-medium text-primary/75 transition hover:bg-surface"
         >
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-accent"
-            aria-hidden
-          >
-            {initialsFrom(account)}
-          </span>
+          <AccountAvatar
+            url={account.avatarUrl}
+            name={account.fullName}
+            email={account.email}
+            size="sm"
+          />
           <span className="min-w-0">
             <span className="block truncate font-semibold text-primary">
               {account.fullName || "My account"}
@@ -226,13 +221,19 @@ export default function AccountNavMenu({
         aria-controls={menuId}
         aria-label="Account menu"
         onClick={() => setOpen((value) => !value)}
-        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition ${
+        className={`overflow-hidden rounded-full transition ${
           overlay
-            ? "bg-white/15 text-white hover:bg-white/25"
-            : "bg-primary text-accent hover:bg-primary/90"
+            ? "ring-2 ring-white/25 hover:ring-white/40"
+            : "hover:opacity-90"
         }`}
       >
-        {initialsFrom(account)}
+        <AccountAvatar
+          url={account.avatarUrl}
+          name={account.fullName}
+          email={account.email}
+          size="sm"
+          tone={overlay && !account.avatarUrl ? "overlay" : "default"}
+        />
       </button>
       {open ? menu : null}
     </div>

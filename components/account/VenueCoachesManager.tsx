@@ -28,6 +28,8 @@ import type {
   RelationshipActionResult,
 } from "@/lib/coachVenues/types";
 import { formatInTimeZone } from "@/lib/coachAvailability/timezone";
+import { coachHealthLabel } from "@/lib/venueOperations/coachHealth";
+import type { CoachAvailabilityHealth } from "@/lib/venueOperations/types";
 
 function statusTone(status: string) {
   if (status === "active") return "green" as const;
@@ -38,20 +40,14 @@ function statusTone(status: string) {
 
 export default function VenueCoachesManager({
   venueId,
+  venueName,
   board,
-  availability = {},
+  health = {},
 }: {
   venueId: string;
+  venueName: string;
   board: CoachVenueBoard;
-  availability?: Record<
-    string,
-    {
-      configured: boolean;
-      isPublic: boolean;
-      timezone: string | null;
-      nextSlotStartsAt: string | null;
-    }
-  >;
+  health?: Record<string, CoachAvailabilityHealth>;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -256,66 +252,57 @@ export default function VenueCoachesManager({
         empty="No current coach relationships."
         items={board.current}
         renderItem={(row) => {
-          const hint = availability[row.id];
+          const rowHealth = health[row.id];
           return (
-          <RelationshipCard
-            key={row.id}
-            title={row.coach?.name ?? "Coach"}
-            subtitle={row.coach?.role ?? undefined}
-            imageUrl={row.coach?.image_url}
-            href={row.coach ? `/coach/${row.coach.id}` : undefined}
-            status={row.status}
-            isPrimary={row.is_primary}
-            meta={`Via ${COACH_VENUE_INITIATOR_LABELS[row.initiated_by]}`}
-            availabilityNote={
-              row.status === "active"
-                ? hint?.configured
-                  ? `${hint.isPublic ? "Public" : "Private"} availability${
-                      hint.nextSlotStartsAt && hint.timezone
-                        ? ` · next ${formatInTimeZone(
-                            hint.nextSlotStartsAt,
-                            hint.timezone,
-                            {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hourCycle: "h23",
-                            }
-                          )}`
-                        : ""
-                    }`
-                  : "No availability set"
-                : undefined
-            }
-            actions={
-              <>
-                {row.status === "active" && row.coach ? (
-                  <Link
-                    href={`/account/venues/${encodeURIComponent(venueId)}/coaches/${encodeURIComponent(row.coach.id)}/availability`}
-                    className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
-                  >
-                    View schedule
-                  </Link>
-                ) : null}
-                {row.status === "active" ? (
-                  <ConfirmActionButton
-                    label="End relationship"
-                    confirmLabel="Confirm end"
-                    onConfirm={() => endVenueCoachRelationship(row.id)}
-                    onDone={applyResult}
-                  />
-                ) : null}
-                {row.status === "unverified" ? (
-                  <p className="max-w-sm text-xs leading-5 text-amber-900">
-                    Imported association — awaiting verification. Admin review is
-                    required before this becomes a confirmed relationship.
-                  </p>
-                ) : null}
-              </>
-            }
-          />
+            <RelationshipCard
+              key={row.id}
+              title={row.coach?.name ?? "Coach"}
+              subtitle={row.coach?.role ?? undefined}
+              imageUrl={row.coach?.image_url}
+              href={row.coach ? `/coach/${row.coach.id}` : undefined}
+              status={row.status}
+              isPrimary={row.is_primary}
+              meta={`Via ${COACH_VENUE_INITIATOR_LABELS[row.initiated_by]}`}
+              availabilityNote={
+                row.status === "active" && rowHealth
+                  ? renderActiveHealthNote(rowHealth, venueId, venueName)
+                  : undefined
+              }
+              actions={
+                <>
+                  {row.status === "active" && row.coach ? (
+                    <Link
+                      href={`/account/venues/${encodeURIComponent(venueId)}/schedule?coach=${encodeURIComponent(row.coach.id)}`}
+                      className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
+                    >
+                      View schedule
+                    </Link>
+                  ) : null}
+                  {row.status === "active" && row.coach ? (
+                    <Link
+                      href={`/account/venues/${encodeURIComponent(venueId)}/coaches/${encodeURIComponent(row.coach.id)}/availability`}
+                      className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
+                    >
+                      Availability
+                    </Link>
+                  ) : null}
+                  {row.status === "active" ? (
+                    <ConfirmActionButton
+                      label="End relationship"
+                      confirmLabel="Confirm end"
+                      onConfirm={() => endVenueCoachRelationship(row.id)}
+                      onDone={applyResult}
+                    />
+                  ) : null}
+                  {row.status === "unverified" ? (
+                    <p className="max-w-sm text-xs leading-5 text-amber-900">
+                      Imported association — awaiting verification. Admin review is
+                      required before this becomes a confirmed relationship.
+                    </p>
+                  ) : null}
+                </>
+              }
+            />
           );
         }}
       />
@@ -396,6 +383,83 @@ export default function VenueCoachesManager({
   );
 }
 
+function renderActiveHealthNote(
+  rowHealth: CoachAvailabilityHealth,
+  venueId: string,
+  venueName: string
+): ReactNode {
+  const tz = rowHealth.timezone ?? "UTC";
+  const nextSlot =
+    rowHealth.nextFutureSlotStartsAt && rowHealth.timezone
+      ? formatInTimeZone(rowHealth.nextFutureSlotStartsAt, tz, {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        })
+      : null;
+
+  const visibility = !rowHealth.settingsConfigured
+    ? null
+    : rowHealth.isPublic
+      ? "Public"
+      : "Hidden";
+
+  return (
+    <div className="mt-2 space-y-1.5 text-xs text-primary/70">
+      <p>
+        <span className="font-semibold text-primary">
+          {coachHealthLabel(rowHealth.state)}
+        </span>
+        {visibility ? (
+          <span>
+            {" "}
+            · {visibility}
+          </span>
+        ) : null}
+      </p>
+      {rowHealth.state === "hidden" ? (
+        <p>
+          Schedule configured, but hidden from public booking. Only the coach can
+          publish or change their availability.
+        </p>
+      ) : null}
+      {rowHealth.state === "not_configured" ? (
+        rowHealth.coachEmail ? (
+          <p>
+            <a
+              href={`mailto:${rowHealth.coachEmail}?subject=${encodeURIComponent(
+                `Please configure availability for ${venueName}`
+              )}`}
+              className="font-semibold text-primary underline"
+            >
+              Remind coach by email
+            </a>
+          </p>
+        ) : (
+          <p>Contact details unavailable</p>
+        )
+      ) : null}
+      {nextSlot ? <p>Next slot: {nextSlot}</p> : null}
+      <p>
+        Upcoming confirmed: {rowHealth.acceptedNext30Days}
+        {" · "}
+        Pending requests: {rowHealth.requestedAwaitingResponse}
+      </p>
+      <p>
+        <Link
+          href={`/account/venues/${encodeURIComponent(venueId)}/schedule?coach=${encodeURIComponent(rowHealth.coachId)}`}
+          className="font-semibold text-primary underline"
+        >
+          View schedule
+        </Link>
+      </p>
+    </div>
+  );
+}
+
 function RelationshipSection({
   title,
   empty,
@@ -463,7 +527,7 @@ function RelationshipCard({
   status: CoachVenueRelationship["status"];
   isPrimary?: boolean;
   meta?: string;
-  availabilityNote?: string;
+  availabilityNote?: ReactNode;
   imageUrl?: string | null;
   actions?: ReactNode;
 }) {
@@ -492,9 +556,7 @@ function RelationshipCard({
             </div>
             {subtitle ? <p className="mt-1 text-sm text-primary/55">{subtitle}</p> : null}
             {meta ? <p className="mt-1 text-xs text-primary/45">{meta}</p> : null}
-            {availabilityNote ? (
-              <p className="mt-1 text-xs text-primary/65">{availabilityNote}</p>
-            ) : null}
+            {availabilityNote}
           </div>
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
