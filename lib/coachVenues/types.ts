@@ -49,6 +49,7 @@ export type CoachVenueSearchVenue = {
   country: string | null;
   image_url: string | null;
   existingStatus: CoachVenueStatus | null;
+  managedByCurrentUser: boolean;
 };
 
 export type CoachVenueSearchCoach = {
@@ -58,9 +59,14 @@ export type CoachVenueSearchCoach = {
   image_url: string | null;
   location: string | null;
   existingStatus: CoachVenueStatus | null;
+  managedByCurrentUser: boolean;
 };
 
 export type RelationshipActionResult = {
   ok: boolean;
   message: string;
+  status?: CoachVenueStatus;
+  relationshipId?: string;
+  alreadyConnected?: boolean;
+  activatedImmediately?: boolean;
 };

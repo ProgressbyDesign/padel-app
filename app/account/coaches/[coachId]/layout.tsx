@@ -23,7 +23,6 @@ export default async function ManagedCoachLayout({
         name={shell.name}
         membershipRole={shell.membershipRole}
         isApproved={shell.is_approved}
-        dataQualityStatus={shell.data_quality_status}
         primaryLocation={shell.primaryLocation}
         coachingRole={shell.role}
       />

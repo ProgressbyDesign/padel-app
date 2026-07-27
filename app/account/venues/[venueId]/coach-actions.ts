@@ -1,7 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { coachVenueMutationErrorMessage } from "@/lib/coachVenues/errors";
+import {
+  CURRENT_COACH_VENUE_STATUSES,
+  isCoachVenueStatus,
+  type CoachVenueStatus,
+} from "@/lib/coachVenues/constants";
+import {
+  ACTIVE_CONNECTED_MESSAGE,
+  DUPLICATE_MESSAGE,
+  coachVenueMutationErrorMessage,
+} from "@/lib/coachVenues/errors";
 import type { RelationshipActionResult } from "@/lib/coachVenues/types";
 import {
   loadCoachVenueById,
@@ -31,12 +40,57 @@ async function requireVenueMember(venueId: string): Promise<string | null> {
 
 function revalidateVenueCoachPaths(coachId: string, venueId: string) {
   revalidatePath("/account");
+  revalidatePath("/account/personal");
   revalidatePath(`/account/venues/${venueId}`);
+  revalidatePath(`/account/venues/${venueId}/schedule`);
+  revalidatePath(`/account/venues/${venueId}/sessions`);
   revalidatePath(`/account/venues/${venueId}/coaches`);
+  revalidatePath(`/account/venues/${venueId}/coaches/${coachId}/availability`);
   revalidatePath(`/account/coaches/${coachId}`);
   revalidatePath(`/account/coaches/${coachId}/venues`);
+  revalidatePath(`/account/coaches/${coachId}/availability`);
   revalidatePath(`/venue/${venueId}`);
   revalidatePath(`/coach/${coachId}`);
+}
+
+async function findCurrentCoachVenuePair(
+  coachId: string,
+  venueId: string
+): Promise<{ id: string; status: CoachVenueStatus } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("coach_venues")
+    .select("id, status")
+    .eq("coach_id", coachId)
+    .eq("venue_id", venueId)
+    .in("status", [...CURRENT_COACH_VENUE_STATUSES])
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  const statusRaw = String(data.status ?? "");
+  if (!isCoachVenueStatus(statusRaw)) return null;
+  return { id: String(data.id), status: statusRaw };
+}
+
+function duplicatePairResult(
+  existing: { id: string; status: CoachVenueStatus }
+): RelationshipActionResult {
+  if (existing.status === "active") {
+    return {
+      ok: false,
+      alreadyConnected: true,
+      relationshipId: existing.id,
+      status: existing.status,
+      message: ACTIVE_CONNECTED_MESSAGE,
+    };
+  }
+  return {
+    ok: false,
+    relationshipId: existing.id,
+    status: existing.status,
+    message: DUPLICATE_MESSAGE,
+  };
 }
 
 export async function searchCoachesForVenueRelationshipAction(
@@ -71,17 +125,43 @@ export async function inviteCoachToVenue(
     .maybeSingle();
   if (coachError || !coach) return { ok: false, message: "That coach could not be found." };
 
-  const { error } = await supabase.from("coach_venues").insert({
-    coach_id: coachId,
-    venue_id: venueId,
-    initiated_by: "venue",
-  });
+  const existing = await findCurrentCoachVenuePair(coachId, venueId);
+  if (existing) return duplicatePairResult(existing);
+
+  const { data: inserted, error } = await supabase
+    .from("coach_venues")
+    .insert({
+      coach_id: coachId,
+      venue_id: venueId,
+      initiated_by: "venue",
+    })
+    .select("id, status")
+    .single();
 
   if (error) {
+    if (error.code === "23505") {
+      const again = await findCurrentCoachVenuePair(coachId, venueId);
+      if (again) return duplicatePairResult(again);
+    }
     return { ok: false, message: coachVenueMutationErrorMessage(error) };
   }
 
+  const statusRaw = String(inserted?.status ?? "");
+  const status = isCoachVenueStatus(statusRaw) ? statusRaw : "pending";
+  const relationshipId = String(inserted.id);
+
   revalidateVenueCoachPaths(coachId, venueId);
+
+  if (status === "active") {
+    return {
+      ok: true,
+      activatedImmediately: true,
+      status: "active",
+      relationshipId,
+      message: "Coach connected.",
+    };
+  }
+
   const { notifyCoachVenueRelationship } = await import(
     "@/lib/notifications/notifyRelationship"
   );
@@ -91,7 +171,12 @@ export async function inviteCoachToVenue(
     venueId,
     recipient: "coach",
   });
-  return { ok: true, message: "Coach invitation sent." };
+  return {
+    ok: true,
+    status,
+    relationshipId,
+    message: "Coach invitation sent.",
+  };
 }
 
 export async function acceptVenueCoachRelationship(

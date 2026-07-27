@@ -9,6 +9,7 @@ import {
   Menu,
   UserRound,
   UserRoundCheck,
+  UserX,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +33,12 @@ const NAV = [
   },
   { href: "/admin/relationships", label: "Relationships", icon: Link2, exact: false },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck2, exact: false },
+  {
+    href: "/admin/account-deletions",
+    label: "Account deletions",
+    icon: UserX,
+    exact: false,
+  },
   { href: "/admin/data-quality", label: "Data quality", icon: Database, exact: false },
 ] as const;
 

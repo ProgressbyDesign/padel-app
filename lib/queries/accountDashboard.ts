@@ -6,9 +6,16 @@ import {
   ACTIVE_APPLICATION_STATUSES,
   type CoachApplicationStatus,
 } from "@/lib/coachProfileApplication/constants";
+import {
+  buildCoachCompletion,
+  buildVenueCompletion,
+} from "@/lib/coachProfileCompletion";
+import { getStructuredOpeningHours } from "@/lib/openingHours";
+import { coachHasLivePublicAvailability } from "@/lib/queries/coachAvailability";
 import { loadBookingAttention } from "@/lib/queries/coachBookings";
 import { createClient } from "@/lib/supabase/server";
 import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ACTIVE_VENUE_APPLICATION_STATUSES = [
   "draft",
@@ -25,6 +32,14 @@ type CoachSummary = {
   id: string;
   name: string | null;
   slug: string | null;
+  role: string | null;
+  image_url: string | null;
+  email: string | null;
+  phone: string | null;
+  description: string | null;
+  experience_years: number | null;
+  price_from: number | null;
+  is_approved: boolean | null;
 };
 
 type VenueSummary = {
@@ -32,6 +47,16 @@ type VenueSummary = {
   name: string | null;
   city: string | null;
   country: string | null;
+  image_url: string | null;
+  address: string | null;
+  website: string | null;
+  phone: string | null;
+  courts: number | null;
+  court_type: string | null;
+  venue_type: string | null;
+  coaching_description: string | null;
+  opening_hours_structured: unknown;
+  is_approved: boolean | null;
 };
 
 type CoachMembershipRow = {
@@ -51,6 +76,12 @@ export type ManagedCoach = {
   name: string;
   slug: string | null;
   membershipRole: MembershipRole;
+  imageUrl: string | null;
+  role: string | null;
+  location: string | null;
+  completionPercent: number;
+  availabilityStatus: "live" | "private" | "none";
+  pendingBookingCount: number;
 };
 
 export type ManagedVenue = {
@@ -58,6 +89,9 @@ export type ManagedVenue = {
   name: string;
   location: string;
   membershipRole: MembershipRole;
+  imageUrl: string | null;
+  completionPercent: number;
+  activeCoachCount: number;
 };
 
 export type AccountCoachApplicationSummary = {
@@ -123,6 +157,373 @@ function one<T>(value: T | T[] | null): T | null {
   return value;
 }
 
+function locationLabel(
+  city: string | null | undefined,
+  country: string | null | undefined
+): string {
+  return [city, country]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function countByKey(
+  rows: Array<{ [key: string]: unknown }> | null | undefined,
+  key: string
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const row of rows ?? []) {
+    const id = String(row[key] ?? "");
+    if (!id) continue;
+    map.set(id, (map.get(id) ?? 0) + 1);
+  }
+  return map;
+}
+
+async function enrichManagedCoaches(
+  supabase: SupabaseClient,
+  baseCoaches: Array<{
+    id: string;
+    name: string;
+    slug: string | null;
+    membershipRole: MembershipRole;
+    role: string | null;
+    imageUrl: string | null;
+    email: string | null;
+    phone: string | null;
+    description: string | null;
+    experienceYears: number | null;
+    priceFrom: number | null;
+    isApproved: boolean | null;
+  }>
+): Promise<ManagedCoach[]> {
+  if (baseCoaches.length === 0) return [];
+
+  const coachIds = baseCoaches.map((coach) => coach.id);
+  const nowIso = new Date().toISOString();
+
+  const [
+    locationsResult,
+    imagesResult,
+    socialsResult,
+    venuesResult,
+    achievementsResult,
+    attributesResult,
+    outcomesResult,
+    bookingsResult,
+    availabilityResults,
+  ] = await Promise.all([
+    supabase
+      .from("coach_locations")
+      .select("coach_id, city, country, is_primary")
+      .in("coach_id", coachIds),
+    supabase.from("coach_images").select("coach_id").in("coach_id", coachIds),
+    supabase.from("coach_socials").select("coach_id").in("coach_id", coachIds),
+    supabase
+      .from("coach_venues")
+      .select("id, coach_id, is_primary, venues ( city, country )")
+      .in("coach_id", coachIds)
+      .eq("status", "active"),
+    supabase
+      .from("coach_achievements")
+      .select("coach_id")
+      .in("coach_id", coachIds),
+    supabase
+      .from("coach_attributes")
+      .select("coach_id, audience_adults, audience_juniors, player_levels")
+      .in("coach_id", coachIds),
+    supabase
+      .from("coach_outcomes")
+      .select("coach_id, outcome, outcome_key")
+      .in("coach_id", coachIds),
+    supabase
+      .from("coach_booking_requests")
+      .select("coach_id")
+      .in("coach_id", coachIds)
+      .eq("status", "requested")
+      .gte("starts_at", nowIso),
+    Promise.all(
+      coachIds.map((coachId) => coachHasLivePublicAvailability(coachId))
+    ),
+  ]);
+
+  const locationByCoach = new Map<string, string>();
+  const hasPrimaryLocationByCoach = new Map<string, boolean>();
+  const locationRows = (locationsResult.data ?? []) as Array<{
+    coach_id: string;
+    city: string | null;
+    country: string | null;
+    is_primary: boolean | null;
+  }>;
+
+  for (const coachId of coachIds) {
+    const rows = locationRows.filter((row) => String(row.coach_id) === coachId);
+    hasPrimaryLocationByCoach.set(
+      coachId,
+      rows.some((row) => row.is_primary) || rows.length > 0
+    );
+    const ordered = [...rows].sort(
+      (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+    );
+    for (const row of ordered) {
+      const label = locationLabel(row.city, row.country);
+      if (label) {
+        locationByCoach.set(coachId, label);
+        break;
+      }
+    }
+  }
+
+  const venueRows = (venuesResult.data ?? []) as Array<{
+    id: string;
+    coach_id: string;
+    is_primary: boolean | null;
+    venues:
+      | { city: string | null; country: string | null }
+      | { city: string | null; country: string | null }[]
+      | null;
+  }>;
+
+  for (const coachId of coachIds) {
+    if (locationByCoach.has(coachId)) continue;
+    const links = venueRows
+      .filter((row) => String(row.coach_id) === coachId)
+      .sort(
+        (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+      );
+    for (const link of links) {
+      const venue = one(link.venues);
+      const label = locationLabel(venue?.city, venue?.country);
+      if (label) {
+        locationByCoach.set(coachId, label);
+        break;
+      }
+    }
+  }
+
+  const imageCountByCoach = countByKey(imagesResult.data, "coach_id");
+  const socialCountByCoach = countByKey(socialsResult.data, "coach_id");
+  const achievementCountByCoach = countByKey(
+    achievementsResult.data,
+    "coach_id"
+  );
+  const pendingByCoach = countByKey(bookingsResult.data, "coach_id");
+  const venueCountByCoach = countByKey(venueRows, "coach_id");
+
+  const attributesByCoach = new Map<
+    string,
+    {
+      audienceAdults: boolean;
+      audienceJuniors: boolean;
+      playerLevels: string[];
+    }
+  >();
+  for (const row of (attributesResult.data ?? []) as Array<{
+    coach_id: string;
+    audience_adults: boolean | null;
+    audience_juniors: boolean | null;
+    player_levels: unknown;
+  }>) {
+    attributesByCoach.set(String(row.coach_id), {
+      audienceAdults: Boolean(row.audience_adults),
+      audienceJuniors: Boolean(row.audience_juniors),
+      playerLevels: Array.isArray(row.player_levels)
+        ? (row.player_levels as string[])
+        : [],
+    });
+  }
+
+  const outcomesByCoach = new Map<string, string[]>();
+  for (const row of (outcomesResult.data ?? []) as Array<{
+    coach_id: string;
+    outcome: string | null;
+    outcome_key: string | null;
+  }>) {
+    const id = String(row.coach_id);
+    const list = outcomesByCoach.get(id) ?? [];
+    list.push(
+      (row.outcome_key ? String(row.outcome_key) : null) ||
+        String(row.outcome ?? "")
+    );
+    outcomesByCoach.set(id, list);
+  }
+
+  const relationshipIds = venueRows.map((row) => String(row.id));
+  const pricingByCoach = new Map<string, boolean>();
+  if (relationshipIds.length > 0) {
+    const { data: pricingRows } = await supabase
+      .from("coach_venue_availability_settings")
+      .select("coach_venue_id, currency, default_hourly_rate_minor")
+      .in("coach_venue_id", relationshipIds);
+
+    const relationshipCoach = new Map(
+      venueRows.map((row) => [String(row.id), String(row.coach_id)] as const)
+    );
+    for (const row of (pricingRows ?? []) as Array<{
+      coach_venue_id: string;
+      currency: string | null;
+      default_hourly_rate_minor: number | null;
+    }>) {
+      const configured =
+        Boolean(typeof row.currency === "string" && row.currency.trim()) &&
+        row.default_hourly_rate_minor != null;
+      if (!configured) continue;
+      const coachId = relationshipCoach.get(String(row.coach_venue_id));
+      if (coachId) pricingByCoach.set(coachId, true);
+    }
+  }
+
+  const availabilityByCoach = new Map(
+    coachIds.map((coachId, index) => [coachId, availabilityResults[index]] as const)
+  );
+
+  return baseCoaches.map((coach) => {
+    const attributes = attributesByCoach.get(coach.id) ?? {
+      audienceAdults: false,
+      audienceJuniors: false,
+      playerLevels: [],
+    };
+    const availability = availabilityByCoach.get(coach.id) ?? {
+      status: "none" as const,
+      nextSlotStartsAt: null,
+    };
+    const completion = buildCoachCompletion(coach.id, {
+      name: coach.name,
+      role: coach.role,
+      description: coach.description,
+      experience_years: coach.experienceYears,
+      phone: coach.phone,
+      email: coach.email,
+      price_from: coach.priceFrom,
+      image_url: coach.imageUrl,
+      is_approved: coach.isApproved,
+      hasPrimaryLocation: hasPrimaryLocationByCoach.get(coach.id) ?? false,
+      audienceAdults: attributes.audienceAdults,
+      audienceJuniors: attributes.audienceJuniors,
+      playerLevels: attributes.playerLevels,
+      outcomes: (outcomesByCoach.get(coach.id) ?? []).filter(Boolean),
+      imageCount: imageCountByCoach.get(coach.id) ?? 0,
+      socialCount: socialCountByCoach.get(coach.id) ?? 0,
+      achievementCount: achievementCountByCoach.get(coach.id) ?? 0,
+      activeVenueCount: venueCountByCoach.get(coach.id) ?? 0,
+      availabilityLive: availability.status === "live",
+      pricingConfigured: pricingByCoach.get(coach.id) ?? false,
+      hasFutureSession: Boolean(availability.nextSlotStartsAt),
+      pendingBookingCount: pendingByCoach.get(coach.id) ?? 0,
+    });
+
+    return {
+      id: coach.id,
+      name: coach.name,
+      slug: coach.slug,
+      membershipRole: coach.membershipRole,
+      imageUrl: coach.imageUrl,
+      role: coach.role,
+      location: locationByCoach.get(coach.id) ?? null,
+      completionPercent: completion.overallPercent,
+      availabilityStatus: availability.status,
+      pendingBookingCount: pendingByCoach.get(coach.id) ?? 0,
+    };
+  });
+}
+
+async function enrichManagedVenues(
+  supabase: SupabaseClient,
+  baseVenues: Array<{
+    id: string;
+    name: string;
+    location: string;
+    membershipRole: MembershipRole;
+    imageUrl: string | null;
+    city: string | null;
+    country: string | null;
+    address: string | null;
+    website: string | null;
+    phone: string | null;
+    courts: number | null;
+    courtType: string | null;
+    venueType: string | null;
+    coachingDescription: string | null;
+    openingHoursStructured: unknown;
+    isApproved: boolean | null;
+  }>
+): Promise<ManagedVenue[]> {
+  if (baseVenues.length === 0) return [];
+
+  const venueIds = baseVenues.map((venue) => venue.id);
+
+  const [imagesResult, socialsResult, coachesResult] = await Promise.all([
+    supabase.from("venue_images").select("venue_id").in("venue_id", venueIds),
+    supabase.from("venue_socials").select("venue_id").in("venue_id", venueIds),
+    supabase
+      .from("coach_venues")
+      .select("id, venue_id")
+      .in("venue_id", venueIds)
+      .eq("status", "active"),
+  ]);
+
+  const imageCountByVenue = countByKey(imagesResult.data, "venue_id");
+  const socialCountByVenue = countByKey(socialsResult.data, "venue_id");
+  const coachRows = (coachesResult.data ?? []) as Array<{
+    id: string;
+    venue_id: string;
+  }>;
+  const coachCountByVenue = countByKey(coachRows, "venue_id");
+
+  const relationshipIds = coachRows.map((row) => String(row.id));
+  const hasAvailabilityByVenue = new Map<string, boolean>();
+  if (relationshipIds.length > 0) {
+    const { data: settings } = await supabase
+      .from("coach_venue_availability_settings")
+      .select("coach_venue_id")
+      .in("coach_venue_id", relationshipIds)
+      .eq("is_public", true);
+
+    const relationshipVenue = new Map(
+      coachRows.map((row) => [String(row.id), String(row.venue_id)] as const)
+    );
+    for (const row of (settings ?? []) as Array<{ coach_venue_id: string }>) {
+      const venueId = relationshipVenue.get(String(row.coach_venue_id));
+      if (venueId) hasAvailabilityByVenue.set(venueId, true);
+    }
+  }
+
+  return baseVenues.map((venue) => {
+    const imageCount = imageCountByVenue.get(venue.id) ?? 0;
+    const activeCoachCount = coachCountByVenue.get(venue.id) ?? 0;
+    const completion = buildVenueCompletion(venue.id, {
+      name: venue.name,
+      city: venue.city,
+      country: venue.country,
+      address: venue.address,
+      website: venue.website,
+      phone: venue.phone,
+      courts: venue.courts,
+      courtType: venue.courtType,
+      venueType: venue.venueType,
+      hasOpeningHours: Boolean(
+        getStructuredOpeningHours(venue.openingHoursStructured)
+      ),
+      imageCount: imageCount > 0 || Boolean(venue.imageUrl) ? Math.max(imageCount, 1) : 0,
+      socialCount: socialCountByVenue.get(venue.id) ?? 0,
+      hasCoachingDescription: Boolean(venue.coachingDescription?.trim()),
+      activeCoachCount,
+      hasCoachAvailability: hasAvailabilityByVenue.get(venue.id) ?? false,
+      isVerified: Boolean(venue.isApproved),
+    });
+
+    return {
+      id: venue.id,
+      name: venue.name,
+      location: venue.location,
+      membershipRole: venue.membershipRole,
+      imageUrl: venue.imageUrl,
+      completionPercent: completion.overallPercent,
+      activeCoachCount,
+    };
+  });
+}
+
 export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const account = await requireAuthenticatedAccount("/account/personal");
   const supabase = await createClient();
@@ -133,65 +534,82 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
     venueResult,
     coachApplicationResult,
     venueApplicationResult,
-  ] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", account.id)
-        .maybeSingle(),
-      supabase
-        .from("coach_memberships")
-        .select(
-          `
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", account.id)
+      .maybeSingle(),
+    supabase
+      .from("coach_memberships")
+      .select(
+        `
         coach_id,
         membership_role,
         coaches (
           id,
           name,
-          slug
+          slug,
+          role,
+          image_url,
+          email,
+          phone,
+          description,
+          experience_years,
+          price_from,
+          is_approved
         )
       `
-        )
-        .eq("user_id", account.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("venue_memberships")
-        .select(
-          `
+      )
+      .eq("user_id", account.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("venue_memberships")
+      .select(
+        `
         venue_id,
         membership_role,
         venues (
           id,
           name,
           city,
-          country
+          country,
+          image_url,
+          address,
+          website,
+          phone,
+          courts,
+          court_type,
+          venue_type,
+          coaching_description,
+          opening_hours_structured,
+          is_approved
         )
       `
-        )
-        .eq("user_id", account.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("coach_profile_applications")
-        .select(
-          "id, status, current_step, submitted_at, updated_at, review_note, coach_id"
-        )
-        .eq("user_id", account.id)
-        .in("status", [...ACTIVE_APPLICATION_STATUSES])
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("venue_profile_applications")
-        .select(
-          "id, status, current_step, submitted_at, updated_at, review_note, approved_venue_id"
-        )
-        .eq("user_id", account.id)
-        .in("status", [...ACTIVE_VENUE_APPLICATION_STATUSES])
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+      )
+      .eq("user_id", account.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("coach_profile_applications")
+      .select(
+        "id, status, current_step, submitted_at, updated_at, review_note, coach_id"
+      )
+      .eq("user_id", account.id)
+      .in("status", [...ACTIVE_APPLICATION_STATUSES])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("venue_profile_applications")
+      .select(
+        "id, status, current_step, submitted_at, updated_at, review_note, approved_venue_id"
+      )
+      .eq("user_id", account.id)
+      .in("status", [...ACTIVE_VENUE_APPLICATION_STATUSES])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (profileResult.error) {
     if (process.env.NODE_ENV === "development") {
@@ -231,31 +649,55 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   }
 
   const profile = profileResult.data as ProfileRow | null;
-  const coachMemberships = (coachResult.data ?? []) as unknown as CoachMembershipRow[];
-  const venueMemberships = (venueResult.data ?? []) as unknown as VenueMembershipRow[];
+  const coachMemberships = (coachResult.data ??
+    []) as unknown as CoachMembershipRow[];
+  const venueMemberships = (venueResult.data ??
+    []) as unknown as VenueMembershipRow[];
 
-  const coaches = coachMemberships.map((membership) => {
+  const baseCoaches = coachMemberships.map((membership) => {
     const coach = one(membership.coaches);
     return {
       id: coach?.id ?? membership.coach_id,
       name: coach?.name?.trim() || "Coach profile",
       slug: coach?.slug?.trim() || null,
       membershipRole: membership.membership_role,
+      role: coach?.role?.trim() || null,
+      imageUrl: coach?.image_url?.trim() || null,
+      email: coach?.email ?? null,
+      phone: coach?.phone ?? null,
+      description: coach?.description ?? null,
+      experienceYears: coach?.experience_years ?? null,
+      priceFrom: coach?.price_from ?? null,
+      isApproved: coach?.is_approved ?? null,
     };
   });
 
-  const venues = venueMemberships.map((membership) => {
+  const baseVenues = venueMemberships.map((membership) => {
     const venue = one(membership.venues);
     return {
       id: venue?.id ?? membership.venue_id,
       name: venue?.name?.trim() || "Venue",
-      location: [venue?.city, venue?.country]
-        .map((part) => part?.trim())
-        .filter(Boolean)
-        .join(", "),
+      location: locationLabel(venue?.city, venue?.country),
       membershipRole: membership.membership_role,
+      imageUrl: venue?.image_url?.trim() || null,
+      city: venue?.city ?? null,
+      country: venue?.country ?? null,
+      address: venue?.address ?? null,
+      website: venue?.website ?? null,
+      phone: venue?.phone ?? null,
+      courts: venue?.courts ?? null,
+      courtType: venue?.court_type ?? null,
+      venueType: venue?.venue_type ?? null,
+      coachingDescription: venue?.coaching_description ?? null,
+      openingHoursStructured: venue?.opening_hours_structured ?? null,
+      isApproved: venue?.is_approved ?? null,
     };
   });
+
+  const [coaches, venues] = await Promise.all([
+    enrichManagedCoaches(supabase, baseCoaches),
+    enrichManagedVenues(supabase, baseVenues),
+  ]);
 
   const coachApplicationRow = coachApplicationResult.data as {
     id: string;
@@ -373,8 +815,8 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   const bookingAttention: AccountBookingAttention = {
     playerAwaiting: bookingAttentionRaw.playerAwaiting,
     playerAcceptedUpcoming: bookingAttentionRaw.playerAcceptedUpcoming,
-    coachNewRequests: [],
-    coachAcceptedUpcoming: [],
+    coachNewRequests: bookingAttentionRaw.coachNewRequests,
+    coachAcceptedUpcoming: bookingAttentionRaw.coachAcceptedUpcoming,
   };
 
   return {

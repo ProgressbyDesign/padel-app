@@ -1,25 +1,20 @@
 import "server-only";
 
+import { accountAvatarDisplayUrl } from "@/lib/accountAvatar";
 import { getAdminAccount } from "@/lib/auth/adminSession";
 import {
   isWorkspaceType,
-  workspaceHref,
   type WorkspaceCoach,
-  type WorkspacePreference,
-  type WorkspaceType,
   type WorkspaceVenue,
 } from "@/lib/workspace/types";
 import { createClient } from "@/lib/supabase/server";
+import type { AccountNavContext } from "@/lib/workspace/destination";
 
-export type AccountNavContext = {
-  id: string;
-  email: string;
-  fullName: string | null;
-  coaches: WorkspaceCoach[];
-  venues: WorkspaceVenue[];
-  isAdmin: boolean;
-  preference: WorkspacePreference;
-};
+export type { AccountNavContext } from "@/lib/workspace/destination";
+export {
+  resolveWorkspaceDestination,
+  isPreferenceAccessible,
+} from "@/lib/workspace/destination";
 
 export async function loadOptionalAccountNavContext(): Promise<AccountNavContext | null> {
   const supabase = await createClient();
@@ -32,7 +27,9 @@ export async function loadOptionalAccountNavContext(): Promise<AccountNavContext
   const [profileResult, coachResult, venueResult, admin] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name, last_workspace_type, last_workspace_entity_id, role")
+      .select(
+        "full_name, avatar_path, avatar_updated_at, last_workspace_type, last_workspace_entity_id, role"
+      )
       .eq("id", userId)
       .maybeSingle(),
     supabase
@@ -72,6 +69,14 @@ export async function loadOptionalAccountNavContext(): Promise<AccountNavContext
   const preferenceType = isWorkspaceType(profile?.last_workspace_type)
     ? profile.last_workspace_type
     : null;
+  const avatarPath =
+    typeof profile?.avatar_path === "string" && profile.avatar_path.trim()
+      ? profile.avatar_path.trim()
+      : null;
+  const avatarUpdatedAt =
+    typeof profile?.avatar_updated_at === "string"
+      ? profile.avatar_updated_at
+      : null;
 
   return {
     id: userId,
@@ -80,6 +85,9 @@ export async function loadOptionalAccountNavContext(): Promise<AccountNavContext
       typeof profile?.full_name === "string"
         ? profile.full_name.trim() || null
         : null,
+    avatarPath,
+    avatarUpdatedAt,
+    avatarUrl: accountAvatarDisplayUrl(avatarPath, avatarUpdatedAt),
     coaches,
     venues,
     isAdmin: Boolean(admin) || profile?.role === "admin",
@@ -91,52 +99,4 @@ export async function loadOptionalAccountNavContext(): Promise<AccountNavContext
           : null,
     },
   };
-}
-
-export function resolveWorkspaceDestination(
-  context: AccountNavContext
-): string {
-  const { preference, coaches, venues, isAdmin } = context;
-
-  if (preference.type === "personal") {
-    return workspaceHref("personal");
-  }
-  if (preference.type === "admin" && isAdmin) {
-    return workspaceHref("admin");
-  }
-  if (preference.type === "coach" && preference.entityId) {
-    if (coaches.some((coach) => coach.id === preference.entityId)) {
-      return workspaceHref("coach", preference.entityId);
-    }
-  }
-  if (preference.type === "venue" && preference.entityId) {
-    if (venues.some((venue) => venue.id === preference.entityId)) {
-      return workspaceHref("venue", preference.entityId);
-    }
-  }
-
-  if (coaches.length === 1 && venues.length === 0) {
-    return workspaceHref("coach", coaches[0].id);
-  }
-  if (venues.length === 1 && coaches.length === 0) {
-    return workspaceHref("venue", venues[0].id);
-  }
-
-  return workspaceHref("personal");
-}
-
-export function isPreferenceAccessible(
-  context: AccountNavContext,
-  type: WorkspaceType,
-  entityId?: string | null
-): boolean {
-  if (type === "personal") return true;
-  if (type === "admin") return context.isAdmin;
-  if (type === "coach") {
-    return Boolean(entityId && context.coaches.some((c) => c.id === entityId));
-  }
-  if (type === "venue") {
-    return Boolean(entityId && context.venues.some((v) => v.id === entityId));
-  }
-  return false;
 }

@@ -69,6 +69,9 @@ function revalidateBookingPaths(input: {
   revalidatePath(
     `/account/coaches/${input.coachId}/availability/${input.relationshipId}`
   );
+  revalidatePath(`/account/venues/${input.venueId}`);
+  revalidatePath(`/account/venues/${input.venueId}/schedule`);
+  revalidatePath(`/account/venues/${input.venueId}/sessions`);
   revalidatePath(`/account/venues/${input.venueId}/coaches`);
   revalidatePath(
     `/account/venues/${input.venueId}/coaches/${input.coachId}/availability`

@@ -6,19 +6,11 @@ function roleLabel(role: MembershipRole): string {
   return role === "owner" ? "Owner" : "Manager";
 }
 
-function readableStatus(value: string | null): string {
-  if (!value) return "Not assessed";
-  return value
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
 type ManagedCoachHeaderProps = {
   coachId: string;
   name: string | null;
   membershipRole: MembershipRole;
   isApproved: boolean | null;
-  dataQualityStatus: string | null;
   primaryLocation: string | null;
   coachingRole: string | null;
 };
@@ -28,7 +20,6 @@ export default function ManagedCoachHeader({
   name,
   membershipRole,
   isApproved,
-  dataQualityStatus,
   primaryLocation,
   coachingRole,
 }: ManagedCoachHeaderProps) {
@@ -58,12 +49,15 @@ export default function ManagedCoachHeader({
             <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-primary">
               {roleLabel(membershipRole)}
             </span>
-            <span className="rounded-full border border-primary/10 bg-white px-2.5 py-1 text-xs font-semibold text-primary/70">
-              {isApproved ? "Approved" : "Pending approval"}
-            </span>
-            <span className="rounded-full border border-primary/10 bg-white px-2.5 py-1 text-xs font-semibold text-primary/70">
-              {readableStatus(dataQualityStatus)}
-            </span>
+            {isApproved ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900">
+                Confirmed
+              </span>
+            ) : (
+              <span className="rounded-full border border-primary/10 bg-white px-2.5 py-1 text-xs font-semibold text-primary/70">
+                Pending confirmation
+              </span>
+            )}
           </div>
           {coachingRole ? (
             <p className="mt-3 text-base text-primary/60">{coachingRole}</p>
@@ -80,7 +74,7 @@ export default function ManagedCoachHeader({
           href={`/coach/${encodeURIComponent(coachId)}`}
           className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl border border-primary/15 bg-white px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface lg:self-auto"
         >
-          View public page
+          View public profile
           <ArrowUpRight className="h-4 w-4" aria-hidden />
         </Link>
       </header>

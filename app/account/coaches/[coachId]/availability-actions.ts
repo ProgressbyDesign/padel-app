@@ -60,6 +60,9 @@ function revalidateAvailability(
   revalidatePath(`/account/coaches/${coachId}`);
   revalidatePath(`/account/coaches/${coachId}/availability`);
   revalidatePath(`/account/coaches/${coachId}/availability/${relationshipId}`);
+  revalidatePath(`/account/venues/${venueId}`);
+  revalidatePath(`/account/venues/${venueId}/schedule`);
+  revalidatePath(`/account/venues/${venueId}/sessions`);
   revalidatePath(`/account/venues/${venueId}/coaches`);
   revalidatePath(`/account/venues/${venueId}/coaches/${coachId}/availability`);
   revalidatePath(`/coach/${coachId}`);
@@ -143,6 +146,54 @@ export async function saveCoachAvailabilitySettings(input: {
     input.relationshipId
   );
   return { ok: true, message: "Availability settings saved." };
+}
+
+/** Publish an existing schedule without changing timezone, duration, or pricing. */
+export async function makeCoachAvailabilityPublic(input: {
+  coachId: string;
+  relationshipId: string;
+}): Promise<AvailabilityActionResult> {
+  const userId = await authorizeCoachOrAdmin(input.coachId);
+  if (!userId) return { ok: false, message: "You do not have access to this coach." };
+
+  const relationship = await requireActiveRelationship(
+    input.coachId,
+    input.relationshipId
+  );
+  if (!relationship) {
+    return {
+      ok: false,
+      message: "Availability can only be edited for active venue relationships.",
+    };
+  }
+
+  const existing = await loadAvailabilitySettings(input.relationshipId);
+  if (!existing) {
+    return {
+      ok: false,
+      message: "Set up availability settings before making them public.",
+    };
+  }
+  if (existing.is_public) {
+    return { ok: true, message: "Availability is already public." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("coach_venue_availability_settings")
+    .update({ is_public: true })
+    .eq("coach_venue_id", input.relationshipId);
+
+  if (error) {
+    return { ok: false, message: availabilityMutationErrorMessage(error) };
+  }
+
+  revalidateAvailability(
+    input.coachId,
+    relationship.venueId,
+    input.relationshipId
+  );
+  return { ok: true, message: "Availability is now public." };
 }
 
 function validateRuleFields(input: {

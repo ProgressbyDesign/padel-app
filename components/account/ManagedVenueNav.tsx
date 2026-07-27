@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Calendar,
+  CalendarDays,
   ImageIcon,
   LayoutDashboard,
   Link2,
@@ -44,6 +46,20 @@ const NAV_ITEMS = [
     icon: UserRound,
     match: (pathname: string, base: string) =>
       pathname.startsWith(`${base}/coaches`),
+  },
+  {
+    href: "/schedule",
+    label: "Schedule",
+    icon: Calendar,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/schedule`),
+  },
+  {
+    href: "/sessions",
+    label: "Sessions",
+    icon: CalendarDays,
+    match: (pathname: string, base: string) =>
+      pathname.startsWith(`${base}/sessions`),
   },
 ] as const;
 

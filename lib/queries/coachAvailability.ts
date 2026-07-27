@@ -13,6 +13,7 @@ import type {
   DerivedSlot,
   PublicCoachAvailabilityCard,
   PublicVenueAvailabilityGroup,
+  VenueCombinedAvailabilityPreviewSlot,
 } from "@/lib/coachAvailability/types";
 import {
   normalizeTimeHm,
@@ -656,6 +657,149 @@ export async function loadAvailabilityMetaForRelationships(
   return map;
 }
 
+function rangesOverlap(
+  slot: { startsAt: string; endsAt: string },
+  ranges: Array<{ startsAt: string; endsAt: string }>
+) {
+  const startMs = new Date(slot.startsAt).getTime();
+  const endMs = new Date(slot.endsAt).getTime();
+  return ranges.some((range) => {
+    const rangeStart = new Date(range.startsAt).getTime();
+    const rangeEnd = new Date(range.endsAt).getTime();
+    return startMs < rangeEnd && rangeStart < endMs;
+  });
+}
+
+/** Venue-manager combined calendar: all active coaches, reserved via venue_booking_blocks (no requester PII). */
+export async function loadVenueCombinedAvailabilityPreview(
+  venueId: string,
+  days = 14
+): Promise<{
+  slots: VenueCombinedAvailabilityPreviewSlot[];
+  hasActiveCoaches: boolean;
+}> {
+  const supabase = await createClient();
+  const { data: links, error } = await supabase
+    .from("coach_venues")
+    .select(
+      `
+      id,
+      coach_id,
+      coaches ( id, name, role, image_url )
+    `
+    )
+    .eq("venue_id", venueId)
+    .eq("status", "active");
+
+  if (error || !links?.length) {
+    return { slots: [], hasActiveCoaches: false };
+  }
+
+  const rangeFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const rangeTo = new Date(
+    Date.now() + (days + 2) * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const { data: blockRows } = await supabase
+    .from("venue_booking_blocks")
+    .select(
+      "coach_id, status, starts_at, ends_at, price_amount_minor, currency"
+    )
+    .eq("venue_id", venueId)
+    .eq("status", "accepted")
+    .lt("starts_at", rangeTo)
+    .gt("ends_at", rangeFrom);
+
+  const acceptedByCoach = new Map<
+    string,
+    Array<{ startsAt: string; endsAt: string }>
+  >();
+  for (const row of blockRows ?? []) {
+    const coachId = String(row.coach_id);
+    const list = acceptedByCoach.get(coachId) ?? [];
+    list.push({
+      startsAt: String(row.starts_at),
+      endsAt: String(row.ends_at),
+    });
+    acceptedByCoach.set(coachId, list);
+  }
+
+  const slots: VenueCombinedAvailabilityPreviewSlot[] = [];
+
+  for (const link of links as Record<string, unknown>[]) {
+    const relationshipId = String(link.id);
+    const coachId = String(link.coach_id);
+    const coaches = link.coaches as
+      | Record<string, unknown>
+      | Record<string, unknown>[]
+      | null;
+    const coach = Array.isArray(coaches) ? coaches[0] : coaches;
+    const settings = await loadAvailabilitySettings(relationshipId);
+    if (!settings) continue;
+
+    const [rules, exceptions] = await Promise.all([
+      loadAvailabilityRules(relationshipId),
+      loadAvailabilityExceptions(relationshipId),
+    ]);
+
+    const acceptedRanges = acceptedByCoach.get(coachId) ?? [];
+
+    // Keep accepted bookings visible as reserved (do not exclude via blockedRanges).
+    const derived = deriveAvailabilitySlots({
+      settings,
+      rules,
+      exceptions,
+      venueId,
+      venueName: "Venue",
+      days,
+    });
+
+    const coachName = String(coach?.name ?? "Coach");
+    const coachRole = (coach?.role as string | null) ?? null;
+    const coachImageUrl = (coach?.image_url as string | null) ?? null;
+    const visibility = settings.is_public ? ("public" as const) : ("hidden" as const);
+
+    for (const slot of derived) {
+      const reserved = rangesOverlap(slot, acceptedRanges);
+      const durationMinutes = Math.max(
+        0,
+        Math.round(
+          (new Date(slot.endsAt).getTime() - new Date(slot.startsAt).getTime()) /
+            60_000
+        )
+      );
+      slots.push({
+        startsAt: slot.startsAt,
+        endsAt: slot.endsAt,
+        timezone: slot.timezone,
+        venueId: slot.venueId,
+        venueName: slot.venueName,
+        priceAmountMinor: slot.priceAmountMinor,
+        currency: slot.currency,
+        state: reserved ? "reserved" : "available",
+        visibility,
+        coachId,
+        coachName,
+        coachRole,
+        coachImageUrl,
+        relationshipId,
+        durationMinutes,
+      });
+    }
+  }
+
+  slots.sort((a, b) => {
+    const byStart = a.startsAt.localeCompare(b.startsAt);
+    if (byStart !== 0) return byStart;
+    return a.coachName.localeCompare(b.coachName);
+  });
+
+  return {
+    slots,
+    hasActiveCoaches: true,
+  };
+}
+
 export async function loadVenueCoachAvailabilityHints(
   venueId: string,
   relationshipIds: string[]
@@ -698,7 +842,7 @@ export async function loadVenueCoachAvailabilityHints(
           loadAvailabilityRules(id),
           loadAvailabilityExceptions(id),
         ]);
-        // Venue read-only view: show accepted as blocked for this relationship's coach.
+        // Venue read-only view: accepted blocks come from venue_booking_blocks (no PII).
         const coachIdForLink = (
           await supabase
             .from("coach_venues")
@@ -706,13 +850,27 @@ export async function loadVenueCoachAvailabilityHints(
             .eq("id", id)
             .maybeSingle()
         ).data?.coach_id;
-        const blockedRanges = coachIdForLink
-          ? await loadAcceptedBlockedRangesForCoach(
-              String(coachIdForLink),
-              new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-              new Date(Date.now() + 16 * 24 * 60 * 60 * 1000).toISOString()
-            )
-          : [];
+        let blockedRanges: Array<{ startsAt: string; endsAt: string }> = [];
+        if (coachIdForLink) {
+          const fromIso = new Date(
+            Date.now() - 24 * 60 * 60 * 1000
+          ).toISOString();
+          const toIso = new Date(
+            Date.now() + 16 * 24 * 60 * 60 * 1000
+          ).toISOString();
+          const { data: blockRows } = await supabase
+            .from("venue_booking_blocks")
+            .select("starts_at, ends_at")
+            .eq("venue_id", venueId)
+            .eq("coach_id", String(coachIdForLink))
+            .eq("status", "accepted")
+            .lt("starts_at", toIso)
+            .gt("ends_at", fromIso);
+          blockedRanges = (blockRows ?? []).map((row) => ({
+            startsAt: String(row.starts_at),
+            endsAt: String(row.ends_at),
+          }));
+        }
         const slots = deriveAvailabilitySlots({
           settings,
           rules,
