@@ -1,7 +1,12 @@
 import { headers } from "next/headers";
 import { safeInternalPath } from "@/lib/auth/safePath";
+import {
+  trustedAppOrigin,
+  trustedAuthCallbackUrl,
+} from "@/lib/auth/trustedOrigin";
 
 export { safeInternalPath };
+export { trustedAppOrigin, trustedAuthCallbackUrl };
 
 function validOrigin(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -15,8 +20,8 @@ function validOrigin(value: string | null | undefined): string | null {
 }
 
 export async function getRequestOrigin(): Promise<string> {
-  const configured = validOrigin(process.env.NEXT_PUBLIC_BASE_URL?.trim());
-  if (configured) return configured;
+  const trusted = trustedAppOrigin();
+  if (trusted) return trusted;
 
   const requestHeaders = await headers();
   const requestOrigin = validOrigin(requestHeaders.get("origin"));

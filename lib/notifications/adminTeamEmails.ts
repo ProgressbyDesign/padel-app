@@ -51,7 +51,8 @@ export async function sendAdminInvitationEmail(input: {
           timeStyle: "short",
         }).format(new Date(input.expiresAt))
       )} and is tied to ${escapeEmailHtml(maskEmail(input.to))}.</p>
-      <p><a href="${escapeEmailHtml(href)}">Accept invitation</a></p>
+      <p>You’ll be asked to sign in or create a Padel Pathways account using this email address before accepting your Admin role.</p>
+      <p><a href="${escapeEmailHtml(href)}">Accept your invitation</a></p>
       <p>If you were not expecting this email, you can ignore it.</p>
     `,
   });
