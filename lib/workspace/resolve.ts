@@ -90,7 +90,8 @@ export async function loadOptionalAccountNavContext(): Promise<AccountNavContext
     avatarUrl: accountAvatarDisplayUrl(avatarPath, avatarUpdatedAt),
     coaches,
     venues,
-    isAdmin: Boolean(admin) || profile?.role === "admin",
+    isAdmin: Boolean(admin),
+    adminRole: admin?.role ?? null,
     preference: {
       type: preferenceType,
       entityId:

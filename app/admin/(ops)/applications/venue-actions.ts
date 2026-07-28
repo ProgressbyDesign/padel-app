@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminAccount, type AdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission, type AdminAccount } from "@/lib/auth/adminSession";
 import {
   searchVenuesForAdminApproval,
   type AdminVenueSearchResult,
 } from "@/lib/admin/applicationQueries";
+import { writeAdminAuditEvent } from "@/lib/admin/audit";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ApprovedMembershipRole,
@@ -35,7 +36,7 @@ async function authorizeAdminAction(): Promise<AdminAccount> {
   if (error || typeof data?.claims?.sub !== "string") {
     throw new Error("Your admin session has expired.");
   }
-  return requireAdminAccount("not-found");
+  return requireAdminPermission("applications.review", "not-found");
 }
 
 async function loadApplication(
@@ -167,6 +168,12 @@ export async function requestVenueApplicationChanges(
     status: "changes_requested",
     note: reviewNote,
   });
+  void writeAdminAuditEvent({
+    action: "venue_application.changes_requested",
+    targetType: "venue_profile_application",
+    targetId: applicationId,
+    details: {},
+  }).catch(() => undefined);
   return { ok: true, message: "Changes requested." };
 }
 
@@ -199,6 +206,12 @@ export async function declineVenueApplication(
     status: "declined",
     note: reviewNote,
   });
+  void writeAdminAuditEvent({
+    action: "venue_application.declined",
+    targetType: "venue_profile_application",
+    targetId: applicationId,
+    details: {},
+  }).catch(() => undefined);
   return { ok: true, message: "Application declined." };
 }
 
@@ -239,6 +252,12 @@ async function approveWithVenue(
     status: "approved",
     venueName: application.proposed_venue_name,
   });
+  void writeAdminAuditEvent({
+    action: "venue_application.approved",
+    targetType: "venue_profile_application",
+    targetId: applicationId,
+    details: { venueId },
+  }).catch(() => undefined);
   return { ok: true, message: "Application approved.", entityId: venueId };
 }
 
@@ -378,6 +397,12 @@ export async function createAndApproveVenueApplication(input: {
     status: "approved",
     venueName: name,
   });
+  void writeAdminAuditEvent({
+    action: "venue_application.approved",
+    targetType: "venue_profile_application",
+    targetId: input.applicationId,
+    details: { venueId, created: true },
+  }).catch(() => undefined);
   return { ok: true, message: "Venue created and application approved.", entityId: venueId };
 }
 

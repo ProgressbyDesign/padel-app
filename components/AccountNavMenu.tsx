@@ -6,6 +6,7 @@ import { logoutAction } from "@/app/actions/auth";
 import { setWorkspacePreference } from "@/app/account/workspace/actions";
 import AccountAvatar from "@/components/account/AccountAvatar";
 import type { AccountNavContext } from "@/lib/workspace/resolve";
+import { ROLE_LABELS } from "@/lib/admin/permissions";
 
 export default function AccountNavMenu({
   account,
@@ -157,7 +158,12 @@ export default function AccountNavMenu({
             className={itemClass}
             onClick={() => prefer("admin")}
           >
-            Admin workspace
+            <span className="block">Admin workspace</span>
+            {account.adminRole ? (
+              <span className="block text-xs font-normal text-primary/45">
+                {ROLE_LABELS[account.adminRole]}
+              </span>
+            ) : null}
           </button>
         </>
       ) : null}

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import type { DeletionActionResult } from "@/lib/accountDeletion/types";
 import {
   sendDeletionCancelledEmail,
@@ -9,6 +9,7 @@ import {
   sendDeletionProcessingEmail,
 } from "@/lib/notifications/deletionEmails";
 import { adminUpdateDeletionRequestStatus } from "@/lib/queries/accountDeletionRequests";
+import { writeAdminAuditEvent } from "@/lib/admin/audit";
 
 function revalidateAdminDeletion(requestId?: string) {
   revalidatePath("/admin/account-deletions");
@@ -19,7 +20,7 @@ function revalidateAdminDeletion(requestId?: string) {
 }
 
 async function authorizeAdmin() {
-  return requireAdminAccount("not-found");
+  return requireAdminPermission("deletions.manage", "not-found");
 }
 
 export async function markProcessing(
@@ -41,6 +42,12 @@ export async function markProcessing(
   void sendDeletionProcessingEmail(result.request.requester_email).catch(
     () => undefined
   );
+  void writeAdminAuditEvent({
+    action: "account_deletion.processing",
+    targetType: "account_deletion_request",
+    targetId: requestId,
+    details: {},
+  }).catch(() => undefined);
 
   return {
     ok: true,
@@ -65,6 +72,12 @@ export async function declineDeletionRequest(
   void sendDeletionDeclinedEmail(result.request.requester_email).catch(
     () => undefined
   );
+  void writeAdminAuditEvent({
+    action: "account_deletion.declined",
+    targetType: "account_deletion_request",
+    targetId: requestId,
+    details: {},
+  }).catch(() => undefined);
 
   return { ok: true, message: "Deletion request declined." };
 }

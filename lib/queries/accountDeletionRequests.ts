@@ -10,7 +10,7 @@ import {
   type DeletionResponsibilitySummary,
 } from "@/lib/accountDeletion/types";
 import { ACTIVE_APPLICATION_STATUSES } from "@/lib/coachProfileApplication/constants";
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import { createClient } from "@/lib/supabase/server";
 import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
 
@@ -204,7 +204,7 @@ export type AdminDeletionListItem = AccountDeletionRequest & {
 export async function listAdminDeletionRequests(
   filters: AdminDeletionListFilters = {}
 ): Promise<AdminDeletionListItem[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("deletions.read");
   const supabase = await createClient();
 
   const statuses =
@@ -261,7 +261,7 @@ export async function listAdminDeletionRequests(
 export async function loadAdminDeletionRequestDetail(
   id: string
 ): Promise<AdminDeletionRequestDetail | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("deletions.read");
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -411,7 +411,7 @@ export async function adminUpdateDeletionRequestStatus(input: {
   requestId: string;
   status: "processing" | "declined" | "cancelled";
 }): Promise<{ request: AccountDeletionRequest } | { error: string }> {
-  await requireAdminAccount("not-found");
+  await requireAdminPermission("deletions.manage", "not-found");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("account_deletion_requests")

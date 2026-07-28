@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getAdminAccount } from "@/lib/auth/adminSession";
+import { hasAdminPermission } from "@/lib/admin/permissions";
 import {
   isValidCoachId,
   loadManagedCoachShell,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/queries/managedCoachShell";
 import { createClient } from "@/lib/supabase/server";
 
-/** Coach members or operations admins may open availability management UI. */
+/** Coach members or admins with profiles.read may open availability management UI. */
 export async function loadCoachAvailabilityAccess(
   coachId: string
 ): Promise<ManagedCoachShell | null> {
@@ -17,7 +18,7 @@ export async function loadCoachAvailabilityAccess(
 
   if (!isValidCoachId(coachId)) return null;
   const admin = await getAdminAccount();
-  if (!admin) return null;
+  if (!admin || !hasAdminPermission(admin, "profiles.read")) return null;
 
   const supabase = await createClient();
   const { data: coach, error } = await supabase

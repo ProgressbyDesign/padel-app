@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminAccount, type AdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission, type AdminAccount } from "@/lib/auth/adminSession";
 import type {
   CoachApplicationMode,
   CoachApplicationStatus,
@@ -11,6 +11,7 @@ import {
   searchCoachesForAdminApproval,
   type AdminCoachSearchResult,
 } from "@/lib/admin/applicationQueries";
+import { writeAdminAuditEvent } from "@/lib/admin/audit";
 import { logSkippedRecipient } from "@/lib/notifications/resolveRecipientEmail";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,7 +43,7 @@ async function authorizeAdminAction(): Promise<AdminAccount> {
   if (error || typeof data?.claims?.sub !== "string") {
     throw new Error("Your admin session has expired.");
   }
-  return requireAdminAccount("not-found");
+  return requireAdminPermission("applications.review", "not-found");
 }
 
 async function loadApplication(
@@ -175,6 +176,12 @@ export async function requestCoachApplicationChanges(
     status: "changes_requested",
     note: reviewNote,
   });
+  void writeAdminAuditEvent({
+    action: "coach_application.changes_requested",
+    targetType: "coach_profile_application",
+    targetId: applicationId,
+    details: {},
+  }).catch(() => undefined);
   return { ok: true, message: "Changes requested." };
 }
 
@@ -210,6 +217,12 @@ export async function declineCoachApplication(
     status: "declined",
     note: reviewNote,
   });
+  void writeAdminAuditEvent({
+    action: "coach_application.declined",
+    targetType: "coach_profile_application",
+    targetId: applicationId,
+    details: {},
+  }).catch(() => undefined);
   return { ok: true, message: "Application declined." };
 }
 
@@ -254,6 +267,12 @@ async function approveWithCoachId(
     status: "approved",
     coachName: (coach.name as string | null) ?? application.full_name,
   });
+  void writeAdminAuditEvent({
+    action: "coach_application.approved",
+    targetType: "coach_profile_application",
+    targetId: application.id,
+    details: { coachId },
+  }).catch(() => undefined);
   return { ok: true, message: "Application approved.", entityId: coachId };
 }
 
@@ -385,6 +404,12 @@ export async function createAndApproveCoachApplication(input: {
     status: "approved",
     coachName: name,
   });
+  void writeAdminAuditEvent({
+    action: "coach_application.approved",
+    targetType: "coach_profile_application",
+    targetId: input.applicationId,
+    details: { coachId, created: true },
+  }).catch(() => undefined);
   return { ok: true, message: "Coach created and application approved.", entityId: coachId };
 }
 

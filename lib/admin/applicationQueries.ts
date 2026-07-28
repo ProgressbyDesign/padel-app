@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import type { CoachApplicationStatus } from "@/lib/coachProfileApplication/constants";
 import type {
   CoachApplicationLocationRow,
@@ -176,7 +176,7 @@ export async function countApplicationStatuses(): Promise<{
   coach: ApplicationStatusCounts;
   venue: ApplicationStatusCounts;
 }> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const [coach, venue] = await Promise.all([
     countTableStatuses("coach_profile_applications"),
     countTableStatuses("venue_profile_applications"),
@@ -189,7 +189,7 @@ export async function listCoachApplications({
 }: {
   statuses: CoachApplicationStatus[];
 }): Promise<AdminCoachApplication[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const supabase = await createClient();
   let query = supabase
     .from("coach_profile_applications")
@@ -205,7 +205,7 @@ export async function listCoachApplications({
 export async function getCoachApplicationDetail(
   id: string
 ): Promise<AdminCoachApplicationDetail | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const supabase = await createClient();
   const [applicationResult, locationResult] = await Promise.all([
     supabase
@@ -245,7 +245,7 @@ export async function listVenueApplications({
 }: {
   statuses: VenueApplicationStatus[];
 }): Promise<AdminVenueApplication[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const supabase = await createClient();
   let query = supabase
     .from("venue_profile_applications")
@@ -275,7 +275,7 @@ async function loadVenue(
 export async function getVenueApplicationDetail(
   id: string
 ): Promise<AdminVenueApplicationDetail | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("venue_profile_applications")
@@ -317,7 +317,7 @@ function safeSearchTerm(term: string): string {
 export async function searchCoachesForAdminApproval(
   term: string
 ): Promise<AdminCoachSearchResult[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const q = safeSearchTerm(term);
   if (q.length < 2) return [];
   const supabase = await createClient();
@@ -340,7 +340,7 @@ export async function searchCoachesForAdminApproval(
 export async function searchVenuesForAdminApproval(
   term: string
 ): Promise<AdminVenueSearchResult[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("applications.read");
   const q = safeSearchTerm(term);
   if (q.length < 2) return [];
   const supabase = await createClient();

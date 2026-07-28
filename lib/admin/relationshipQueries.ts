@@ -10,7 +10,7 @@ import {
   asCoachVenueRelationship,
 } from "@/lib/queries/coachVenueRelationships";
 import type { CoachVenueRelationship } from "@/lib/coachVenues/types";
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import { createClient } from "@/lib/supabase/server";
 
 const ADMIN_RELATIONSHIP_SELECT = `
@@ -85,7 +85,7 @@ async function profileLabels(
 export async function listAdminCoachVenueRelationships(
   filters: AdminRelationshipFilters = {}
 ): Promise<AdminRelationshipListItem[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("relationships.read");
   const supabase = await createClient();
 
   let query = supabase
@@ -160,7 +160,7 @@ export async function loadAdminRelationshipDetail(
   coachHasMembership: boolean;
   venueHasMembership: boolean;
 } | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("relationships.read");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
@@ -206,7 +206,7 @@ export async function loadAdminRelationshipDetail(
 export async function countAdminRelationshipBuckets(): Promise<
   Record<"pending" | "unverified" | "active" | "past", number>
 > {
-  await requireAdminAccount();
+  await requireAdminPermission("relationships.read");
   const supabase = await createClient();
   const statuses: CoachVenueStatus[] = [...COACH_VENUE_STATUSES];
   const counts = await Promise.all(
@@ -239,7 +239,7 @@ export type AdminEntitySearchResult = {
 export async function searchAdminCoachesForRelationship(
   term: string
 ): Promise<AdminEntitySearchResult[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("relationships.read");
   const safe = sanitize(term);
   if (safe.length < 2) return [];
   const supabase = await createClient();
@@ -262,7 +262,7 @@ export async function searchAdminCoachesForRelationship(
 export async function searchAdminVenuesForRelationship(
   term: string
 ): Promise<AdminEntitySearchResult[]> {
-  await requireAdminAccount();
+  await requireAdminPermission("relationships.read");
   const safe = sanitize(term);
   if (safe.length < 2) return [];
   const supabase = await createClient();

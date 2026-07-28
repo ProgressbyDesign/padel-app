@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import {
   buildCoachCompletion,
   buildVenueCompletion,
@@ -65,7 +65,7 @@ export type OpsVenueOverview = {
 export async function loadOpsCoachOverview(
   coachId: string
 ): Promise<OpsCoachOverview | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("profiles.read");
   const supabase = await createClient();
 
   const [
@@ -203,7 +203,7 @@ export async function loadOpsCoachOverview(
 export async function loadOpsVenueOverview(
   venueId: string
 ): Promise<OpsVenueOverview | null> {
-  await requireAdminAccount();
+  await requireAdminPermission("profiles.read");
   const supabase = await createClient();
 
   const [

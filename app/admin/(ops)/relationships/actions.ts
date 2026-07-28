@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdminAccount } from "@/lib/auth/adminSession";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
+import { writeAdminAuditEvent } from "@/lib/admin/audit";
 import { coachVenueMutationErrorMessage } from "@/lib/coachVenues/errors";
 import type { RelationshipActionResult } from "@/lib/coachVenues/types";
 import {
@@ -19,7 +20,7 @@ async function authorizeAdmin() {
   if (error || typeof data?.claims?.sub !== "string") {
     throw new Error("Your admin session has expired.");
   }
-  return requireAdminAccount("not-found");
+  return requireAdminPermission("relationships.manage", "not-found");
 }
 
 function revalidateRelationship(coachId: string, venueId: string) {
@@ -72,6 +73,27 @@ async function updateStatus(
   }
 
   revalidateRelationship(relationship.coach_id, relationship.venue_id);
+  if (status === "active") {
+    void writeAdminAuditEvent({
+      action: "relationship.activated",
+      targetType: "coach_venue",
+      targetId: relationshipId,
+      details: {
+        coachId: relationship.coach_id,
+        venueId: relationship.venue_id,
+      },
+    }).catch(() => undefined);
+  } else if (status === "ended") {
+    void writeAdminAuditEvent({
+      action: "relationship.ended",
+      targetType: "coach_venue",
+      targetId: relationshipId,
+      details: {
+        coachId: relationship.coach_id,
+        venueId: relationship.venue_id,
+      },
+    }).catch(() => undefined);
+  }
   return { ok: true, message: successMessage };
 }
 
@@ -232,6 +254,16 @@ export async function adminCreateCoachVenueRelationship(input: {
   }
 
   revalidateRelationship(input.coachId, input.venueId);
+  void writeAdminAuditEvent({
+    action: "relationship.created",
+    targetType: "coach_venue",
+    targetId: null,
+    details: {
+      coachId: input.coachId,
+      venueId: input.venueId,
+      mode: input.mode,
+    },
+  }).catch(() => undefined);
   return {
     ok: true,
     message:
