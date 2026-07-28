@@ -158,12 +158,12 @@ describe("invitation tokens", () => {
     const { rawToken, tokenDigest } = generateInvitationToken();
     const path = invitationAcceptPath(rawToken);
     expect(path).toContain(encodeURIComponent(rawToken));
+    expect(path).toContain("/admin/invitations/start");
     expect(path).not.toContain(tokenDigest);
   });
 
   it("preserves safe invitation next URL", () => {
-    const token = generateInvitationToken().rawToken;
-    const next = `/admin/invitations/accept?token=${encodeURIComponent(token)}`;
+    const next = `/admin/invitations/accept`;
     expect(safeInternalPath(next, "/account")).toBe(next);
     expect(safeInternalPath("https://evil.com", "/account")).toBe("/account");
   });

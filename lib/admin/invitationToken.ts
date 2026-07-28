@@ -64,7 +64,36 @@ export function normalizeInvitationEmail(email: string): string | null {
   return normalized;
 }
 
-/** Build accept URL path with raw token (for email / one-time copy). */
+/** New invitation emails: start route stores the token in an HTTP-only cookie. */
+export function invitationStartPath(rawToken: string): string {
+  return `/admin/invitations/start?token=${encodeURIComponent(rawToken)}`;
+}
+
+/**
+ * Legacy accept URL with raw token (older emails).
+ * Prefer invitationStartPath for new emails.
+ */
 export function invitationAcceptPath(rawToken: string): string {
+  return invitationStartPath(rawToken);
+}
+
+/** Compatibility path for emails that still deep-link to accept?token=. */
+export function invitationLegacyAcceptPath(rawToken: string): string {
   return `/admin/invitations/accept?token=${encodeURIComponent(rawToken)}`;
+}
+
+/** True when a stored/profile name is meaningful (not empty or email-derived). */
+export function hasMeaningfulFullName(
+  fullName: string | null | undefined,
+  email?: string | null
+): boolean {
+  const name = typeof fullName === "string" ? fullName.trim() : "";
+  if (name.length < 2) return false;
+  if (!email) return true;
+  const local = email.trim().toLowerCase().split("@")[0] ?? "";
+  if (!local) return true;
+  const normalizedName = name.toLowerCase().replace(/[.\s_-]+/g, "");
+  const normalizedLocal = local.replace(/[.\s_-]+/g, "");
+  if (!normalizedLocal) return true;
+  return normalizedName !== normalizedLocal;
 }

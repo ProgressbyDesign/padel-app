@@ -1,60 +1,68 @@
 import { getAuthenticatedAccount } from "@/lib/auth/session";
-import {
-  loadInvitationPreviewByRawToken,
-} from "@/app/admin/invitations/actions";
-import { isValidInvitationRawToken } from "@/lib/admin/invitationToken";
+import { readAdminInvitationTokenFromCookie } from "@/lib/admin/invitationCookie";
+import { parseInvitationTokenSearchParam } from "@/lib/admin/invitationAcceptHelpers";
+import { loadInvitationPreviewFromCookie } from "@/app/admin/invitations/actions";
 import AcceptAdminInvitationClient from "@/components/admin/AcceptAdminInvitationClient";
 
 type PageProps = {
   searchParams: Promise<{ token?: string | string[] }>;
 };
 
-function first(value: string | string[] | undefined): string | null {
-  if (!value) return null;
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
 export default async function AcceptAdminInvitationPage({
   searchParams,
 }: PageProps) {
   const params = await searchParams;
-  const rawToken = first(params.token)?.trim() ?? "";
+  const legacyToken = parseInvitationTokenSearchParam(params.token);
   const account = await getAuthenticatedAccount();
 
-  if (!rawToken || !isValidInvitationRawToken(rawToken)) {
+  // Legacy emails: /accept?token= — Continue stores cookie and strips the URL.
+  if (legacyToken) {
     return (
       <AcceptAdminInvitationClient
-        state="invalid"
-        token=""
-        signedIn={Boolean(account)}
+        state="legacy-token"
         signedInEmail={account?.email ?? null}
+        legacyToken={legacyToken}
       />
     );
   }
 
-  const preview = await loadInvitationPreviewByRawToken(rawToken);
+  const cookieToken = await readAdminInvitationTokenFromCookie();
 
   if (!account) {
+    if (!cookieToken) {
+      return (
+        <AcceptAdminInvitationClient
+          state="missing-cookie"
+          signedInEmail={null}
+        />
+      );
+    }
+    return (
+      <AcceptAdminInvitationClient state="signed-out" signedInEmail={null} />
+    );
+  }
+
+  const preview = await loadInvitationPreviewFromCookie();
+
+  if (
+    preview.status === "missing-cookie" ||
+    preview.status === "invalid-token"
+  ) {
     return (
       <AcceptAdminInvitationClient
-        state="signed-out"
-        token={rawToken}
-        signedIn={false}
-        signedInEmail={null}
-        role={preview.role}
-        emailMasked={preview.emailMasked}
-        expiresAt={preview.expiresAt}
+        state={preview.status}
+        signedInEmail={account.email}
+        preview={preview}
       />
     );
   }
 
-  if (preview.status === "invalid") {
+  if (preview.status === "unavailable") {
     return (
       <AcceptAdminInvitationClient
-        state="invalid"
-        token={rawToken}
-        signedIn
+        state="unavailable"
         signedInEmail={account.email}
+        preview={preview}
       />
     );
   }
@@ -63,12 +71,8 @@ export default async function AcceptAdminInvitationPage({
     return (
       <AcceptAdminInvitationClient
         state="expired"
-        token={rawToken}
-        signedIn
         signedInEmail={account.email}
-        role={preview.role}
-        emailMasked={preview.emailMasked}
-        expiresAt={preview.expiresAt}
+        preview={preview}
       />
     );
   }
@@ -77,11 +81,8 @@ export default async function AcceptAdminInvitationPage({
     return (
       <AcceptAdminInvitationClient
         state="cancelled"
-        token={rawToken}
-        signedIn
         signedInEmail={account.email}
-        role={preview.role}
-        emailMasked={preview.emailMasked}
+        preview={preview}
       />
     );
   }
@@ -89,40 +90,18 @@ export default async function AcceptAdminInvitationPage({
   if (preview.status === "accepted") {
     return (
       <AcceptAdminInvitationClient
-        state="already-accepted"
-        token={rawToken}
-        signedIn
+        state="accepted"
         signedInEmail={account.email}
-        role={preview.role}
-        emailMasked={preview.emailMasked}
-      />
-    );
-  }
-
-  // pending
-  if (preview.emailMatches === false) {
-    return (
-      <AcceptAdminInvitationClient
-        state="wrong-email"
-        token={rawToken}
-        signedIn
-        signedInEmail={account.email}
-        role={preview.role}
-        emailMasked={preview.emailMasked}
-        expiresAt={preview.expiresAt}
+        preview={preview}
       />
     );
   }
 
   return (
     <AcceptAdminInvitationClient
-      state="matching-email"
-      token={rawToken}
-      signedIn
+      state="pending"
       signedInEmail={account.email}
-      role={preview.role}
-      emailMasked={preview.emailMasked}
-      expiresAt={preview.expiresAt}
+      preview={preview}
     />
   );
 }
