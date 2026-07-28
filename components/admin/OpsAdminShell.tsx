@@ -3,58 +3,54 @@
 import {
   Building2,
   CalendarCheck2,
+  ClipboardList,
   Database,
   LayoutDashboard,
   Link2,
   Menu,
+  ScrollText,
   UserRound,
   UserRoundCheck,
+  Users,
   UserX,
   X,
 } from "lucide-react";
+import AdminAccountMenu from "@/components/admin/AdminAccountMenu";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { AdminAccount } from "@/lib/auth/adminSession";
+import {
+  navItemsForMembership,
+  ROLE_LABELS,
+  type AdminNavItem,
+} from "@/lib/admin/permissions";
 
-const NAV = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  {
-    href: "/admin/applications/coaches",
-    label: "Coach applications",
-    icon: UserRoundCheck,
-    exact: false,
-  },
-  {
-    href: "/admin/applications/venues",
-    label: "Venue applications",
-    icon: Building2,
-    exact: false,
-  },
-  { href: "/admin/relationships", label: "Relationships", icon: Link2, exact: false },
-  { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck2, exact: false },
-  {
-    href: "/admin/account-deletions",
-    label: "Account deletions",
-    icon: UserX,
-    exact: false,
-  },
-  { href: "/admin/data-quality", label: "Data quality", icon: Database, exact: false },
-] as const;
+const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
+  "/admin": LayoutDashboard,
+  "/admin/applications/coaches": UserRoundCheck,
+  "/admin/applications/venues": Building2,
+  "/admin/relationships": Link2,
+  "/admin/bookings": CalendarCheck2,
+  "/admin/account-deletions": UserX,
+  "/admin/team": Users,
+  "/admin/audit": ScrollText,
+  "/admin/data-quality": Database,
+};
 
-function navIsActive(pathname: string, href: string, exact: boolean) {
-  if (exact) return pathname === href;
-  if (href === "/admin/applications/coaches") {
+function navIsActive(pathname: string, item: AdminNavItem) {
+  if (item.exact) return pathname === item.href;
+  if (item.href === "/admin/applications/coaches") {
     return (
-      pathname.startsWith(href) || pathname.startsWith("/admin/coaches/")
+      pathname.startsWith(item.href) || pathname.startsWith("/admin/coaches/")
     );
   }
-  if (href === "/admin/applications/venues") {
+  if (item.href === "/admin/applications/venues") {
     return (
-      pathname.startsWith(href) || pathname.startsWith("/admin/venues/")
+      pathname.startsWith(item.href) || pathname.startsWith("/admin/venues/")
     );
   }
-  return pathname.startsWith(href);
+  return pathname.startsWith(item.href);
 }
 
 export default function OpsAdminShell({
@@ -66,16 +62,22 @@ export default function OpsAdminShell({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const displayName = account.fullName || account.email || "Admin";
+  const roleLabel = ROLE_LABELS[account.role];
+
+  const navItems = useMemo(
+    () => navItemsForMembership(account),
+    [account]
+  );
 
   const nav = (
     <nav className="space-y-1" aria-label="Admin navigation">
-      {NAV.map(({ href, label, icon: Icon, exact }) => {
-        const active = navIsActive(pathname, href, exact);
+      {navItems.map((item) => {
+        const Icon = NAV_ICONS[item.href] ?? ClipboardList;
+        const active = navIsActive(pathname, item);
         return (
           <Link
-            key={href}
-            href={href}
+            key={item.href}
+            href={item.href}
             onClick={() => setOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
               active
@@ -84,7 +86,7 @@ export default function OpsAdminShell({
             }`}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            {label}
+            {item.label}
           </Link>
         );
       })}
@@ -112,19 +114,20 @@ export default function OpsAdminShell({
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link href="/admin" className="font-heading text-lg font-bold tracking-tight">
-              Padel Pathways <span className="text-primary/40">Admin</span>
-            </Link>
+            <div>
+              <Link
+                href="/admin"
+                className="font-heading text-lg font-bold tracking-tight"
+              >
+                Padel Pathways{" "}
+                <span className="text-primary/40">Admin</span>
+              </Link>
+              <p className="text-xs font-medium text-primary/45">
+                Admin workspace · {roleLabel}
+              </p>
+            </div>
           </div>
-          <Link
-            href="/account"
-            className="min-w-0 rounded-xl px-3 py-2 text-right transition hover:bg-surface"
-          >
-            <span className="block truncate text-sm font-semibold">{displayName}</span>
-            <span className="block max-w-52 truncate text-xs text-primary/50">
-              {account.email || "View account"}
-            </span>
-          </Link>
+          <AdminAccountMenu account={account} />
         </div>
       </header>
 
@@ -136,7 +139,8 @@ export default function OpsAdminShell({
         >
           {nav}
           <p className="mt-8 border-t border-primary/10 pt-4 text-xs leading-5 text-primary/45">
-            Operational tools use your authenticated admin account and database policies.
+            Operational tools use your authenticated admin account and database
+            policies.
           </p>
         </aside>
         <main className="min-w-0 p-4 sm:p-6 lg:p-8">{children}</main>

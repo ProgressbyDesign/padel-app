@@ -116,6 +116,9 @@ function revalidateAccountSettings() {
   revalidatePath("/account/personal");
   revalidatePath("/");
   revalidatePath("/account", "layout");
+  revalidatePath("/admin");
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/audit");
 }
 
 export async function updateAccountDisplayNameAction(

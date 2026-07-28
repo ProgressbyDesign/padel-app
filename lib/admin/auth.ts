@@ -4,7 +4,7 @@ export const ADMIN_COOKIE = "pp_admin_token";
 
 /**
  * Shared-secret gate for legacy /admin/data-quality tools only.
- * Operational admin uses profiles.role = "admin" via Supabase Auth.
+ * Operational admin uses public.admin_memberships via lib/auth/adminSession.ts.
  */
 export function getAdminSecret(): string | null {
   return process.env.ADMIN_SECRET?.trim() || null;

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAdminAccount } from "@/lib/auth/adminSession";
+import { hasAdminPermission } from "@/lib/admin/permissions";
 import {
   BOOKING_ERROR_COPY,
   bookingMutationErrorMessage,
@@ -41,7 +42,10 @@ async function requireCoachMemberOrAdmin(coachId: string): Promise<string | null
   if (!userId) return null;
 
   const admin = await getAdminAccount();
-  if (admin) return userId;
+  if (admin) {
+    if (!hasAdminPermission(admin, "bookings.manage")) return null;
+    return userId;
+  }
 
   const supabase = await createClient();
   const { data: membership, error } = await supabase

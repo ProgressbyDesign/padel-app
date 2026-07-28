@@ -22,6 +22,7 @@ import {
   loadAvailabilityRules,
   loadAvailabilitySettings,
 } from "@/lib/queries/coachAvailability";
+import { requireAdminPermission } from "@/lib/auth/adminSession";
 import { createClient } from "@/lib/supabase/server";
 
 export {
@@ -293,6 +294,7 @@ export type AdminBookingFilters = {
 export async function listAdminBookings(
   filters: AdminBookingFilters = {}
 ): Promise<CoachBookingRequest[]> {
+  await requireAdminPermission("bookings.read");
   const supabase = await createClient();
   let query = supabase
     .from("coach_booking_requests")

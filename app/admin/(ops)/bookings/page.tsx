@@ -1,38 +1,35 @@
 import AdminBookingsPanel from "@/components/admin/AdminBookingsPanel";
+import {
+  filterAdminBookings,
+  paginateAdminBookings,
+  parseAdminBookingSearchParams,
+  sortAdminBookings,
+  type AdminBookingSearchParams,
+} from "@/lib/admin/bookingTable";
+import { hasAdminPermission } from "@/lib/admin/permissions";
+import { getAdminAccount } from "@/lib/auth/adminSession";
 import { PAYMENT_COPY } from "@/lib/coachBookings/constants";
 import { listAdminBookings } from "@/lib/queries/coachBookings";
 
 type PageProps = {
-  searchParams: Promise<{
-    status?: string;
-    coach?: string;
-    venue?: string;
-    requester?: string;
-    date?: string;
-  }>;
+  searchParams: Promise<AdminBookingSearchParams>;
 };
 
 export default async function AdminBookingsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  let rows = await listAdminBookings({
-    status: params.status,
-    coach: params.coach,
-    venue: params.venue,
-  });
+  const [rawParams, account] = await Promise.all([
+    searchParams,
+    getAdminAccount(),
+  ]);
+  const params = parseAdminBookingSearchParams(rawParams);
+  const canManage = hasAdminPermission(account, "bookings.manage");
 
-  const requester = params.requester?.trim().toLowerCase();
-  if (requester) {
-    rows = rows.filter(
-      (row) =>
-        row.requester_name.toLowerCase().includes(requester) ||
-        row.requester_email.toLowerCase().includes(requester)
-    );
-  }
-
-  const date = params.date?.trim();
-  if (date) {
-    rows = rows.filter((row) => row.starts_at.slice(0, 10) === date);
-  }
+  const allRows = await listAdminBookings();
+  const filtered = filterAdminBookings(allRows, params);
+  const sorted = sortAdminBookings(filtered, params);
+  const { rows, total, page, pageCount } = paginateAdminBookings(
+    sorted,
+    params.page
+  );
 
   return (
     <div className="space-y-6">
@@ -48,11 +45,10 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
       </div>
       <AdminBookingsPanel
         rows={rows}
-        initialStatus={params.status ?? null}
-        initialCoach={params.coach ?? null}
-        initialVenue={params.venue ?? null}
-        initialRequester={params.requester ?? null}
-        initialDate={params.date ?? null}
+        params={{ ...params, page }}
+        total={total}
+        pageCount={pageCount}
+        canManage={canManage}
         // eslint-disable-next-line react-hooks/purity -- intentional request-time clock for UI eligibility
         nowMs={Date.now()}
       />

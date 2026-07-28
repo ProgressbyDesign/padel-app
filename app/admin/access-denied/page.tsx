@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAuthenticatedAccount } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { getAdminAccount } from "@/lib/auth/adminSession";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminAccessDeniedPage() {
   const account = await getAuthenticatedAccount();
@@ -13,6 +14,16 @@ export default async function AdminAccessDeniedPage() {
     redirect("/admin");
   }
 
+  const supabase = await createClient();
+  const { data: membership } = await supabase
+    .from("admin_memberships")
+    .select("status")
+    .eq("user_id", account.id)
+    .maybeSingle();
+  const suspended =
+    membership &&
+    (membership.status === "suspended" || membership.status === "revoked");
+
   return (
     <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-16">
       <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
@@ -23,8 +34,10 @@ export default async function AdminAccessDeniedPage() {
       </h1>
       <p className="mt-4 text-base leading-7 text-primary/65">
         You&apos;re signed in as {account.email || "this account"}, but this
-        workspace is limited to Padel Pathways admins. This is not a password
-        problem — your account simply isn&apos;t an admin.
+        workspace is limited to active Padel Pathways admins.
+        {suspended
+          ? " Your admin membership is suspended or revoked — contact an owner if you need access restored."
+          : " This is not a password problem — your account simply isn't an active admin."}
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
         <Link

@@ -5,6 +5,7 @@ import {
   type WorkspaceType,
   type WorkspaceVenue,
 } from "@/lib/workspace/types";
+import type { AdminRole } from "@/lib/admin/permissions";
 
 export type AccountNavContext = {
   id: string;
@@ -16,6 +17,7 @@ export type AccountNavContext = {
   coaches: WorkspaceCoach[];
   venues: WorkspaceVenue[];
   isAdmin: boolean;
+  adminRole?: AdminRole | null;
   preference: WorkspacePreference;
 };
 

@@ -19,6 +19,7 @@ import {
   zonedLocalToUtc,
 } from "@/lib/coachAvailability/timezone";
 import { getAdminAccount } from "@/lib/auth/adminSession";
+import { hasAdminPermission } from "@/lib/admin/permissions";
 import {
   loadActiveCoachVenueForPair,
   loadAvailabilitySettings,
@@ -34,7 +35,10 @@ async function authorizeCoachOrAdmin(coachId: string): Promise<string | null> {
   if (error || typeof userId !== "string" || !userId) return null;
 
   const admin = await getAdminAccount();
-  if (admin) return userId;
+  if (admin) {
+    if (!hasAdminPermission(admin, "profiles.manage")) return null;
+    return userId;
+  }
 
   const { data: membership, error: membershipError } = await supabase
     .from("coach_memberships")

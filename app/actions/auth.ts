@@ -150,10 +150,10 @@ export async function resetPasswordAction(
   redirect("/account");
 }
 
-export async function logoutAction(): Promise<void> {
+export async function logoutAction(formData?: FormData): Promise<void> {
   const supabase = await createClient();
   try {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
   } catch (error) {
     console.warn(
       "[auth] signOut failed:",
@@ -162,5 +162,13 @@ export async function logoutAction(): Promise<void> {
   }
   await clearPasswordRecoverySession();
   revalidatePath("/", "layout");
-  redirect("/login");
+  const nextRaw =
+    formData && typeof formData.get === "function"
+      ? text(formData, "next")
+      : "";
+  const nextPath = nextRaw ? safeInternalPath(nextRaw, "/login") : "/login";
+  if (nextPath === "/login" || nextPath.startsWith("/login?")) {
+    redirect(nextPath);
+  }
+  redirect(`/login?next=${encodeURIComponent(nextPath)}`);
 }

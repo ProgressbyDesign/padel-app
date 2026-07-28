@@ -184,7 +184,7 @@ export async function loadAccountSettingsPage(): Promise<AccountSettingsPageData
     },
     coaches,
     venues,
-    isAdmin: Boolean(admin) || profile?.role === "admin",
+    isAdmin: Boolean(admin),
     deletionRequest,
     openDeletionRequest,
     latestDeletionStatus: deletionRequest?.status ?? null,
