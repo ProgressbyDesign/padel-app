@@ -127,6 +127,7 @@ export async function createAdminInvitationAction(input: {
   const acceptPath = invitationAcceptPath(rawToken);
 
   const delivery = await sendAdminInvitationEmail({
+    invitationId: invitationId ?? "unknown",
     to: email,
     inviterName: actor.fullName || actor.email || "A Padel Pathways admin",
     role,
@@ -258,6 +259,7 @@ export async function resendAdminInvitationAction(
   const email = String(existing.email);
   const acceptPath = invitationAcceptPath(rawToken);
   const delivery = await sendAdminInvitationEmail({
+    invitationId,
     to: email,
     inviterName: actor.fullName || actor.email || "A Padel Pathways admin",
     role,

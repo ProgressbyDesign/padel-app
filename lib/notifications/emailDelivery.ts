@@ -96,6 +96,12 @@ export function mapEmailProviderError(input: {
       message: "Email could not be sent because the mail service is unavailable.",
     };
   }
+  if (input.providerMessage?.toLowerCase().includes("missing message id")) {
+    return {
+      errorCode: "provider_missing_message_id",
+      message: "Invitation created, but the email could not be sent.",
+    };
+  }
   return {
     errorCode: "delivery_failed",
     message: "Invitation created, but the email could not be sent.",

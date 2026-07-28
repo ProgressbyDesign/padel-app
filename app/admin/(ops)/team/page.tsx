@@ -1,10 +1,15 @@
 import { requireAdminPermission } from "@/lib/auth/adminSession";
+import { loadEmailServiceDiagnostic } from "@/lib/notifications/emailServiceDiagnostic";
 import { loadAdminTeamBoard } from "@/lib/queries/adminTeam";
+import AdminEmailServiceDiagnostic from "@/components/admin/AdminEmailServiceDiagnostic";
 import AdminTeamPanel from "@/components/admin/AdminTeamPanel";
 
 export default async function AdminTeamPage() {
   const account = await requireAdminPermission("team.manage");
-  const board = await loadAdminTeamBoard();
+  const [board, emailDiagnostic] = await Promise.all([
+    loadAdminTeamBoard(),
+    account.role === "owner" ? loadEmailServiceDiagnostic() : null,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -17,6 +22,9 @@ export default async function AdminTeamPage() {
           Invite admins, manage roles, and keep at least one active Owner.
         </p>
       </div>
+      {emailDiagnostic ? (
+        <AdminEmailServiceDiagnostic diagnostic={emailDiagnostic} />
+      ) : null}
       <AdminTeamPanel board={board} currentUserId={account.id} />
     </div>
   );

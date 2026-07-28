@@ -2,6 +2,7 @@ import {
   mapEmailProviderError,
   type EmailDeliveryResult,
 } from "@/lib/notifications/emailDelivery";
+import { configuredSenderAddress } from "@/lib/notifications/emailServiceDiagnostic";
 
 export async function sendEmailWithResult(input: {
   to: string;
@@ -11,9 +12,7 @@ export async function sendEmailWithResult(input: {
 }): Promise<EmailDeliveryResult> {
   const label = input.logLabel ?? "product-email";
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from =
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    process.env.ENQUIRY_FROM_EMAIL?.trim();
+  const from = configuredSenderAddress();
 
   if (!apiKey) {
     const mapped = mapEmailProviderError({ missingApiKey: true });
@@ -39,23 +38,23 @@ export async function sendEmailWithResult(input: {
   try {
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
-    const result = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from,
       to: input.to.trim(),
       subject: input.subject,
       html: input.html,
     });
 
-    if (result.error) {
+    if (error) {
       const mapped = mapEmailProviderError({
-        providerMessage: result.error.message,
-        providerName: result.error.name,
+        providerMessage: error.message,
+        providerName: error.name,
       });
       if (process.env.NODE_ENV === "development") {
         console.warn(
           `[${label}] provider error:`,
-          result.error.name,
-          result.error.message
+          error.name,
+          error.message
         );
       } else {
         console.warn(`[${label}] send failed:`, mapped.errorCode);
@@ -64,7 +63,21 @@ export async function sendEmailWithResult(input: {
     }
 
     const providerId =
-      result.data && typeof result.data.id === "string" ? result.data.id : null;
+      data && typeof data.id === "string" && data.id.trim()
+        ? data.id.trim()
+        : null;
+    if (!providerId) {
+      const mapped = mapEmailProviderError({
+        providerMessage: "missing message id",
+      });
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[${label}] ${mapped.errorCode}: Resend returned no data.id`);
+      } else {
+        console.warn(`[${label}] send failed:`, mapped.errorCode);
+      }
+      return { ok: false, ...mapped };
+    }
+
     return { ok: true, providerId };
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
