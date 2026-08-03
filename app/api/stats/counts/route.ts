@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../../../../lib/lifecycle/publicationFilters";
 import { createClient } from "../../../../lib/supabase/server";
 
 export async function GET() {
   try {
     const supabase = await createClient();
-    const [venueRes, coachRes] = await Promise.all([
-      supabase.from("venues").select("*", { count: "exact", head: true }),
-      supabase.from("coaches").select("*", { count: "exact", head: true }),
-    ]);
+    let venueQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+    venueQuery = applyPublishedVenueFilter(venueQuery);
+    let coachQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+    coachQuery = applyPublishedCoachFilter(coachQuery);
+
+    const [venueRes, coachRes] = await Promise.all([venueQuery, coachQuery]);
 
     const venueCount =
       !venueRes.error && typeof venueRes.count === "number" ? venueRes.count : null;

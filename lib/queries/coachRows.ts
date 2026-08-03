@@ -12,6 +12,11 @@ import {
   type CoachVenueLinkRow,
 } from "../coachVenueGeo";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
+import { PUBLIC_COACH_VENUE_STATUSES, PUBLISHED_STATUS } from "../lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../lifecycle/publicationFilters";
 import { createClient } from "../supabase/server";
 import type { Venue } from "../venueFilters";
 
@@ -52,7 +57,7 @@ async function attachCoachVenueAndOutcomeEmbeds(
         coach_id,
         is_primary,
         venue_id,
-        venues (
+        venues!inner (
           id,
           name,
           city,
@@ -63,7 +68,8 @@ async function attachCoachVenueAndOutcomeEmbeds(
       `
       )
       .in("coach_id", ids)
-      .in("status", ["active", "unverified"]),
+      .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
+      .eq("venues.publication_status", PUBLISHED_STATUS),
     supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
     supabase
       .from("coach_images")
@@ -139,7 +145,9 @@ export async function fetchCoachRowsFromSupabase(limit = 200): Promise<{
   let lastError: string | null = null;
 
   for (const select of selects) {
-    const res = await supabase.from("coaches").select(select).limit(limit);
+    let query = supabase.from("coaches").select(select).limit(limit);
+    query = applyPublishedCoachFilter(query);
+    const res = await query;
     if (res.error) {
       lastError = res.error.message;
       continue;
@@ -165,8 +173,10 @@ export async function loadCoachesExplorerData(): Promise<{
   coachEntities: Coach[];
 }> {
   const supabase = await createClient();
+  let venuesQuery = supabase.from("venues").select("*").limit(500);
+  venuesQuery = applyPublishedVenueFilter(venuesQuery);
   const [venuesRes, coachResult] = await Promise.all([
-    supabase.from("venues").select("*").limit(500),
+    venuesQuery,
     fetchCoachRowsFromSupabase(200),
   ]);
 

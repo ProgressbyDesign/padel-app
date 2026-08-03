@@ -1,3 +1,9 @@
+import type {
+  LaunchSelectionStatus,
+  OnboardingStatus,
+  PublicationStatus,
+} from "@/lib/lifecycle/constants";
+
 export const DATA_QUALITY_OPTIONS = [
   "pending",
   "needs_review",
@@ -6,6 +12,19 @@ export const DATA_QUALITY_OPTIONS = [
 ] as const;
 
 export type DataQualityStatus = (typeof DATA_QUALITY_OPTIONS)[number];
+
+/** Sprint 6A lifecycle fields — independent of approval / data quality / claim. */
+export type AdminLifecycleFields = {
+  launch_selection_status?: LaunchSelectionStatus | string | null;
+  onboarding_status?: OnboardingStatus | string | null;
+  publication_status?: PublicationStatus | string | null;
+  selected_at?: string | null;
+  selected_by_user_id?: string | null;
+  onboarding_started_at?: string | null;
+  onboarding_completed_at?: string | null;
+  published_at?: string | null;
+  published_by_user_id?: string | null;
+};
 
 export type AdminVenueRow = {
   id: string;
@@ -24,7 +43,7 @@ export type AdminVenueRow = {
   coaching_available?: boolean | null;
   coaching_description?: string | null;
   price?: string | null;
-};
+} & AdminLifecycleFields;
 
 export type AdminVenueDetail = AdminVenueRow & {
   description: string | null;
@@ -56,7 +75,7 @@ export type AdminCoachRow = {
   is_approved: boolean | null;
   data_quality_status: string | null;
   coach_venues?: { venue_id: string; is_primary: boolean | null; venues: { id: string; name: string | null; city: string | null; country: string | null } | { id: string; name: string | null; city: string | null; country: string | null }[] | null }[] | null;
-};
+} & AdminLifecycleFields;
 
 export type AdminCoachDetail = {
   id: string;
@@ -72,7 +91,7 @@ export type AdminCoachDetail = {
   is_approved: boolean | null;
   data_quality_status: string | null;
   reviewed_at: string | null;
-};
+} & AdminLifecycleFields;
 
 export type CoachVenueLinkRow = {
   id?: string;

@@ -2,19 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  COACHING_OUTCOMES,
   isActiveApplicationStatus,
-  isApplicationCountry,
-  isCoachApplicationMode,
   isEditableApplicationStatus,
   isWithdrawableApplicationStatus,
-  mapLegacyCoachRole,
-  type AudienceValue,
   type CoachApplicationMode,
-  type CoachingOutcomeValue,
-  type PlayerLevelValue,
 } from "@/lib/coachProfileApplication/constants";
-import type { CoachApplicationActionResult } from "@/lib/coachProfileApplication/types";
+import type {
+  CoachApplicationActionResult,
+  CoachClaimTargetSummary,
+} from "@/lib/coachProfileApplication/types";
 import { safeInternalPath } from "@/lib/auth/safePath";
 import {
   parseStepOnePayload,
@@ -27,15 +23,12 @@ import {
   type StepThreeInput,
 } from "@/lib/coachProfileApplication/validation";
 import {
-  isValidCoachApplicationUuid,
   loadApplicationLocations,
   loadClaimTargetCoach,
   loadCurrentCoachApplication,
   loadOwnedApplication,
   loadOwnedEditableApplication,
-  searchClaimableCoaches,
 } from "@/lib/queries/coachProfileApplication";
-import type { CoachClaimTargetSummary } from "@/lib/coachProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
 
 function errorResult(
@@ -96,44 +89,18 @@ function mapInsertError(error: { code?: string; message?: string }): string {
   return "We could not start your application. Please try again shortly.";
 }
 
-const OUTCOME_KEYS = new Set(
-  COACHING_OUTCOMES.map((outcome) => outcome.value)
-);
-
-function asPlayerLevels(values: unknown): PlayerLevelValue[] {
-  if (!Array.isArray(values)) return [];
-  return values.filter(
-    (value): value is PlayerLevelValue =>
-      typeof value === "string" &&
-      ["beginner", "intermediate", "advanced", "competitive_professional"].includes(
-        value
-      )
-  );
-}
-
-function asAudiences(attrs: {
-  audience_adults?: boolean | null;
-  audience_juniors?: boolean | null;
-}): AudienceValue[] {
-  const audiences: AudienceValue[] = [];
-  if (attrs.audience_adults) audiences.push("adults");
-  if (attrs.audience_juniors) audiences.push("juniors");
-  return audiences;
-}
-
 export async function searchClaimableCoachesAction(
   term: string
 ): Promise<
   | { ok: true; coaches: CoachClaimTargetSummary[] }
   | { ok: false; message: string }
 > {
-  const userId = await requireUserId();
-  if (!userId) return { ok: false, message: "Sign in to search coach profiles." };
-  try {
-    return { ok: true, coaches: await searchClaimableCoaches(term, userId) };
-  } catch {
-    return { ok: false, message: "Coach search failed. Please try again." };
-  }
+  void term;
+  return {
+    ok: false,
+    message:
+      "Public profile claiming is no longer available. Apply as a coach to create a new profile.",
+  };
 }
 
 export async function createCoachApplicationDraft(input?: {
@@ -163,10 +130,17 @@ export async function createCoachApplicationDraft(input?: {
     );
   }
 
-  const mode: CoachApplicationMode = isCoachApplicationMode(input?.mode)
-    ? input.mode
-    : "create_new";
+  if (
+    input?.mode === "claim_existing" ||
+    (typeof input?.targetCoachId === "string" &&
+      input.targetCoachId.trim().length > 0)
+  ) {
+    return errorResult(
+      "Public profile claiming is no longer available. Apply as a coach to create a new profile."
+    );
+  }
 
+  // Self-service applications are create_new only; claim_existing is closed.
   const applicantEmail = await claimsEmail();
   if (!applicantEmail) {
     return errorResult(
@@ -176,103 +150,13 @@ export async function createCoachApplicationDraft(input?: {
 
   const supabase = await createClient();
 
-  if (mode === "create_new") {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", userId)
-      .maybeSingle();
-    const prefillName =
-      typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
-
-    const { data, error } = await supabase
-      .from("coach_profile_applications")
-      .insert({
-        user_id: userId,
-        status: "draft",
-        current_step: 1,
-        application_mode: "create_new",
-        target_coach_id: null,
-        applicant_email: applicantEmail,
-        full_name:
-          prefillName.length >= 2 && prefillName.length <= 120
-            ? prefillName
-            : null,
-        player_levels: [],
-        audiences: [],
-        outcomes: [],
-      })
-      .select("id")
-      .single();
-
-    if (error || !data) {
-      return errorResult(mapInsertError(error ?? {}));
-    }
-
-    revalidateApplicationPaths();
-    return successResult("Draft application created.", String(data.id));
-  }
-
-  const targetCoachId = input?.targetCoachId?.trim() ?? "";
-  if (!isValidCoachApplicationUuid(targetCoachId)) {
-    return errorResult("Select a valid coach profile to claim.", {
-      target_coach_id: "Select a coach from the search results.",
-    });
-  }
-
-  const target = await loadClaimTargetCoach(targetCoachId);
-  if (!target) {
-    return errorResult(
-      "This profile is already claimed or no longer available.",
-      { target_coach_id: "Choose another unclaimed profile." }
-    );
-  }
-
-  const [{ data: coachRow }, { data: attrs }, { data: outcomesRows }, { data: locRows }] =
-    await Promise.all([
-      supabase
-        .from("coaches")
-        .select("id, name, role, phone, experience_years, description")
-        .eq("id", targetCoachId)
-        .maybeSingle(),
-      supabase
-        .from("coach_attributes")
-        .select("audience_adults, audience_juniors, player_levels")
-        .eq("coach_id", targetCoachId)
-        .maybeSingle(),
-      supabase
-        .from("coach_outcomes")
-        .select("outcome_key, outcome")
-        .eq("coach_id", targetCoachId),
-      supabase
-        .from("coach_locations")
-        .select("country, city, is_primary")
-        .eq("coach_id", targetCoachId)
-        .order("is_primary", { ascending: false }),
-    ]);
-
-  if (!coachRow) {
-    return errorResult("This profile is already claimed or no longer available.");
-  }
-
-  const mappedRole = mapLegacyCoachRole(coachRow.role as string | null);
-  const playerLevels = asPlayerLevels(attrs?.player_levels);
-  const audiences = asAudiences(attrs ?? {});
-  const outcomes = (outcomesRows ?? [])
-    .map((row) => row.outcome_key)
-    .filter(
-      (key): key is CoachingOutcomeValue =>
-        typeof key === "string" && OUTCOME_KEYS.has(key as CoachingOutcomeValue)
-    );
-
-  const fullName =
-    typeof coachRow.name === "string" ? coachRow.name.trim() : "";
-  const phone =
-    typeof coachRow.phone === "string" ? coachRow.phone.trim() : "";
-  const description =
-    typeof coachRow.description === "string"
-      ? coachRow.description.trim()
-      : "";
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const prefillName =
+    typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
 
   const { data, error } = await supabase
     .from("coach_profile_applications")
@@ -280,27 +164,16 @@ export async function createCoachApplicationDraft(input?: {
       user_id: userId,
       status: "draft",
       current_step: 1,
-      application_mode: "claim_existing",
-      target_coach_id: targetCoachId,
+      application_mode: "create_new",
+      target_coach_id: null,
       applicant_email: applicantEmail,
       full_name:
-        fullName.length >= 2 && fullName.length <= 120 ? fullName : null,
-      phone: phone.length >= 5 && phone.length <= 40 ? phone : null,
-      coaching_role: mappedRole.coaching_role,
-      coaching_role_other: mappedRole.coaching_role_other,
-      experience_years:
-        typeof coachRow.experience_years === "number"
-          ? coachRow.experience_years
+        prefillName.length >= 2 && prefillName.length <= 120
+          ? prefillName
           : null,
-      description:
-        description.length >= 40 && description.length <= 500
-          ? description
-          : description.length > 500
-            ? description.slice(0, 500)
-            : null,
-      player_levels: playerLevels,
-      audiences,
-      outcomes,
+      player_levels: [],
+      audiences: [],
+      outcomes: [],
     })
     .select("id")
     .single();
@@ -309,32 +182,8 @@ export async function createCoachApplicationDraft(input?: {
     return errorResult(mapInsertError(error ?? {}));
   }
 
-  const applicationId = String(data.id);
-  const locationPayload = (locRows ?? [])
-    .map((row, index) => {
-      const country = String(row.country ?? "").trim();
-      const city = String(row.city ?? "").trim();
-      if (!isApplicationCountry(country) || city.length < 2) return null;
-      return {
-        application_id: applicationId,
-        country,
-        city: city.slice(0, 120),
-        is_primary: Boolean(row.is_primary) || index === 0,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => Boolean(row));
-
-  if (locationPayload.length > 0) {
-    const primaryIndex = locationPayload.findIndex((row) => row.is_primary);
-    const normalized = locationPayload.map((row, index) => ({
-      ...row,
-      is_primary: primaryIndex >= 0 ? index === primaryIndex : index === 0,
-    }));
-    await supabase.from("coach_application_locations").insert(normalized);
-  }
-
-  revalidateApplicationPaths(targetCoachId);
-  return successResult("Claim draft created.", applicationId);
+  revalidateApplicationPaths();
+  return successResult("Draft application created.", String(data.id));
 }
 
 export async function saveCoachApplicationStepOne(input: {

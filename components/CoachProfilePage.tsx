@@ -70,21 +70,6 @@ export default function CoachProfilePage({
         <CoachProfileBack />
       </Suspense>
 
-      {!coach.isClaimed ? (
-        <div className="mb-8 rounded-2xl border border-primary/15 bg-white px-4 py-4 sm:px-5">
-          <p className="text-sm font-semibold text-primary">Is this your profile?</p>
-          <p className="mt-1 text-sm text-primary/65">
-            Claim it to manage details, availability, and booking requests.
-          </p>
-          <Link
-            href={`/account/applications/coach?mode=claim_existing&coach=${encodeURIComponent(coach.id)}`}
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent transition hover:bg-primary/90"
-          >
-            Claim this profile
-          </Link>
-        </div>
-      ) : null}
-
       <header className="grid gap-8 border-b border-primary/10 pb-10 lg:grid-cols-[minmax(280px,400px)_1fr] lg:items-start lg:gap-10">
         <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
           <CoachImage

@@ -19,6 +19,14 @@ import {
   normalizeTimeHm,
 } from "@/lib/coachAvailability/timezone";
 import {
+  PUBLIC_COACH_VENUE_STATUSES,
+  PUBLISHED_STATUS,
+} from "@/lib/lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "@/lib/lifecycle/publicationFilters";
+import {
   loadAcceptedBlockedRangesForCoach,
   loadRequestedCountsForRelationship,
 } from "@/lib/queries/coachBookingBlocks";
@@ -434,17 +442,24 @@ export async function loadPublicCoachAvailability(
   days = 14
 ): Promise<PublicVenueAvailabilityGroup[]> {
   const supabase = await createClient();
+
+  let coachQuery = supabase.from("coaches").select("id").eq("id", coachId);
+  coachQuery = applyPublishedCoachFilter(coachQuery);
+  const { data: publishedCoach } = await coachQuery.maybeSingle();
+  if (!publishedCoach) return [];
+
   const { data: links, error } = await supabase
     .from("coach_venues")
     .select(
       `
       id,
       venue_id,
-      venues ( id, name, city, country )
+      venues!inner ( id, name, city, country )
     `
     )
     .eq("coach_id", coachId)
-    .eq("status", "active");
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
+    .eq("venues.publication_status", PUBLISHED_STATUS);
 
   if (error || !links?.length) return [];
 
@@ -504,17 +519,24 @@ export async function loadPublicVenueCoachAvailability(
   days = 14
 ): Promise<PublicCoachAvailabilityCard[]> {
   const supabase = await createClient();
+
+  let venueQuery = supabase.from("venues").select("id").eq("id", venueId);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
+  const { data: publishedVenue } = await venueQuery.maybeSingle();
+  if (!publishedVenue) return [];
+
   const { data: links, error } = await supabase
     .from("coach_venues")
     .select(
       `
       id,
       coach_id,
-      coaches ( id, name, role, image_url )
+      coaches!inner ( id, name, role, image_url )
     `
     )
     .eq("venue_id", venueId)
-    .eq("status", "active");
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
+    .eq("coaches.publication_status", PUBLISHED_STATUS);
 
   if (error || !links?.length) return [];
 

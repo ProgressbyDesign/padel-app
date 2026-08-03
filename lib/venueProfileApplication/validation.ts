@@ -80,17 +80,13 @@ export function validateVenueChoiceDraft(
   input: VenueChoiceInput
 ): Record<string, string> {
   const errors: Record<string, string> = {};
+  if (input.application_mode === "claim_existing") {
+    errors.application_mode =
+      "Public venue claiming is no longer available. Submit your venue details instead.";
+    return errors;
+  }
   if (input.application_mode && !isMode(input.application_mode)) {
     errors.application_mode = "Choose how you want to continue.";
-  }
-
-  if (input.application_mode === "claim_existing") {
-    if (
-      input.target_venue_id &&
-      !isValidVenueUuid(input.target_venue_id)
-    ) {
-      errors.target_venue_id = "Select a venue from the search results.";
-    }
   }
 
   if (input.application_mode === "create_new") {
@@ -137,13 +133,13 @@ export function validateVenueChoiceForSubmit(
   input: VenueChoiceInput
 ): Record<string, string> {
   const errors = validateVenueChoiceDraft(input);
-  if (!isMode(input.application_mode)) {
-    errors.application_mode = "Choose whether to claim or propose a venue.";
-  }
   if (input.application_mode === "claim_existing") {
-    if (!isValidVenueUuid(input.target_venue_id)) {
-      errors.target_venue_id = "Select an existing venue to claim.";
-    }
+    errors.application_mode =
+      "Public venue claiming is no longer available. Submit your venue details instead.";
+    return errors;
+  }
+  if (input.application_mode !== "create_new") {
+    errors.application_mode = "Submit your venue details to continue.";
   }
   if (input.application_mode === "create_new") {
     if (!input.proposed_venue_name.trim()) {
@@ -182,6 +178,7 @@ export function parseVenueRolePayload(input: VenueRoleInput) {
 export function parseVenueChoicePayload(input: VenueChoiceInput) {
   const mode = isMode(input.application_mode) ? input.application_mode : null;
   if (mode === "claim_existing") {
+    // Rejected by validation for self-service; keep shape for type safety.
     return {
       application_mode: mode,
       target_venue_id: isValidVenueUuid(input.target_venue_id)

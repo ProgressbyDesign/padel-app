@@ -83,7 +83,7 @@ export async function loadOpsCoachOverview(
     supabase
       .from("coaches")
       .select(
-        "id, name, role, description, experience_years, phone, email, price_from, image_url, is_approved, level"
+        "id, name, role, description, experience_years, phone, email, price_from, image_url, is_approved, level, publication_status, launch_selection_status, onboarding_status, published_at"
       )
       .eq("id", coachId)
       .maybeSingle(),
@@ -216,7 +216,7 @@ export async function loadOpsVenueOverview(
     supabase
       .from("venues")
       .select(
-        "id, name, city, country, address, website, phone, courts, court_type, venue_type, coaching_description, opening_hours_structured, is_approved"
+        "id, name, city, country, address, website, phone, courts, court_type, venue_type, coaching_description, opening_hours_structured, is_approved, publication_status, launch_selection_status, onboarding_status, published_at"
       )
       .eq("id", venueId)
       .maybeSingle(),

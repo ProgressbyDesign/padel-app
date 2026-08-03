@@ -264,7 +264,7 @@ export default async function PersonalAccountPage() {
                   Coach application
                 </h3>
                 <p className="mt-2 text-sm text-primary/65">
-                  Create a new coach profile or claim an existing listing.
+                  Apply as a coach to create your profile on Padel Pathways.
                 </p>
                 <Link
                   href="/join"
@@ -311,7 +311,7 @@ export default async function PersonalAccountPage() {
                   Venue application
                 </h3>
                 <p className="mt-2 text-sm text-primary/65">
-                  Claim an existing venue or propose a new listing.
+                  Submit your venue details to join as an academy or venue.
                 </p>
                 <Link
                   href="/join"
@@ -353,16 +353,16 @@ export default async function PersonalAccountPage() {
             id="add-profile-heading"
             className="text-lg font-bold text-primary"
           >
-            Add or claim another profile
+            Join Padel Pathways
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-primary/65">
-            Manage another coach profile or claim a venue.
+            Apply as a coach or submit your venue details.
           </p>
           <Link
             href="/join"
             className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl border border-primary/15 bg-white px-4 py-2 text-sm font-semibold text-primary transition hover:bg-white/80"
           >
-            Add or claim another profile
+            Join Padel Pathways
           </Link>
         </div>
       </section>

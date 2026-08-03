@@ -1,5 +1,6 @@
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { LISTING_PAGE_SIZE } from "../constants/listings";
+import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { clampPage, listingPageCount } from "../listingUrlParams";
 import { applyVenueLocationFilter, applyVenueNameFilter } from "../venueSearchFilters";
 import { createClient } from "../supabase/server";
@@ -85,6 +86,7 @@ export async function fetchVenueListingPage(
   const pageSize = input.pageSize ?? LISTING_PAGE_SIZE;
 
   let countQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+  countQuery = applyPublishedVenueFilter(countQuery);
   countQuery = applyVenueFilters(countQuery, input.filters);
   const countRes = await countQuery;
   const totalCount =
@@ -110,6 +112,7 @@ export async function fetchVenueListingPage(
 
   if (useDistanceSort) {
     let idQuery = supabase.from("venues").select("id, lat, lng");
+    idQuery = applyPublishedVenueFilter(idQuery);
     idQuery = applyVenueFilters(idQuery, input.filters);
     const { data: idRows, error: idErr } = await idQuery;
     if (idErr || !idRows?.length) {
@@ -124,10 +127,9 @@ export async function fetchVenueListingPage(
       return asc ? da - db : db - da;
     });
     const pageIds = sortedIds.slice(from, to + 1).map((r) => r.id);
-    const { data: pageRows, error: pageErr } = await supabase
-      .from("venues")
-      .select("*")
-      .in("id", pageIds);
+    let pageQuery = supabase.from("venues").select("*").in("id", pageIds);
+    pageQuery = applyPublishedVenueFilter(pageQuery);
+    const { data: pageRows, error: pageErr } = await pageQuery;
     if (pageErr || !pageRows) {
       return { venues: [], totalCount, page, pageSize, totalPages };
     }
@@ -135,6 +137,7 @@ export async function fetchVenueListingPage(
     venues = pageIds.map((id) => byId.get(String(id))).filter((v): v is Venue => v != null);
   } else {
     let dataQuery = supabase.from("venues").select("*");
+    dataQuery = applyPublishedVenueFilter(dataQuery);
     dataQuery = applyVenueFilters(dataQuery, input.filters);
     dataQuery = applyVenueSort(dataQuery, input.sortBy, input.sortDirection);
 

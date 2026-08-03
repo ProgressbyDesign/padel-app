@@ -10,7 +10,7 @@ import { isEditableVenueApplicationStatus } from "@/lib/venueProfileApplication/
 
 export const metadata: Metadata = {
   title: "Venue application",
-  description: "Apply to claim or create a venue on Padel Pathways.",
+  description: "Submit your venue details to join Padel Pathways.",
 };
 
 export default async function VenueApplicationPage() {
@@ -38,8 +38,7 @@ export default async function VenueApplicationPage() {
           Venue application
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-6 text-primary/65">
-          Claim an existing venue or propose a new listing. Your progress is
-          saved to your account.
+          Submit your venue details. Your progress is saved to your account.
         </p>
       </div>
 

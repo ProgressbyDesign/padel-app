@@ -167,32 +167,7 @@ export async function loadOwnedVenueApplication(
 export async function searchVenuesForApplication(
   term: string
 ): Promise<VenueApplicationTargetVenue[]> {
-  const q = term.trim();
-  if (q.length < 2) return [];
-  const supabase = await createClient();
-  const safe = q.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
-  if (safe.length < 2) return [];
-  const pattern = `%${safe}%`;
-
-  // Quote patterns so spaces/special chars are valid in PostgREST `.or()` filters.
-  const quoted = `"${pattern.replace(/"/g, "")}"`;
-  const { data, error } = await supabase
-    .from("venues")
-    .select("id, name, city, country, image_url, website")
-    .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
-    .order("name", { ascending: true })
-    .limit(12);
-
-  if (error) {
-    // Fallback without OR filter if PostgREST rejects the pattern
-    const fallback = await supabase
-      .from("venues")
-      .select("id, name, city, country, image_url, website")
-      .ilike("name", pattern)
-      .order("name", { ascending: true })
-      .limit(12);
-    if (fallback.error) return [];
-    return (fallback.data ?? []) as VenueApplicationTargetVenue[];
-  }
-  return (data ?? []) as VenueApplicationTargetVenue[];
+  void term;
+  // Public claiming is disabled; do not expose imported venues for applicants.
+  return [];
 }

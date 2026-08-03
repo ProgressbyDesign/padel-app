@@ -19,8 +19,8 @@ import {
   loadCurrentVenueApplication,
   loadOwnedEditableVenueApplication,
   loadOwnedVenueApplication,
-  searchVenuesForApplication,
 } from "@/lib/queries/venueProfileApplication";
+import type { VenueApplicationTargetVenue } from "@/lib/venueProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
 
 function errorResult(
@@ -90,6 +90,8 @@ export async function createVenueApplicationDraft(): Promise<VenueApplicationAct
       user_id: userId,
       status: "draft",
       current_step: 1,
+      application_mode: "create_new",
+      target_venue_id: null,
       applicant_email: applicantEmail,
     })
     .select("id")
@@ -185,18 +187,20 @@ export async function saveVenueApplicationVenue(input: {
 
   const payload = parseVenueChoicePayload(input.values);
 
-  if (payload.application_mode === "claim_existing" && payload.target_venue_id) {
-    const supabaseCheck = await createClient();
-    const { data: venue } = await supabaseCheck
-      .from("venues")
-      .select("id")
-      .eq("id", payload.target_venue_id)
-      .maybeSingle();
-    if (!venue) {
-      return errorResult("Select a venue from the search results.", {
-        target_venue_id: "Select a venue from the search results.",
-      });
-    }
+  if (payload.application_mode === "claim_existing") {
+    return errorResult(
+      "Public venue claiming is no longer available. Submit your venue details instead.",
+      {
+        application_mode:
+          "Public venue claiming is no longer available. Submit your venue details instead.",
+      }
+    );
+  }
+
+  if (payload.application_mode !== "create_new") {
+    return errorResult("Submit your venue details to continue.", {
+      application_mode: "Submit your venue details to continue.",
+    });
   }
 
   const currentStep = Math.min(
@@ -208,8 +212,8 @@ export async function saveVenueApplicationVenue(input: {
   const { error } = await supabase
     .from("venue_profile_applications")
     .update({
-      application_mode: payload.application_mode,
-      target_venue_id: payload.target_venue_id,
+      application_mode: "create_new",
+      target_venue_id: null,
       proposed_venue_name: payload.proposed_venue_name,
       proposed_country: payload.proposed_country,
       proposed_city: payload.proposed_city,
@@ -321,6 +325,12 @@ export async function submitVenueApplication(input: {
     return errorResult("This application cannot be submitted right now.");
   }
 
+  if (application.application_mode === "claim_existing") {
+    return errorResult(
+      "Public venue claiming is no longer available. Update your venue details and submit again."
+    );
+  }
+
   const fieldErrors = {
     ...validateVenueRoleForSubmit({
       relationship_to_venue: application.relationship_to_venue ?? "",
@@ -429,18 +439,13 @@ export async function withdrawVenueApplication(
 export async function searchVenueApplicationTargets(
   term: string
 ): Promise<
-  | {
-      ok: true;
-      venues: Awaited<ReturnType<typeof searchVenuesForApplication>>;
-    }
+  | { ok: true; venues: VenueApplicationTargetVenue[] }
   | { ok: false; message: string }
 > {
-  const userId = await requireUserId();
-  if (!userId) return { ok: false, message: "Sign in to search venues." };
-  try {
-    const venues = await searchVenuesForApplication(term);
-    return { ok: true, venues };
-  } catch {
-    return { ok: false, message: "Venue search failed. Please try again." };
-  }
+  void term;
+  return {
+    ok: false,
+    message:
+      "Public venue claiming is no longer available. Submit your venue details instead.",
+  };
 }

@@ -3,6 +3,7 @@ import {
   type CoachListingItem,
 } from "../coachListing";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
+import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { createClient } from "../supabase/server";
 import type { Venue } from "../venueFilters";
 import { TOP_RATED_MIN_SCORE, TOP_RATED_SECTION_LIMIT } from "../constants/listings";
@@ -20,8 +21,10 @@ function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): numb
  */
 export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]> {
   const supabase = await createClient();
+  let venuesQuery = supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  venuesQuery = applyPublishedVenueFilter(venuesQuery);
   const [venuesRes, coachResult] = await Promise.all([
-    supabase.from("venues").select("id, city, country, lat, lng").limit(500),
+    venuesQuery,
     fetchCoachRowsFromSupabase(200),
   ]);
 
@@ -39,12 +42,14 @@ export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]>
  */
 export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
   const supabase = await createClient();
-  const strict = await supabase
+  let strictQuery = supabase
     .from("venues")
     .select("*")
     .gte("rating", TOP_RATED_MIN_SCORE)
     .order("rating", { ascending: false })
     .limit(TOP_RATED_SECTION_LIMIT);
+  strictQuery = applyPublishedVenueFilter(strictQuery);
+  const strict = await strictQuery;
 
   const strictRows =
     !strict.error && strict.data?.length ? (strict.data as Venue[]) : [];
@@ -56,11 +61,13 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
     );
   }
 
-  const relaxed = await supabase
+  let relaxedQuery = supabase
     .from("venues")
     .select("*")
     .order("rating", { ascending: false })
     .limit(TOP_RATED_SECTION_LIMIT);
+  relaxedQuery = applyPublishedVenueFilter(relaxedQuery);
+  const relaxed = await relaxedQuery;
 
   if (relaxed.error || !relaxed.data?.length) return [];
 

@@ -1,6 +1,7 @@
 import { createClient } from "./supabase/server";
 import { COACH_VENUES_WITH_VENUE_SELECT } from "./coachVenueGeo";
 import { rawCoachRowToProfileView, type CoachPdpQueryRow, type CoachProfileView } from "./coachProfileView";
+import { applyPublishedCoachFilter } from "./lifecycle/publicationFilters";
 import { coachHasLivePublicAvailability } from "./queries/coachAvailability";
 
 const COACH_PDP_NESTED_SELECT = `
@@ -71,21 +72,26 @@ export async function fetchCoachPdpById(id: string): Promise<CoachProfileView | 
   const availability = await coachHasLivePublicAvailability(id);
   const availabilityLive = availability.status === "live";
 
-  const nested = await supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id).maybeSingle();
+  let nestedQuery = supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id);
+  nestedQuery = applyPublishedCoachFilter(nestedQuery);
+  const nested = await nestedQuery.maybeSingle();
   if (!nested.error && nested.data) {
     return rawCoachRowToProfileView(nested.data as CoachPdpQueryRow, { availabilityLive });
   }
 
-  const withVenues = await supabase
+  let withVenuesQuery = supabase
     .from("coaches")
     .select(`*, ${COACH_VENUES_WITH_VENUE_SELECT}`)
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+  withVenuesQuery = applyPublishedCoachFilter(withVenuesQuery);
+  const withVenues = await withVenuesQuery.maybeSingle();
   if (!withVenues.error && withVenues.data) {
     return rawCoachRowToProfileView(withVenues.data as CoachPdpQueryRow, { availabilityLive });
   }
 
-  const basic = await supabase.from("coaches").select("*").eq("id", id).maybeSingle();
+  let basicQuery = supabase.from("coaches").select("*").eq("id", id);
+  basicQuery = applyPublishedCoachFilter(basicQuery);
+  const basic = await basicQuery.maybeSingle();
   if (!basic.error && basic.data) {
     return rawCoachRowToProfileView(basic.data as CoachPdpQueryRow, { availabilityLive });
   }

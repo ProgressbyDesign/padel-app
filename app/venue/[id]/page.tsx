@@ -4,6 +4,11 @@ import VenueDetailPage from "../../../components/VenueDetailPage";
 import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
 import type { Coach } from "../../../lib/coaches";
 import { resolveCoachImageUrl } from "../../../lib/coachImageResolve";
+import { PUBLIC_COACH_VENUE_STATUSES, PUBLISHED_STATUS } from "../../../lib/lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../../../lib/lifecycle/publicationFilters";
 import type { Venue } from "../../../lib/venueFilters";
 import { hydrateVenueImages } from "../../../lib/queries/venueImages";
 import { loadVenueSocials } from "../../../lib/queries/venueSocials";
@@ -16,7 +21,9 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data } = await supabase.from("venues").select("name, city, country").eq("id", id).maybeSingle();
+  let metaQuery = supabase.from("venues").select("name, city, country").eq("id", id);
+  metaQuery = applyPublishedVenueFilter(metaQuery);
+  const { data } = await metaQuery.maybeSingle();
 
   if (!data?.name) {
     return { title: "Venue | Padel" };
@@ -33,21 +40,26 @@ export default async function VenuePdpPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: venue, error } = await supabase.from("venues").select("*").eq("id", id).maybeSingle();
+  let venueQuery = supabase.from("venues").select("*").eq("id", id);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
+  const { data: venue, error } = await venueQuery.maybeSingle();
 
-  if (error || !venue) {
+  if (error || !venue || (venue as { publication_status?: string }).publication_status !== PUBLISHED_STATUS) {
     notFound();
   }
 
   const venueRow = venue as Venue;
 
+  let similarPoolQuery = supabase.from("venues").select("*").neq("id", id).limit(48);
+  similarPoolQuery = applyPublishedVenueFilter(similarPoolQuery);
+
   const [{ data: pool }, { data: coachLinks }] = await Promise.all([
-    supabase.from("venues").select("*").neq("id", id).limit(48),
+    similarPoolQuery,
     supabase
       .from("coach_venues")
       .select("coach_id, status, is_primary")
       .eq("venue_id", id)
-      .in("status", ["active", "unverified"])
+      .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
       .order("is_primary", { ascending: false }),
   ]);
 
@@ -68,13 +80,6 @@ export default async function VenuePdpPage({ params }: PageProps) {
   const coachIds = Array.from(
     new Set(
       (coachLinks ?? [])
-        .slice()
-        .sort((a, b) => {
-          const aActive = a.status === "active" ? 0 : 1;
-          const bActive = b.status === "active" ? 0 : 1;
-          if (aActive !== bActive) return aActive - bActive;
-          return Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary));
-        })
         .map((row: { coach_id?: string }) => row.coach_id)
         .filter((cid): cid is string => Boolean(cid))
     )
@@ -82,7 +87,7 @@ export default async function VenuePdpPage({ params }: PageProps) {
 
   let coaches: Coach[] = [];
   if (coachIds.length > 0) {
-    const { data: coachRows } = await supabase
+    let coachQuery = supabase
       .from("coaches")
       .select(
         `
@@ -95,6 +100,8 @@ export default async function VenuePdpPage({ params }: PageProps) {
       `
       )
       .in("id", coachIds);
+    coachQuery = applyPublishedCoachFilter(coachQuery);
+    const { data: coachRows } = await coachQuery;
     const byId = new Map(
       (coachRows as Coach[] | null)?.map((c) => {
         const resolved = resolveCoachImageUrl(c.coach_images, c.image_url);
