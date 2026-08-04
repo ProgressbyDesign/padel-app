@@ -4,6 +4,7 @@ import VenueApplicationReadOnly from "@/components/account/applications/VenueApp
 import VenueApplicationWizard, {
   StartVenueApplicationButton,
 } from "@/components/account/applications/VenueApplicationWizard";
+import VenueLegacyClaimApplication from "@/components/account/applications/VenueLegacyClaimApplication";
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import { loadCurrentVenueApplication } from "@/lib/queries/venueProfileApplication";
 import { isEditableVenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
@@ -60,6 +61,8 @@ export default async function VenueApplicationPage() {
               <StartVenueApplicationButton />
             </div>
           </section>
+        ) : current.application.application_mode === "claim_existing" ? (
+          <VenueLegacyClaimApplication data={current} />
         ) : isEditableVenueApplicationStatus(current.application.status) ? (
           <VenueApplicationWizard
             initial={current}

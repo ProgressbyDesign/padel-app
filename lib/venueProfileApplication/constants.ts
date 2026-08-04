@@ -27,6 +27,13 @@ export const EDITABLE_VENUE_APPLICATION_STATUSES = [
   "changes_requested",
 ] as const satisfies readonly VenueApplicationStatus[];
 
+export const WITHDRAWABLE_VENUE_APPLICATION_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "changes_requested",
+] as const satisfies readonly VenueApplicationStatus[];
+
 export const VENUE_APPLICATION_MODES = [
   {
     value: "claim_existing",
@@ -100,6 +107,14 @@ export function isEditableVenueApplicationStatus(
   return (EDITABLE_VENUE_APPLICATION_STATUSES as readonly string[]).includes(
     status
   );
+}
+
+export function isWithdrawableVenueApplicationStatus(
+  status: string
+): status is (typeof WITHDRAWABLE_VENUE_APPLICATION_STATUSES)[number] {
+  return (
+    WITHDRAWABLE_VENUE_APPLICATION_STATUSES as readonly string[]
+  ).includes(status);
 }
 
 export function venueRelationshipLabel(value: string | null): string {

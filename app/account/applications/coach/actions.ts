@@ -24,7 +24,6 @@ import {
 } from "@/lib/coachProfileApplication/validation";
 import {
   loadApplicationLocations,
-  loadClaimTargetCoach,
   loadCurrentCoachApplication,
   loadOwnedApplication,
   loadOwnedEditableApplication,
@@ -87,6 +86,18 @@ function mapInsertError(error: { code?: string; message?: string }): string {
     return "This profile is already claimed or no longer available.";
   }
   return "We could not start your application. Please try again shortly.";
+}
+
+const HISTORICAL_CLAIM_LOCKED =
+  "This historical profile claim is read-only. You may withdraw it if it is still open, but you cannot edit or submit it.";
+
+function rejectHistoricalClaimMutation(
+  mode: string | null | undefined
+): CoachApplicationActionResult | null {
+  if (mode === "claim_existing") {
+    return errorResult(HISTORICAL_CLAIM_LOCKED);
+  }
+  return null;
 }
 
 export async function searchClaimableCoachesAction(
@@ -203,6 +214,9 @@ export async function saveCoachApplicationStepOne(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const locked = rejectHistoricalClaimMutation(application.application_mode);
+  if (locked) return locked;
+
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 1;
   const fieldErrors = advancing
     ? validateStepOneForSubmit(input.values)
@@ -259,6 +273,9 @@ export async function saveCoachApplicationStepThree(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const locked = rejectHistoricalClaimMutation(application.application_mode);
+  if (locked) return locked;
+
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 3;
   const fieldErrors = advancing
     ? validateStepThreeForSubmit(input.values)
@@ -314,6 +331,9 @@ export async function setCoachApplicationStep(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const locked = rejectHistoricalClaimMutation(application.application_mode);
+  if (locked) return locked;
+
   const step = Math.min(Math.max(Math.trunc(input.step), 1), 4);
   const supabase = await createClient();
   const { error } = await supabase
@@ -345,19 +365,8 @@ export async function submitCoachApplication(input: {
     return errorResult("This application cannot be submitted right now.");
   }
 
-  if (
-    application.application_mode === "claim_existing" &&
-    application.target_coach_id
-  ) {
-    const stillClaimable = await loadClaimTargetCoach(
-      application.target_coach_id
-    );
-    if (!stillClaimable) {
-      return errorResult(
-        "This profile is already claimed or no longer available."
-      );
-    }
-  }
+  const locked = rejectHistoricalClaimMutation(application.application_mode);
+  if (locked) return locked;
 
   const stepOneErrors = validateStepOneForSubmit({
     full_name: application.full_name ?? "",

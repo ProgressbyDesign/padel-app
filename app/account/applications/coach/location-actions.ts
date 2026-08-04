@@ -54,6 +54,12 @@ export async function replaceCoachApplicationLocations(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  if (application.application_mode === "claim_existing") {
+    return errorResult(
+      "This historical profile claim is read-only. You may withdraw it if it is still open, but you cannot edit or submit it."
+    );
+  }
+
   const locations = normalizeLocationRows(input.locations);
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 2;
   const fieldErrors = validateLocations(locations, {

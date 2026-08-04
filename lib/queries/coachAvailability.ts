@@ -956,3 +956,28 @@ export async function coachHasLivePublicAvailability(
 
   return { status: "none", nextSlotStartsAt: null };
 }
+
+/**
+ * Public coach badge / PDP availability signal.
+ * Matches displayed public availability: published coach + published venue +
+ * active relationship + public setting + at least one derived slot.
+ */
+export async function coachHasDisplayedPublicAvailability(
+  coachId: string
+): Promise<{
+  status: "none" | "live";
+  nextSlotStartsAt: string | null;
+}> {
+  const groups = await loadPublicCoachAvailability(coachId, 14);
+  for (const group of groups) {
+    for (const day of group.days) {
+      if (day.slots.length > 0) {
+        return {
+          status: "live",
+          nextSlotStartsAt: day.slots[0]?.startsAt ?? null,
+        };
+      }
+    }
+  }
+  return { status: "none", nextSlotStartsAt: null };
+}

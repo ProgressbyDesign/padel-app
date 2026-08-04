@@ -180,6 +180,8 @@ language plpgsql
 security definer
 set search_path to ''
 as $function$
+declare
+  actor_id uuid := (select auth.uid());
 begin
   if
     new.launch_selection_status is not distinct from old.launch_selection_status
@@ -199,6 +201,47 @@ begin
     raise exception
       'Only administrators with profiles.manage may change launch, onboarding or publication fields.'
       using errcode = '42501';
+  end if;
+
+  -- Authorised lifecycle changes maintain audit fields server-side.
+  if new.launch_selection_status is distinct from old.launch_selection_status
+     and new.launch_selection_status = 'selected' then
+    new.selected_at := now();
+    new.selected_by_user_id := actor_id;
+  end if;
+
+  if new.selected_by_user_id is distinct from old.selected_by_user_id
+     and new.selected_by_user_id is distinct from actor_id then
+    new.selected_by_user_id := actor_id;
+  end if;
+
+  if new.publication_status is distinct from old.publication_status
+     and new.publication_status = 'published' then
+    new.published_at := now();
+    new.published_by_user_id := actor_id;
+  end if;
+
+  if new.published_by_user_id is distinct from old.published_by_user_id
+     and new.published_by_user_id is distinct from actor_id then
+    new.published_by_user_id := actor_id;
+  end if;
+
+  if new.onboarding_status is distinct from old.onboarding_status then
+    if new.onboarding_status in ('invited', 'in_progress') then
+      new.onboarding_started_at := coalesce(old.onboarding_started_at, now());
+    end if;
+    if new.onboarding_status = 'complete' then
+      new.onboarding_started_at := coalesce(
+        new.onboarding_started_at,
+        old.onboarding_started_at,
+        now()
+      );
+      new.onboarding_completed_at := now();
+    end if;
+  elsif new.onboarding_started_at is null
+        and old.onboarding_started_at is null
+        and new.onboarding_status in ('invited', 'in_progress', 'complete') then
+    new.onboarding_started_at := now();
   end if;
 
   return new;
@@ -353,8 +396,9 @@ grant execute on function private.availability_is_publicly_readable(uuid) to aut
 
 -- ---------------------------------------------------------------------------
 -- 6. Booking validation — separate creation vs acceptance
--- Slot validity (active + public settings + schedule/conflicts) without publication.
--- New inserts additionally require published coach + venue.
+-- Acceptance: active relationship + schedule + no unavailable + no conflict.
+-- Does NOT require publication or availability.is_public.
+-- Creation: those acceptance checks PLUS published coach/venue + is_public.
 -- ---------------------------------------------------------------------------
 create or replace function private.is_valid_availability_slot(
   target_coach_venue_id uuid,
@@ -366,21 +410,24 @@ language sql
 stable
 set search_path to ''
 as $function$
-  with settings as (
-    select availability.timezone
-    from public.coach_venue_availability_settings availability
-    join public.coach_venues relationship
-      on relationship.id = availability.coach_venue_id
-    where availability.coach_venue_id = target_coach_venue_id
-      and availability.is_public is true
-      and relationship.status = 'active'
+  with relationship as (
+    select
+      cv.id,
+      cv.coach_id,
+      availability.timezone
+    from public.coach_venues cv
+    join public.coach_venue_availability_settings availability
+      on availability.coach_venue_id = cv.id
+    where cv.id = target_coach_venue_id
+      and cv.status = 'active'
   ),
   local_slot as (
     select
-      settings.timezone,
-      target_starts_at at time zone settings.timezone as local_start,
-      target_ends_at at time zone settings.timezone as local_end
-    from settings
+      relationship.timezone,
+      relationship.coach_id,
+      target_starts_at at time zone relationship.timezone as local_start,
+      target_ends_at at time zone relationship.timezone as local_end
+    from relationship
   ),
   recurring_match as (
     select 1
@@ -423,18 +470,30 @@ as $function$
       and tstzrange(exception.starts_at, exception.ends_at, '[)')
           && tstzrange(target_starts_at, target_ends_at, '[)')
     limit 1
+  ),
+  accepted_conflict as (
+    select 1
+    from local_slot slot
+    join public.coach_booking_requests booking
+      on booking.coach_id = slot.coach_id
+     and booking.status = 'accepted'
+     and tstzrange(booking.starts_at, booking.ends_at, '[)')
+         && tstzrange(target_starts_at, target_ends_at, '[)')
+    limit 1
   )
   select
-    target_starts_at > now()
+    exists (select 1 from relationship)
+    and target_starts_at > now()
     and target_ends_at > target_starts_at
     and (
       exists (select 1 from recurring_match)
       or exists (select 1 from extra_match)
     )
-    and not exists (select 1 from blocked);
+    and not exists (select 1 from blocked)
+    and not exists (select 1 from accepted_conflict);
 $function$;
 
--- Kept for callers: public-creation path includes publication requirement.
+-- Public creation path: published coach/venue + public setting + slot validity.
 create or replace function private.is_valid_public_availability_slot(
   target_coach_venue_id uuid,
   target_starts_at timestamp with time zone,
@@ -576,7 +635,7 @@ begin
           raise exception 'Only the coach may respond to this booking request.'
             using errcode = '42501';
         end if;
-        -- Acceptance: slot/conflict checks only — publication may have changed.
+        -- Acceptance: schedule/conflict only — no publication / is_public requirement.
         if new.status = 'accepted'
            and not private.is_valid_availability_slot(
              old.coach_venue_id, old.starts_at, old.ends_at
@@ -643,6 +702,40 @@ end;
 $function$;
 
 -- ---------------------------------------------------------------------------
+-- 6b. Preserve historical claim emails on withdrawal
+-- ---------------------------------------------------------------------------
+create or replace function private.prepare_application_notification_email()
+returns trigger
+language plpgsql
+set search_path to ''
+as $function$
+declare
+  caller_id uuid := (select auth.uid());
+  caller_email text := lower(nullif(btrim((select auth.jwt() ->> 'email')), ''));
+begin
+  if tg_op = 'UPDATE'
+     and old.application_mode = 'claim_existing'
+     and new.status = 'withdrawn'
+     and old.status is distinct from 'withdrawn' then
+    new.applicant_email := old.applicant_email;
+    return new;
+  end if;
+
+  if caller_id is not null and caller_id = new.user_id then
+    if caller_email is null then
+      raise exception 'A verified account email is required.' using errcode = '23514';
+    end if;
+
+    new.applicant_email := caller_email;
+  elsif tg_op = 'UPDATE' and new.applicant_email is distinct from old.applicant_email then
+    raise exception 'Applicant email cannot be changed by reviewers.' using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$function$;
+
+-- ---------------------------------------------------------------------------
 -- 7. Claim lock + new-claim prevention + coach_application_id protection
 -- ---------------------------------------------------------------------------
 create or replace function private.guard_profile_application_mutations()
@@ -654,7 +747,8 @@ as $function$
 declare
   is_reviewer boolean := false;
   linked_user_id uuid;
-  withdrawable boolean := false;
+  old_locked jsonb;
+  new_locked jsonb;
 begin
   is_reviewer :=
     private.has_admin_permission('applications.review')
@@ -679,34 +773,12 @@ begin
     end if;
 
     if old.application_mode = 'claim_existing' then
-      withdrawable :=
-        old.status in ('draft', 'submitted', 'under_review', 'changes_requested')
-        and new.status = 'withdrawn';
+      old_locked := to_jsonb(old) - 'status' - 'updated_at';
+      new_locked := to_jsonb(new) - 'status' - 'updated_at';
 
-      if withdrawable
-         and new.user_id is not distinct from old.user_id
-         and new.application_mode is not distinct from old.application_mode
-         and new.target_coach_id is not distinct from old.target_coach_id
-         and new.current_step is not distinct from old.current_step
-         and new.full_name is not distinct from old.full_name
-         and new.phone is not distinct from old.phone
-         and new.coaching_role is not distinct from old.coaching_role
-         and new.coaching_role_other is not distinct from old.coaching_role_other
-         and new.experience_years is not distinct from old.experience_years
-         and new.description is not distinct from old.description
-         and new.player_levels is not distinct from old.player_levels
-         and new.audiences is not distinct from old.audiences
-         and new.outcomes is not distinct from old.outcomes
-         and new.terms_accepted_at is not distinct from old.terms_accepted_at
-         and new.privacy_accepted_at is not distinct from old.privacy_accepted_at
-         and new.submitted_at is not distinct from old.submitted_at
-         and new.coach_id is not distinct from old.coach_id
-         and new.applicant_email is not distinct from old.applicant_email
-         and new.reviewed_at is not distinct from old.reviewed_at
-         and new.reviewed_by_user_id is not distinct from old.reviewed_by_user_id
-         and new.review_note is not distinct from old.review_note
-         and new.owns_or_manages_venue is not distinct from old.owns_or_manages_venue
-      then
+      if new.status = 'withdrawn'
+         and old.status in ('draft', 'submitted', 'under_review', 'changes_requested')
+         and new_locked is not distinct from old_locked then
         return new;
       end if;
 
@@ -784,34 +856,12 @@ begin
     end if;
 
     if old.application_mode = 'claim_existing' then
-      withdrawable :=
-        old.status in ('draft', 'submitted', 'under_review', 'changes_requested')
-        and new.status = 'withdrawn';
+      old_locked := to_jsonb(old) - 'status' - 'updated_at';
+      new_locked := to_jsonb(new) - 'status' - 'updated_at';
 
-      if withdrawable
-         and new.user_id is not distinct from old.user_id
-         and new.application_mode is not distinct from old.application_mode
-         and new.target_venue_id is not distinct from old.target_venue_id
-         and new.current_step is not distinct from old.current_step
-         and new.relationship_to_venue is not distinct from old.relationship_to_venue
-         and new.proposed_venue_name is not distinct from old.proposed_venue_name
-         and new.proposed_country is not distinct from old.proposed_country
-         and new.proposed_city is not distinct from old.proposed_city
-         and new.proposed_address is not distinct from old.proposed_address
-         and new.proposed_website is not distinct from old.proposed_website
-         and new.phone is not distinct from old.phone
-         and new.supporting_note is not distinct from old.supporting_note
-         and new.terms_accepted_at is not distinct from old.terms_accepted_at
-         and new.privacy_accepted_at is not distinct from old.privacy_accepted_at
-         and new.submitted_at is not distinct from old.submitted_at
-         and new.approved_venue_id is not distinct from old.approved_venue_id
-         and new.approved_membership_role is not distinct from old.approved_membership_role
-         and new.applicant_email is not distinct from old.applicant_email
-         and new.reviewed_at is not distinct from old.reviewed_at
-         and new.reviewed_by_user_id is not distinct from old.reviewed_by_user_id
-         and new.review_note is not distinct from old.review_note
-         and new.coach_application_id is not distinct from old.coach_application_id
-      then
+      if new.status = 'withdrawn'
+         and old.status in ('draft', 'submitted', 'under_review', 'changes_requested')
+         and new_locked is not distinct from old_locked then
         return new;
       end if;
 
@@ -1400,6 +1450,7 @@ declare
   venue_app_id uuid;
   venue_app_user_id uuid;
   booking_fn text;
+  slot_fn text;
   anon_visible_count bigint;
   anon_hidden_count bigint;
   booking_policy_ok boolean;

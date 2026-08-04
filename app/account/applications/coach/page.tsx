@@ -7,6 +7,7 @@ import {
 import CoachApplicationEntry from "@/components/account/applications/CoachApplicationEntry";
 import CoachApplicationReadOnly from "@/components/account/applications/CoachApplicationReadOnly";
 import CoachApplicationWizard from "@/components/account/applications/CoachApplicationWizard";
+import CoachLegacyClaimApplication from "@/components/account/applications/CoachLegacyClaimApplication";
 import { isEditableApplicationStatus } from "@/lib/coachProfileApplication/constants";
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import {
@@ -48,6 +49,8 @@ export default async function CoachApplicationPage({ searchParams }: PageProps) 
     );
   } else if (!active) {
     content = <CoachApplicationEntry />;
+  } else if (active.application.application_mode === "claim_existing") {
+    content = <CoachLegacyClaimApplication data={active} />;
   } else if (isEditableApplicationStatus(active.application.status)) {
     content = (
       <CoachApplicationWizard

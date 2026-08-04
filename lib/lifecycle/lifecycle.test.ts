@@ -97,42 +97,37 @@ describe("public vs private visibility rules", () => {
     });
   });
 
-  it("requires published coach and venue for public availability", () => {
-    const canShowAvailability = (input: {
+  it("requires published coach and venue and derived slots for public availability badge", () => {
+    const canShowAvailabilityBadge = (input: {
       relationshipStatus: string;
       isPublic: boolean;
       coachPublication: string;
       venuePublication: string;
+      hasDerivedSlot: boolean;
     }) =>
       input.relationshipStatus === "active" &&
       input.isPublic &&
       input.coachPublication === "published" &&
-      input.venuePublication === "published";
+      input.venuePublication === "published" &&
+      input.hasDerivedSlot;
 
     expect(
-      canShowAvailability({
-        relationshipStatus: "active",
-        isPublic: true,
-        coachPublication: "private",
-        venuePublication: "published",
-      })
-    ).toBe(false);
-
-    expect(
-      canShowAvailability({
-        relationshipStatus: "unverified",
-        isPublic: true,
-        coachPublication: "published",
-        venuePublication: "published",
-      })
-    ).toBe(false);
-
-    expect(
-      canShowAvailability({
+      canShowAvailabilityBadge({
         relationshipStatus: "active",
         isPublic: true,
         coachPublication: "published",
         venuePublication: "published",
+        hasDerivedSlot: false,
+      })
+    ).toBe(false);
+
+    expect(
+      canShowAvailabilityBadge({
+        relationshipStatus: "active",
+        isPublic: true,
+        coachPublication: "published",
+        venuePublication: "published",
+        hasDerivedSlot: true,
       })
     ).toBe(true);
   });

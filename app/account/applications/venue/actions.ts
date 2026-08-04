@@ -60,6 +60,18 @@ function revalidateVenueApplicationPaths() {
   revalidatePath("/account/personal");
 }
 
+const HISTORICAL_VENUE_CLAIM_LOCKED =
+  "This historical venue claim is read-only. You may withdraw it if it is still open, but you cannot edit, submit, or convert it.";
+
+function rejectHistoricalVenueClaimMutation(
+  mode: string | null | undefined
+): VenueApplicationActionResult | null {
+  if (mode === "claim_existing") {
+    return errorResult(HISTORICAL_VENUE_CLAIM_LOCKED);
+  }
+  return null;
+}
+
 export async function createVenueApplicationDraft(): Promise<VenueApplicationActionResult> {
   const userId = await requireUserId();
   if (!userId) return errorResult("Sign in to start a venue application.");
@@ -124,6 +136,9 @@ export async function saveVenueApplicationRole(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const locked = rejectHistoricalVenueClaimMutation(application.application_mode);
+  if (locked) return locked;
+
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 1;
   const fieldErrors = advancing
     ? validateVenueRoleForSubmit(input.values)
@@ -176,6 +191,9 @@ export async function saveVenueApplicationVenue(input: {
   if (!application) {
     return errorResult("This application cannot be edited right now.");
   }
+
+  const locked = rejectHistoricalVenueClaimMutation(application.application_mode);
+  if (locked) return locked;
 
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 2;
   const fieldErrors = advancing
@@ -252,6 +270,11 @@ export async function saveVenueApplicationConfirmation(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const lockedConfirm = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedConfirm) return lockedConfirm;
+
   const fieldErrors = validateVenueConfirmationDraft(input.values);
   if (Object.keys(fieldErrors).length > 0) {
     return errorResult("Fix the highlighted fields before continuing.", fieldErrors);
@@ -298,6 +321,11 @@ export async function setVenueApplicationStep(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const lockedStep = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedStep) return lockedStep;
+
   const step = Math.min(Math.max(Math.trunc(input.step), 1), 4);
   const supabase = await createClient();
   const { error } = await supabase
@@ -325,11 +353,10 @@ export async function submitVenueApplication(input: {
     return errorResult("This application cannot be submitted right now.");
   }
 
-  if (application.application_mode === "claim_existing") {
-    return errorResult(
-      "Public venue claiming is no longer available. Update your venue details and submit again."
-    );
-  }
+  const lockedSubmit = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedSubmit) return lockedSubmit;
 
   const fieldErrors = {
     ...validateVenueRoleForSubmit({

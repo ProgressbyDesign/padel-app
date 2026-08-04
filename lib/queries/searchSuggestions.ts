@@ -342,11 +342,7 @@ export async function fetchCoachEntitySuggestions(
       role,
       search_key,
       image_url,
-      coach_images ( image_url, is_primary ),
-      coach_venues (
-        is_primary,
-        venues ( city, country )
-      )
+      coach_images ( image_url, is_primary )
     `
     )
     .limit(SUGGESTION_FETCH_CAP);
@@ -364,13 +360,20 @@ export async function fetchCoachEntitySuggestions(
     return { outcomes, coaches: [] };
   }
 
-  const rows: EntityCoachSuggestion[] = data.map((c) => ({
+  const { attachPublicCoachVenueRelationships } = await import(
+    "./publicCoachVenues"
+  );
+  const withVenues = await attachPublicCoachVenueRelationships(
+    data as Array<{ id?: string | null; coach_venues?: CoachWithVenueLinks["coach_venues"] }>
+  );
+
+  const rows: EntityCoachSuggestion[] = withVenues.map((c) => ({
     id: String(c.id),
-    name: c.name?.trim() || "Coach",
-    role: c.role?.trim() ?? null,
+    name: (c as { name?: string | null }).name?.trim() || "Coach",
+    role: (c as { role?: string | null }).role?.trim() ?? null,
     imageUrl: resolveCoachImageUrl(
       (c as { coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] }).coach_images,
-      c.image_url
+      (c as { image_url?: string | null }).image_url
     ),
     locationSummary: conciseCoachLocationSummary(c as CoachWithVenueLinks),
   }));

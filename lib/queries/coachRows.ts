@@ -1,5 +1,3 @@
-import "server-only";
-
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   COACH_LISTING_SELECT,
@@ -7,18 +5,14 @@ import {
   type CoachListingItem,
 } from "../coachListing";
 import type { Coach } from "../coaches";
-import {
-  COACH_VENUES_WITH_VENUE_SELECT,
-  type CoachVenueLinkRow,
-} from "../coachVenueGeo";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
-import { PUBLIC_COACH_VENUE_STATUSES, PUBLISHED_STATUS } from "../lifecycle/constants";
 import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "../lifecycle/publicationFilters";
 import { createClient } from "../supabase/server";
 import type { Venue } from "../venueFilters";
+import { attachPublicCoachVenueRelationships } from "./publicCoachVenues";
 
 const COACH_IMAGES_EMBED = `
   coach_images (
@@ -32,14 +26,12 @@ const COACH_LISTING_SELECT_OUTCOMES_VENUES = `
   coach_outcomes (
     outcome
   ),
-  ${COACH_IMAGES_EMBED},
-  ${COACH_VENUES_WITH_VENUE_SELECT}
+  ${COACH_IMAGES_EMBED}
 `;
 
 const COACH_LISTING_SELECT_VENUES_ONLY = `
   *,
-  ${COACH_IMAGES_EMBED},
-  ${COACH_VENUES_WITH_VENUE_SELECT}
+  ${COACH_IMAGES_EMBED}
 `;
 
 async function attachCoachVenueAndOutcomeEmbeds(
@@ -49,47 +41,15 @@ async function attachCoachVenueAndOutcomeEmbeds(
   const ids = rows.map((row) => row.id).filter((id) => id != null && String(id).trim());
   if (ids.length === 0) return rows;
 
-  const [linksRes, outcomesRes, imagesRes] = await Promise.all([
-    supabase
-      .from("coach_venues")
-      .select(
-        `
-        coach_id,
-        is_primary,
-        venue_id,
-        venues!inner (
-          id,
-          name,
-          city,
-          country,
-          lat,
-          lng
-        )
-      `
-      )
-      .in("coach_id", ids)
-      .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
-      .eq("venues.publication_status", PUBLISHED_STATUS),
+  const withVenues = await attachPublicCoachVenueRelationships(rows, supabase);
+
+  const [outcomesRes, imagesRes] = await Promise.all([
     supabase.from("coach_outcomes").select("coach_id, outcome").in("coach_id", ids),
     supabase
       .from("coach_images")
       .select("coach_id, image_url, is_primary")
       .in("coach_id", ids),
   ]);
-
-  const venuesByCoach = new Map<string, CoachVenueLinkRow[]>();
-  for (const link of linksRes.data ?? []) {
-    const coachId = String((link as { coach_id?: string }).coach_id ?? "");
-    if (!coachId) continue;
-    const entry: CoachVenueLinkRow = {
-      is_primary: (link as { is_primary?: boolean }).is_primary,
-      venue_id: (link as { venue_id?: string }).venue_id,
-      venues: (link as { venues?: CoachVenueLinkRow["venues"] }).venues,
-    };
-    const list = venuesByCoach.get(coachId) ?? [];
-    list.push(entry);
-    venuesByCoach.set(coachId, list);
-  }
 
   const outcomesByCoach = new Map<string, { outcome?: string | null }[]>();
   for (const row of outcomesRes.data ?? []) {
@@ -115,11 +75,10 @@ async function attachCoachVenueAndOutcomeEmbeds(
     imagesByCoach.set(coachId, list);
   }
 
-  return rows.map((row) => {
+  return withVenues.map((row) => {
     const id = String(row.id);
     return {
       ...row,
-      coach_venues: venuesByCoach.get(id) ?? row.coach_venues ?? null,
       coach_outcomes: outcomesByCoach.get(id) ?? row.coach_outcomes ?? null,
       coach_images: imagesByCoach.get(id) ?? row.coach_images ?? null,
     };
@@ -159,6 +118,8 @@ export async function fetchCoachRowsFromSupabase(limit = 200): Promise<{
     let rows = res.data as unknown as Coach[];
     if (select === "*") {
       rows = await attachCoachVenueAndOutcomeEmbeds(supabase, rows);
+    } else {
+      rows = await attachPublicCoachVenueRelationships(rows, supabase);
     }
     return { rows, error: null };
   }

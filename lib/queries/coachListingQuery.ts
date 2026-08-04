@@ -17,6 +17,7 @@ import { normalizeSearchKey, searchMatchScore } from "../searchFuzzy";
 import { createClient } from "../supabase/server";
 import type { Coach } from "../coaches";
 import type { Venue } from "../venueFilters";
+import { attachPublicCoachVenueRelationships } from "./publicCoachVenues";
 
 export type CoachListingQueryInput = {
   page: number;
@@ -282,11 +283,12 @@ export async function fetchCoachListingPage(
   }
 
   const rows = (data ?? []) as Coach[];
+  const withPublicVenues = await attachPublicCoachVenueRelationships(rows, supabase);
   let venuesQuery = supabase.from("venues").select("id, city, country, lat, lng").limit(500);
   venuesQuery = applyPublishedVenueFilter(venuesQuery);
   const venuesRes = await venuesQuery;
   const venues = (venuesRes.data ?? []) as Venue[];
-  const hydrated = hydrateCoachVenueEmbeds(rows, venues);
+  const hydrated = hydrateCoachVenueEmbeds(withPublicVenues, venues);
   let coaches = coachesRowsToListingItems(hydrated);
 
   if (useDistanceSort) {
