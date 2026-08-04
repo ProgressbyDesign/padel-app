@@ -30,6 +30,66 @@ export async function loadAcceptedBlockedRangesForCoach(
   }));
 }
 
+/**
+ * Anonymous-safe accepted ranges for public availability calendars.
+ * Uses SECURITY DEFINER RPC — never query coach_booking_requests directly as anon.
+ */
+export async function loadPublicAcceptedBlockedRangesForCoach(
+  coachId: string,
+  fromIso: string,
+  toIso: string
+): Promise<BlockedTimeRange[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "get_public_accepted_booking_ranges",
+    {
+      p_range_start: fromIso,
+      p_range_end: toIso,
+      p_coach_id: coachId,
+      p_coach_venue_id: null,
+    }
+  );
+
+  if (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("[bookings] public accepted ranges failed:", error.message);
+    }
+    return [];
+  }
+
+  return (
+    (data as Array<{ starts_at?: string; ends_at?: string }> | null) ?? []
+  ).map((row) => ({
+    startsAt: String(row.starts_at),
+    endsAt: String(row.ends_at),
+  }));
+}
+
+export async function loadPublicAcceptedBlockedRangesForRelationship(
+  coachVenueId: string,
+  fromIso: string,
+  toIso: string
+): Promise<BlockedTimeRange[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "get_public_accepted_booking_ranges",
+    {
+      p_range_start: fromIso,
+      p_range_end: toIso,
+      p_coach_id: null,
+      p_coach_venue_id: coachVenueId,
+    }
+  );
+
+  if (error) return [];
+  return (
+    (data as Array<{ starts_at?: string; ends_at?: string }> | null) ?? []
+  ).map((row) => ({
+    startsAt: String(row.starts_at),
+    endsAt: String(row.ends_at),
+  }));
+}
+
 export async function loadAcceptedBlockedRangesForVenueRelationship(
   coachVenueId: string,
   fromIso: string,

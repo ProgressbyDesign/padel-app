@@ -28,6 +28,7 @@ import {
 } from "@/lib/lifecycle/publicationFilters";
 import {
   loadAcceptedBlockedRangesForCoach,
+  loadPublicAcceptedBlockedRangesForCoach,
   loadRequestedCountsForRelationship,
 } from "@/lib/queries/coachBookingBlocks";
 import { createClient } from "@/lib/supabase/server";
@@ -467,7 +468,7 @@ export async function loadPublicCoachAvailability(
   const rangeTo = new Date(
     Date.now() + (days + 2) * 24 * 60 * 60 * 1000
   ).toISOString();
-  const blockedRanges = await loadAcceptedBlockedRangesForCoach(
+  const blockedRanges = await loadPublicAcceptedBlockedRangesForCoach(
     coachId,
     rangeFrom,
     rangeTo
@@ -561,7 +562,7 @@ export async function loadPublicVenueCoachAvailability(
     const rangeTo = new Date(
       Date.now() + (days + 2) * 24 * 60 * 60 * 1000
     ).toISOString();
-    const blockedRanges = await loadAcceptedBlockedRangesForCoach(
+    const blockedRanges = await loadPublicAcceptedBlockedRangesForCoach(
       String(link.coach_id),
       rangeFrom,
       rangeTo

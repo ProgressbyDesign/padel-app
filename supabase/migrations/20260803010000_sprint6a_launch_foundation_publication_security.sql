@@ -1426,8 +1426,69 @@ create policy "Requesters can create booking requests"
   );
 
 -- ---------------------------------------------------------------------------
--- 14. SQL verification tests
--- Nested BEGIN/EXCEPTION blocks roll back fixture mutations.
+-- 13b. Public accepted booking ranges (anon-safe SECURITY DEFINER RPC)
+-- Returns only starts_at/ends_at for accepted bookings on publicly visible
+-- active coach–venue relationships. No requester or private fields.
+-- ---------------------------------------------------------------------------
+create or replace function public.get_public_accepted_booking_ranges(
+  p_range_start timestamp with time zone,
+  p_range_end timestamp with time zone,
+  p_coach_id uuid default null,
+  p_coach_venue_id uuid default null
+)
+returns table (
+  starts_at timestamp with time zone,
+  ends_at timestamp with time zone
+)
+language sql
+stable
+security definer
+set search_path to ''
+as $function$
+  select
+    booking.starts_at,
+    booking.ends_at
+  from public.coach_booking_requests booking
+  join public.coach_venues relationship
+    on relationship.id = booking.coach_venue_id
+  join public.coaches coach
+    on coach.id = relationship.coach_id
+  join public.venues venue
+    on venue.id = relationship.venue_id
+  where booking.status = 'accepted'
+    and relationship.status = 'active'
+    and coach.publication_status = 'published'
+    and venue.publication_status = 'published'
+    and (
+      (p_coach_id is not null and booking.coach_id = p_coach_id)
+      or (p_coach_venue_id is not null and booking.coach_venue_id = p_coach_venue_id)
+    )
+    and (p_coach_id is not null or p_coach_venue_id is not null)
+    and p_range_start is not null
+    and p_range_end is not null
+    and p_range_end > p_range_start
+    and booking.starts_at < p_range_end
+    and booking.ends_at > p_range_start
+  order by booking.starts_at;
+$function$;
+
+revoke all on function public.get_public_accepted_booking_ranges(
+  timestamp with time zone,
+  timestamp with time zone,
+  uuid,
+  uuid
+) from public;
+grant execute on function public.get_public_accepted_booking_ranges(
+  timestamp with time zone,
+  timestamp with time zone,
+  uuid,
+  uuid
+) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 14. SQL verification tests (lightweight structural assertions only)
+-- Detailed claim-withdrawal and RPC behaviour live in
+-- supabase/tests/sprint6a_publication_security.sql for disposable DBs.
 -- ---------------------------------------------------------------------------
 do $$
 declare
@@ -1441,22 +1502,13 @@ declare
   published_attr_coach_id uuid;
   private_img_venue_id uuid;
   published_img_venue_id uuid;
-  claim_app_id uuid;
-  claim_user_id uuid;
-  claim_status text;
-  claim_loc_id uuid;
-  claim_loc_city text;
-  other_coach_app_id uuid;
-  venue_app_id uuid;
-  venue_app_user_id uuid;
   booking_fn text;
   slot_fn text;
+  rpc_fn text;
   anon_visible_count bigint;
   anon_hidden_count bigint;
   booking_policy_ok boolean;
-  loc_update_count int;
 begin
-  -- (10) Migration publishes zero records
   select count(*) into published_coaches
   from public.coaches where publication_status = 'published';
   select count(*) into published_venues
@@ -1468,7 +1520,6 @@ begin
       published_coaches, published_venues;
   end if;
 
-  -- Anon child SELECT policies: published-parent only, no admin helpers
   for anon_policy in
     select tablename, policyname, coalesce(qual, '') as qual
     from pg_policies
@@ -1517,118 +1568,78 @@ begin
       'Sprint 6A verification failed: venue insert policy must require application_mode = create_new exactly';
   end if;
 
-  if exists (
-    select 1
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = 'coach_application_locations'
-      and policyname in (
-        'Users can add coach application locations',
-        'Users can update coach application locations',
-        'Users can delete coach application locations'
-      )
-      and (coalesce(qual, '') || coalesce(with_check, ''))
-          not ilike '%application_mode = ''create_new''%'
-  ) then
+  if to_regprocedure(
+    'public.get_public_accepted_booking_ranges(timestamptz, timestamptz, uuid, uuid)'
+  ) is null then
     raise exception
-      'Sprint 6A verification failed: location write policies must require create_new';
+      'Sprint 6A verification failed: get_public_accepted_booking_ranges missing';
+  end if;
+
+  rpc_fn := pg_get_functiondef(
+    'public.get_public_accepted_booking_ranges(timestamptz, timestamptz, uuid, uuid)'::regprocedure
+  );
+  if rpc_fn ilike '%requester_%'
+     or rpc_fn ilike '%price_amount%'
+     or rpc_fn ilike '%applicant_%' then
+    raise exception
+      'Sprint 6A verification failed: public accepted-range RPC appears to expose private fields';
   end if;
 
   select id into sample_coach_id from public.coaches limit 1;
   select id into sample_venue_id from public.venues limit 1;
-
   if sample_coach_id is null or sample_venue_id is null then
     raise exception 'Sprint 6A verification failed: missing sample coach/venue rows';
   end if;
 
-  -- (1) Members cannot self-publish (lifecycle trigger; no admin JWT)
   begin
-    update public.coaches
-    set publication_status = 'published'
-    where id = sample_coach_id;
+    update public.coaches set publication_status = 'published' where id = sample_coach_id;
     raise exception 'Sprint 6A verification failed: coach self-publish was allowed';
   exception
     when insufficient_privilege then null;
     when others then
-      if sqlstate = '42501' then null;
-      else raise;
-      end if;
+      if sqlstate = '42501' then null; else raise; end if;
   end;
 
   begin
-    update public.venues
-    set publication_status = 'published'
-    where id = sample_venue_id;
+    update public.venues set publication_status = 'published' where id = sample_venue_id;
     raise exception 'Sprint 6A verification failed: venue self-publish was allowed';
   exception
     when insufficient_privilege then null;
     when others then
-      if sqlstate = '42501' then null;
-      else raise;
-      end if;
+      if sqlstate = '42501' then null; else raise; end if;
   end;
 
-  if exists (
-    select 1 from public.coaches
-    where id = sample_coach_id and publication_status = 'published'
-  ) or exists (
-    select 1 from public.venues
-    where id = sample_venue_id and publication_status = 'published'
-  ) then
-    raise exception 'Sprint 6A verification failed: self-publish left a published row';
-  end if;
-
-  -- (2)+(3) Anon can read published children; cannot read private children
-  select coach_id into private_attr_coach_id
-  from public.coach_attributes
-  limit 1;
-  select venue_id into private_img_venue_id
-  from public.venue_images
-  limit 1;
+  select coach_id into private_attr_coach_id from public.coach_attributes limit 1;
+  select venue_id into private_img_venue_id from public.venue_images limit 1;
 
   if private_attr_coach_id is not null then
     alter table public.coaches disable trigger protect_coach_lifecycle_fields;
-    update public.coaches
-    set publication_status = 'published'
-    where id = private_attr_coach_id;
+    update public.coaches set publication_status = 'published' where id = private_attr_coach_id;
     published_attr_coach_id := private_attr_coach_id;
-
     begin
       execute 'set local role anon';
       execute 'select count(*) from public.coach_attributes where coach_id = $1'
-        into anon_visible_count
-        using published_attr_coach_id;
+        into anon_visible_count using published_attr_coach_id;
       execute 'reset role';
-
       if anon_visible_count < 1 then
-        raise exception
-          'Sprint 6A verification failed: anon could not read published coach child rows';
+        raise exception 'Sprint 6A verification failed: anon could not read published coach child rows';
       end if;
     exception
       when others then
         begin execute 'reset role'; exception when others then null; end;
-        update public.coaches
-        set publication_status = 'private'
-        where id = published_attr_coach_id;
+        update public.coaches set publication_status = 'private' where id = published_attr_coach_id;
         alter table public.coaches enable trigger protect_coach_lifecycle_fields;
         raise;
     end;
-
-    update public.coaches
-    set publication_status = 'private'
-    where id = published_attr_coach_id;
+    update public.coaches set publication_status = 'private' where id = published_attr_coach_id;
     alter table public.coaches enable trigger protect_coach_lifecycle_fields;
-
     begin
       execute 'set local role anon';
       execute 'select count(*) from public.coach_attributes where coach_id = $1'
-        into anon_hidden_count
-        using private_attr_coach_id;
+        into anon_hidden_count using private_attr_coach_id;
       execute 'reset role';
-
       if anon_hidden_count <> 0 then
-        raise exception
-          'Sprint 6A verification failed: anon read private coach child rows';
+        raise exception 'Sprint 6A verification failed: anon read private coach child rows';
       end if;
     exception
       when others then
@@ -1639,47 +1650,32 @@ begin
 
   if private_img_venue_id is not null then
     alter table public.venues disable trigger protect_venue_lifecycle_fields;
-    update public.venues
-    set publication_status = 'published'
-    where id = private_img_venue_id;
+    update public.venues set publication_status = 'published' where id = private_img_venue_id;
     published_img_venue_id := private_img_venue_id;
-
     begin
       execute 'set local role anon';
       execute 'select count(*) from public.venue_images where venue_id = $1'
-        into anon_visible_count
-        using published_img_venue_id;
+        into anon_visible_count using published_img_venue_id;
       execute 'reset role';
-
       if anon_visible_count < 1 then
-        raise exception
-          'Sprint 6A verification failed: anon could not read published venue child rows';
+        raise exception 'Sprint 6A verification failed: anon could not read published venue child rows';
       end if;
     exception
       when others then
         begin execute 'reset role'; exception when others then null; end;
-        update public.venues
-        set publication_status = 'private'
-        where id = published_img_venue_id;
+        update public.venues set publication_status = 'private' where id = published_img_venue_id;
         alter table public.venues enable trigger protect_venue_lifecycle_fields;
         raise;
     end;
-
-    update public.venues
-    set publication_status = 'private'
-    where id = published_img_venue_id;
+    update public.venues set publication_status = 'private' where id = published_img_venue_id;
     alter table public.venues enable trigger protect_venue_lifecycle_fields;
-
     begin
       execute 'set local role anon';
       execute 'select count(*) from public.venue_images where venue_id = $1'
-        into anon_hidden_count
-        using private_img_venue_id;
+        into anon_hidden_count using private_img_venue_id;
       execute 'reset role';
-
       if anon_hidden_count <> 0 then
-        raise exception
-          'Sprint 6A verification failed: anon read private venue child rows';
+        raise exception 'Sprint 6A verification failed: anon read private venue child rows';
       end if;
     exception
       when others then
@@ -1688,203 +1684,18 @@ begin
     end;
   end if;
 
-  -- Historical claim fixtures
-  select cpa.id, cpa.user_id, cpa.status
-    into claim_app_id, claim_user_id, claim_status
-  from public.coach_profile_applications cpa
-  where cpa.application_mode = 'claim_existing'
-    and cpa.status in ('draft', 'submitted', 'under_review', 'changes_requested')
-  limit 1;
-
-  select cal.id, cal.city
-    into claim_loc_id, claim_loc_city
-  from public.coach_application_locations cal
-  where cal.application_id = claim_app_id
-  limit 1;
-
-  if claim_app_id is not null then
-    -- (4) Historical claim editing fails
-    begin
-      update public.coach_profile_applications
-      set full_name = coalesce(full_name, '') || ' (locked-edit)'
-      where id = claim_app_id;
-      raise exception 'Sprint 6A verification failed: claim field edit was allowed';
-    exception
-      when insufficient_privilege then null;
-      when others then
-        if sqlstate = '42501' then null;
-        else raise;
-        end if;
-    end;
-
-    -- (4) Historical claim submission fails
-    begin
-      update public.coach_profile_applications
-      set status = 'submitted'
-      where id = claim_app_id
-        and status = 'draft';
-      if found then
-        raise exception 'Sprint 6A verification failed: claim submission was allowed';
-      end if;
-    exception
-      when insufficient_privilege then null;
-      when others then
-        if sqlstate in ('42501', '23514') then null;
-        else raise;
-        end if;
-    end;
-
-    -- (5) Historical claim withdrawal succeeds (then rolled back)
-    begin
-      update public.coach_profile_applications
-      set status = 'withdrawn'
-      where id = claim_app_id;
-
-      if not exists (
-        select 1 from public.coach_profile_applications
-        where id = claim_app_id and status = 'withdrawn'
-      ) then
-        raise exception 'Sprint 6A verification failed: claim withdrawal did not apply';
-      end if;
-
-      raise exception 'SPRINT6A_WITHDRAW_ROLLBACK';
-    exception
-      when raise_exception then
-        if sqlerrm = 'SPRINT6A_WITHDRAW_ROLLBACK' then null;
-        else raise;
-        end if;
-      when others then
-        raise;
-    end;
-
-    if not exists (
-      select 1 from public.coach_profile_applications
-      where id = claim_app_id and status = claim_status
-    ) then
-      raise exception
-        'Sprint 6A verification failed: claim withdrawal fixture was not rolled back';
-    end if;
-  end if;
-
-  -- (6) Historical claim location editing fails (RLS as applicant)
-  if claim_loc_id is not null and claim_user_id is not null then
-    begin
-      loc_update_count := 0;
-      perform set_config(
-        'request.jwt.claims',
-        json_build_object('sub', claim_user_id::text, 'role', 'authenticated')::text,
-        true
-      );
-      perform set_config('request.jwt.claim.sub', claim_user_id::text, true);
-      execute 'set local role authenticated';
-
-      execute
-        'update public.coach_application_locations set city = $1 where id = $2'
-        using claim_loc_city || '-locked', claim_loc_id;
-      get diagnostics loc_update_count = row_count;
-
-      execute 'reset role';
-      perform set_config('request.jwt.claims', '', true);
-      perform set_config('request.jwt.claim.sub', '', true);
-
-      if loc_update_count <> 0 then
-        raise exception
-          'Sprint 6A verification failed: claim location edit was allowed';
-      end if;
-    exception
-      when others then
-        begin execute 'reset role'; exception when others then null; end;
-        perform set_config('request.jwt.claims', '', true);
-        perform set_config('request.jwt.claim.sub', '', true);
-        if sqlstate = '42501' then null;
-        else raise;
-        end if;
-    end;
-  end if;
-
-  -- (7) Cross-user coach_application_id linking fails
-  select cpa.user_id into venue_app_user_id
-  from public.coach_profile_applications cpa
-  limit 1;
-
-  select cpa.id into other_coach_app_id
-  from public.coach_profile_applications cpa
-  where venue_app_user_id is not null
-    and cpa.user_id is distinct from venue_app_user_id
-  limit 1;
-
-  -- Prefer two distinct users; otherwise use claim user + any other coach app
-  if other_coach_app_id is null then
-    select cpa.id, claim_user_id
-      into other_coach_app_id, venue_app_user_id
-    from public.coach_profile_applications cpa
-    where claim_user_id is not null
-      and cpa.user_id is distinct from claim_user_id
-    limit 1;
-  end if;
-
-  if venue_app_user_id is not null and other_coach_app_id is not null then
-    begin
-      insert into public.venue_profile_applications (
-        user_id,
-        status,
-        current_step,
-        applicant_email,
-        application_mode,
-        target_venue_id
-      )
-      values (
-        venue_app_user_id,
-        'draft',
-        1,
-        'sprint6a-verify+cross-link@example.com',
-        'create_new',
-        null
-      )
-      returning id into venue_app_id;
-
-      begin
-        update public.venue_profile_applications
-        set coach_application_id = other_coach_app_id
-        where id = venue_app_id;
-        raise exception
-          'Sprint 6A verification failed: cross-user coach_application_id link was allowed';
-      exception
-        when insufficient_privilege then null;
-        when others then
-          if sqlstate in ('42501', '23514') then null;
-          else raise;
-          end if;
-      end;
-
-      delete from public.venue_profile_applications where id = venue_app_id;
-    exception
-      when others then
-        if venue_app_id is not null then
-          delete from public.venue_profile_applications where id = venue_app_id;
-        end if;
-        raise;
-    end;
-  end if;
-
-  -- (8)+(9) Booking create vs accept separation + policies remain
-  booking_fn := pg_get_functiondef(
-    'private.prepare_coach_booking_request()'::regprocedure
+  booking_fn := pg_get_functiondef('private.prepare_coach_booking_request()'::regprocedure);
+  slot_fn := pg_get_functiondef(
+    'private.is_valid_availability_slot(uuid, timestamp with time zone, timestamp with time zone)'::regprocedure
   );
 
   if booking_fn not ilike '%Booking requests require a published coach and venue%' then
-    raise exception
-      'Sprint 6A verification failed: booking insert missing publication requirement';
+    raise exception 'Sprint 6A verification failed: booking insert missing publication requirement';
   end if;
 
-  if booking_fn not ilike '%is_valid_availability_slot%' then
+  if slot_fn ilike '%is_public is true%' or slot_fn ilike '%publication_status%' then
     raise exception
-      'Sprint 6A verification failed: booking workflow missing slot validator';
-  end if;
-
-  if booking_fn ilike '%is_valid_public_availability_slot%' then
-    raise exception
-      'Sprint 6A verification failed: prepare_coach_booking_request still uses is_valid_public_availability_slot';
+      'Sprint 6A verification failed: acceptance slot validator still requires public/published visibility';
   end if;
 
   select exists (
@@ -1911,19 +1722,8 @@ begin
       'Sprint 6A verification failed: booking access/create policies missing expected checks';
   end if;
 
-  if to_regprocedure(
-    'private.is_valid_availability_slot(uuid, timestamptz, timestamptz)'
-  ) is null then
-    raise exception
-      'Sprint 6A verification failed: is_valid_availability_slot missing';
-  end if;
-
-  -- Final zero-publish assertion
-  select count(*) into published_coaches
-  from public.coaches where publication_status = 'published';
-  select count(*) into published_venues
-  from public.venues where publication_status = 'published';
-
+  select count(*) into published_coaches from public.coaches where publication_status = 'published';
+  select count(*) into published_venues from public.venues where publication_status = 'published';
   if published_coaches <> 0 or published_venues <> 0 then
     raise exception
       'Sprint 6A verification failed after tests: published coaches/venues = % / %',
@@ -1931,6 +1731,6 @@ begin
   end if;
 
   raise notice
-    'Sprint 6A verification passed (published=% / %, claim_app=%, venue_app=%)',
-    published_coaches, published_venues, claim_app_id, venue_app_id;
+    'Sprint 6A structural verification passed (published=% / %). Claim withdrawal coverage is in supabase/tests/.',
+    published_coaches, published_venues;
 end $$;

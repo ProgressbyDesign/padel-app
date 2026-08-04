@@ -118,6 +118,29 @@ export async function loadCurrentVenueApplication(): Promise<VenueApplicationWit
   return { application, targetVenue };
 }
 
+/** Latest application for the signed-in user, including approved/history rows. */
+export async function loadLatestVenueApplication(): Promise<VenueApplicationWithVenue | null> {
+  const account = await requireAuthenticatedAccount(
+    "/account/applications/venue"
+  );
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("venue_profile_applications")
+    .select(APPLICATION_SELECT)
+    .eq("user_id", account.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const application = asApplication(data as Record<string, unknown>);
+  const targetVenue = await loadTargetVenue(
+    application.target_venue_id ?? application.approved_venue_id
+  );
+  return { application, targetVenue };
+}
+
 export async function loadUserVenueApplications(): Promise<
   VenueProfileApplicationRow[]
 > {
