@@ -129,16 +129,138 @@ create trigger protect_venue_lifecycle_fields
   for each row
   execute function private.protect_profile_lifecycle_fields();
 
+create or replace function private.protect_listing_server_owned_fields()
+returns trigger
+language plpgsql
+set search_path to ''
+as $function$
+begin
+  if tg_op <> 'UPDATE' then
+    return new;
+  end if;
+
+  if current_user is distinct from 'authenticated' then
+    return new;
+  end if;
+
+  if private.has_admin_permission('profiles.manage') then
+    return new;
+  end if;
+
+  if tg_table_name = 'coaches' then
+    if new.id is distinct from old.id
+       or new.created_at is distinct from old.created_at
+       or new.is_approved is distinct from old.is_approved
+       or new.is_claimed is distinct from old.is_claimed
+       or new.source is distinct from old.source
+       or new.data_quality_status is distinct from old.data_quality_status
+       or new.reviewed_at is distinct from old.reviewed_at
+       or new.reviewed_by is distinct from old.reviewed_by
+       or new.rating is distinct from old.rating
+       or new.review_count is distinct from old.review_count
+       or new.normalized_name is distinct from old.normalized_name
+       or new.slug is distinct from old.slug
+       or new.level is distinct from old.level
+    then
+      raise exception
+        'Coach members cannot change server-owned coach metadata.'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if tg_table_name = 'venues' then
+    if new.id is distinct from old.id
+       or new.created_at is distinct from old.created_at
+       or new.is_approved is distinct from old.is_approved
+       or new.source is distinct from old.source
+       or new.data_quality_status is distinct from old.data_quality_status
+       or new.reviewed_at is distinct from old.reviewed_at
+       or new.reviewed_by is distinct from old.reviewed_by
+       or new.rating is distinct from old.rating
+       or new.review_count is distinct from old.review_count
+       or new.last_synced_at is distinct from old.last_synced_at
+       or new.last_crawled_at is distinct from old.last_crawled_at
+       or new.crawl_version is distinct from old.crawl_version
+       or new.ai_confidence is distinct from old.ai_confidence
+       or new.google_place_id is distinct from old.google_place_id
+       or new.lat is distinct from old.lat
+       or new.lng is distinct from old.lng
+       or new.image_url is distinct from old.image_url
+       or new.images is distinct from old.images
+       or new.opening_hours is distinct from old.opening_hours
+    then
+      raise exception
+        'Venue members cannot change server-owned venue metadata.'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists protect_coach_server_owned_fields on public.coaches;
+create trigger protect_coach_server_owned_fields
+  before update on public.coaches
+  for each row
+  execute function private.protect_listing_server_owned_fields();
+
+drop trigger if exists protect_venue_server_owned_fields on public.venues;
+create trigger protect_venue_server_owned_fields
+  before update on public.venues
+  for each row
+  execute function private.protect_listing_server_owned_fields();
+
+create or replace function private.reject_direct_coach_venue_audit_writes()
+returns trigger
+language plpgsql
+set search_path to ''
+as $function$
+begin
+  if tg_op <> 'UPDATE' then
+    return new;
+  end if;
+
+  if new.id is distinct from old.id then
+    raise exception 'Relationship id cannot be changed.' using errcode = '42501';
+  end if;
+
+  if new.responded_by_user_id is distinct from old.responded_by_user_id
+     or new.responded_at is distinct from old.responded_at
+     or new.ended_at is distinct from old.ended_at then
+    raise exception 'Relationship audit fields cannot be changed directly.'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists reject_direct_coach_venue_audit_writes on public.coach_venues;
+create trigger reject_direct_coach_venue_audit_writes
+  before update on public.coach_venues
+  for each row
+  execute function private.reject_direct_coach_venue_audit_writes();
+
 -- Same authenticated DML grants as the Sprint 6A migration section 13c.
 -- Required on pre-migration DBs so RLS and the lifecycle trigger are actually
 -- reachable. RLS remains the row-level boundary.
-grant update on public.profiles to authenticated;
+grant update (
+  full_name,
+  avatar_path,
+  avatar_updated_at,
+  last_workspace_type,
+  last_workspace_entity_id
+) on public.profiles to authenticated;
 grant insert, update on public.coaches to authenticated;
 grant insert, update on public.venues to authenticated;
 grant insert, update on public.coach_profile_applications to authenticated;
 grant insert, update on public.venue_profile_applications to authenticated;
 grant insert, update on public.coach_application_locations to authenticated;
-grant insert, update on public.coach_venues to authenticated;
+grant insert on public.coach_venues to authenticated;
+grant update (status, is_primary) on public.coach_venues to authenticated;
 grant insert, update on public.coach_attributes to authenticated;
 grant insert, update on public.coach_outcomes to authenticated;
 grant insert, update on public.coach_achievements to authenticated;

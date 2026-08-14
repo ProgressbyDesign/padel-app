@@ -261,6 +261,136 @@ create trigger protect_venue_lifecycle_fields
   execute function private.protect_profile_lifecycle_fields();
 
 -- ---------------------------------------------------------------------------
+-- 2c. Server-owned listing metadata — members cannot forge approval/ratings
+--
+-- Admins and coach/venue members share the authenticated role, so table UPDATE
+-- cannot distinguish them. Lifecycle columns stay in
+-- private.protect_profile_lifecycle_fields. This trigger only blocks
+-- server/admin metadata when the statement user is authenticated without
+-- profiles.manage. SECURITY DEFINER writers (approval finaliser, claimed-state
+-- sync) run as the function owner and are not blocked.
+-- search_key is GENERATED ALWAYS from listing text, so it is not compared
+-- here: blocking it would reject legitimate name/role/city edits.
+-- ---------------------------------------------------------------------------
+create or replace function private.protect_listing_server_owned_fields()
+returns trigger
+language plpgsql
+set search_path to ''
+as $function$
+begin
+  if tg_op <> 'UPDATE' then
+    return new;
+  end if;
+
+  if current_user is distinct from 'authenticated' then
+    return new;
+  end if;
+
+  if private.has_admin_permission('profiles.manage') then
+    return new;
+  end if;
+
+  if tg_table_name = 'coaches' then
+    if new.id is distinct from old.id
+       or new.created_at is distinct from old.created_at
+       or new.is_approved is distinct from old.is_approved
+       or new.is_claimed is distinct from old.is_claimed
+       or new.source is distinct from old.source
+       or new.data_quality_status is distinct from old.data_quality_status
+       or new.reviewed_at is distinct from old.reviewed_at
+       or new.reviewed_by is distinct from old.reviewed_by
+       or new.rating is distinct from old.rating
+       or new.review_count is distinct from old.review_count
+       or new.normalized_name is distinct from old.normalized_name
+       or new.slug is distinct from old.slug
+       or new.level is distinct from old.level
+    then
+      raise exception
+        'Coach members cannot change server-owned coach metadata.'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if tg_table_name = 'venues' then
+    if new.id is distinct from old.id
+       or new.created_at is distinct from old.created_at
+       or new.is_approved is distinct from old.is_approved
+       or new.source is distinct from old.source
+       or new.data_quality_status is distinct from old.data_quality_status
+       or new.reviewed_at is distinct from old.reviewed_at
+       or new.reviewed_by is distinct from old.reviewed_by
+       or new.rating is distinct from old.rating
+       or new.review_count is distinct from old.review_count
+       or new.last_synced_at is distinct from old.last_synced_at
+       or new.last_crawled_at is distinct from old.last_crawled_at
+       or new.crawl_version is distinct from old.crawl_version
+       or new.ai_confidence is distinct from old.ai_confidence
+       or new.google_place_id is distinct from old.google_place_id
+       or new.lat is distinct from old.lat
+       or new.lng is distinct from old.lng
+       or new.image_url is distinct from old.image_url
+       or new.images is distinct from old.images
+       or new.opening_hours is distinct from old.opening_hours
+    then
+      raise exception
+        'Venue members cannot change server-owned venue metadata.'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists protect_coach_server_owned_fields on public.coaches;
+create trigger protect_coach_server_owned_fields
+  before update on public.coaches
+  for each row
+  execute function private.protect_listing_server_owned_fields();
+
+drop trigger if exists protect_venue_server_owned_fields on public.venues;
+create trigger protect_venue_server_owned_fields
+  before update on public.venues
+  for each row
+  execute function private.protect_listing_server_owned_fields();
+
+-- Runs before validate_coach_venue_change so clients cannot smuggle audit
+-- values in the SET list. Status-only updates leave these columns unchanged
+-- here; the existing workflow trigger then fills them on NEW.
+create or replace function private.reject_direct_coach_venue_audit_writes()
+returns trigger
+language plpgsql
+set search_path to ''
+as $function$
+begin
+  if tg_op <> 'UPDATE' then
+    return new;
+  end if;
+
+  if new.id is distinct from old.id then
+    raise exception 'Relationship id cannot be changed.' using errcode = '42501';
+  end if;
+
+  if new.responded_by_user_id is distinct from old.responded_by_user_id
+     or new.responded_at is distinct from old.responded_at
+     or new.ended_at is distinct from old.ended_at then
+    raise exception 'Relationship audit fields cannot be changed directly.'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists reject_direct_coach_venue_audit_writes on public.coach_venues;
+create trigger reject_direct_coach_venue_audit_writes
+  before update on public.coach_venues
+  for each row
+  execute function private.reject_direct_coach_venue_audit_writes();
+
+-- ---------------------------------------------------------------------------
 -- 3. Sprint 6B schema foundation on applications
 -- ---------------------------------------------------------------------------
 alter table public.coach_profile_applications
@@ -1502,10 +1632,22 @@ grant execute on function public.get_public_accepted_booking_ranges(
 -- ---------------------------------------------------------------------------
 
 -- Own account settings / welcome name. Created by auth trigger, not by clients.
-grant update on public.profiles to authenticated;
+-- Column-level UPDATE: RLS picks the row; these columns are the only ones the
+-- authenticated user may SET. id, role, created_at stay ungranted.
+-- updated_at is filled by private.set_profile_updated_at, not by clients.
+grant update (
+  full_name,
+  avatar_path,
+  avatar_updated_at,
+  last_workspace_type,
+  last_workspace_entity_id
+) on public.profiles to authenticated;
 
 -- Admin create-and-approve inserts; admin and coach/venue members update.
--- Lifecycle columns stay protected by private.protect_profile_lifecycle_fields.
+-- Table UPDATE stays because admins and members share the authenticated role.
+-- Server-owned metadata is blocked for non-admins by
+-- private.protect_listing_server_owned_fields. Lifecycle columns stay in
+-- private.protect_profile_lifecycle_fields.
 grant insert, update on public.coaches to authenticated;
 grant insert, update on public.venues to authenticated;
 
@@ -1516,7 +1658,10 @@ grant insert, update on public.venue_profile_applications to authenticated;
 grant insert, update on public.coach_application_locations to authenticated;
 
 -- Member-initiated relationship requests and admin relationship management.
-grant insert, update on public.coach_venues to authenticated;
+-- INSERT stays table-wide (trigger fills request/response timestamps).
+-- UPDATE is limited to the workflow columns clients actually SET.
+grant insert on public.coach_venues to authenticated;
+grant update (status, is_primary) on public.coach_venues to authenticated;
 
 -- Coach-member profile child tables. DELETE already granted where a DELETE
 -- policy exists; coach_attributes has INSERT/UPDATE policies only.
@@ -1550,6 +1695,10 @@ grant insert on public.enquiries to anon;
 --   created by auth.users trigger handle_new_user.
 -- * DELETE on public.coaches / public.venues / public.profiles — no DELETE
 --   RLS policies.
+-- * UPDATE on public.profiles.id / role / created_at — server-owned.
+--   updated_at is trigger-maintained (private.set_profile_updated_at).
+-- * UPDATE on public.coach_venues audit columns (responded_*, ended_at, id)
+--   — filled by private.validate_coach_venue_change, not by clients.
 
 -- ---------------------------------------------------------------------------
 -- 14. SQL verification tests (lightweight structural assertions only)
@@ -1800,7 +1949,6 @@ begin
      or not has_table_privilege('authenticated', 'public.coaches', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.venues', 'INSERT')
      or not has_table_privilege('authenticated', 'public.venues', 'UPDATE')
-     or not has_table_privilege('authenticated', 'public.profiles', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.coach_profile_applications', 'INSERT')
      or not has_table_privilege('authenticated', 'public.coach_profile_applications', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.venue_profile_applications', 'INSERT')
@@ -1808,7 +1956,6 @@ begin
      or not has_table_privilege('authenticated', 'public.coach_application_locations', 'INSERT')
      or not has_table_privilege('authenticated', 'public.coach_application_locations', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.coach_venues', 'INSERT')
-     or not has_table_privilege('authenticated', 'public.coach_venues', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.coach_memberships', 'INSERT')
      or not has_table_privilege('authenticated', 'public.coach_memberships', 'UPDATE')
      or not has_table_privilege('authenticated', 'public.venue_memberships', 'INSERT')
@@ -1818,6 +1965,30 @@ begin
   then
     raise exception
       'Sprint 6A verification failed: authenticated is missing required DML grants for RLS-managed writes';
+  end if;
+
+  if not has_column_privilege('authenticated', 'public.profiles'::regclass, 'full_name', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'avatar_path', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'last_workspace_type', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'role', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'created_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'id', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'status', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'is_primary', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'responded_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'responded_by_user_id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'ended_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'id', 'UPDATE')
+  then
+    raise exception
+      'Sprint 6A verification failed: authenticated column UPDATE privileges are misaligned';
+  end if;
+
+  if to_regprocedure('private.protect_listing_server_owned_fields()') is null
+     or to_regprocedure('private.reject_direct_coach_venue_audit_writes()') is null
+  then
+    raise exception
+      'Sprint 6A verification failed: column-protection triggers are missing';
   end if;
 
   if has_table_privilege('authenticated', 'public.coaches', 'DELETE')

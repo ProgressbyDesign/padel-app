@@ -19,7 +19,10 @@ declare
   coach_app_id uuid;
   venue_app_id uuid;
   location_id uuid;
-  enquiry_id uuid;
+  relationship_id uuid;
+  relationship_pending uuid;
+  responded_after timestamptz;
+  approved_after boolean;
   n int;
   pub_after text;
   launch_after text;
@@ -60,9 +63,19 @@ begin
   end if;
 
   -- Privilege inventory: every authenticated RLS write used by a supported
-  -- journey must have the matching table GRANT.
-  if not has_table_privilege('authenticated', 'public.profiles', 'UPDATE') then
-    raise exception 'FAIL grant: profiles UPDATE';
+  -- journey must have the matching GRANT. Column-level UPDATE does not make
+  -- has_table_privilege(..., 'UPDATE') true.
+  if not has_column_privilege('authenticated', 'public.profiles'::regclass, 'full_name', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'avatar_path', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'avatar_updated_at', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'last_workspace_type', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles'::regclass, 'last_workspace_entity_id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'role', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'created_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles'::regclass, 'updated_at', 'UPDATE')
+  then
+    raise exception 'FAIL grant: profiles column UPDATE allowlist';
   end if;
   if not has_table_privilege('authenticated', 'public.coaches', 'INSERT')
      or not has_table_privilege('authenticated', 'public.coaches', 'UPDATE') then
@@ -85,9 +98,18 @@ begin
      or not has_table_privilege('authenticated', 'public.coach_application_locations', 'DELETE') then
     raise exception 'FAIL grant: coach_application_locations INSERT/UPDATE/DELETE';
   end if;
-  if not has_table_privilege('authenticated', 'public.coach_venues', 'INSERT')
-     or not has_table_privilege('authenticated', 'public.coach_venues', 'UPDATE') then
-    raise exception 'FAIL grant: coach_venues INSERT/UPDATE';
+  if not has_table_privilege('authenticated', 'public.coach_venues', 'INSERT') then
+    raise exception 'FAIL grant: coach_venues INSERT';
+  end if;
+  if not has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'status', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'is_primary', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'responded_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'responded_by_user_id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'ended_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.coach_venues'::regclass, 'coach_id', 'UPDATE')
+  then
+    raise exception 'FAIL grant: coach_venues column UPDATE allowlist';
   end if;
   if not has_table_privilege('authenticated', 'public.coach_attributes', 'INSERT')
      or not has_table_privilege('authenticated', 'public.coach_attributes', 'UPDATE') then
@@ -185,6 +207,26 @@ begin
   values (venue_owned, member_user_id, 'owner')
   on conflict do nothing;
 
+  insert into public.coach_venues (
+    coach_id, venue_id, status, is_primary, initiated_by,
+    requested_by_user_id, responded_at, responded_by_user_id
+  )
+  values (
+    coach_owned, venue_owned, 'active', false, 'coach',
+    member_user_id, now(), member_user_id
+  )
+  returning id into relationship_id;
+
+  insert into public.coach_venues (
+    coach_id, venue_id, status, is_primary, initiated_by,
+    requested_by_user_id, responded_at, responded_by_user_id
+  )
+  values (
+    coach_owned, venue_other, 'pending', false, 'coach',
+    member_user_id, null, null
+  )
+  returning id into relationship_pending;
+
   -- One-active-application unique indexes: clear the member's existing rows
   -- inside this rolled-back transaction so the journey fixtures can insert.
   alter table public.coach_profile_applications
@@ -262,6 +304,82 @@ begin
     raise exception 'FAIL: coach member could not update own coach (row_count=%)', n;
   end if;
 
+  begin
+    execute 'set local role authenticated';
+    update public.coaches set is_approved = false where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member changed is_approved';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coaches set is_claimed = false where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member changed is_claimed';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coaches
+    set source = 'forged', data_quality_status = 'approved'
+    where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member changed source/data_quality_status';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coaches set rating = 5, review_count = 999 where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member forged rating/review_count';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coaches set created_at = now() - interval '10 years' where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member changed coaches.created_at';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coaches
+    set normalized_name = 'forged', slug = 'forged-slug', level = 'forged'
+    where id = coach_owned;
+    execute 'reset role';
+    raise exception 'FAIL: coach member changed search/slug/level metadata';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
   -- Coach member cannot self-select or self-publish (lifecycle trigger 42501).
   begin
     execute 'set local role authenticated';
@@ -308,6 +426,21 @@ begin
     raise exception 'FAIL: venue member updated an arbitrary venue';
   end if;
 
+  begin
+    execute 'set local role authenticated';
+    update public.venues
+    set is_approved = true, source = 'forged', data_quality_status = 'approved',
+        rating = 5, review_count = 999, last_synced_at = now()
+    where id = venue_owned;
+    execute 'reset role';
+    raise exception 'FAIL: venue member changed server-owned venue metadata';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
   -- Own profile vs another user's profile.
   execute 'set local role authenticated';
   update public.profiles set full_name = 'Member Self' where id = member_user_id;
@@ -330,6 +463,76 @@ begin
   if own_name is distinct from 'Member Self' or other_name is distinct from 'Admin Fixture' then
     raise exception 'FAIL: profile isolation broken (own=%, other=%)', own_name, other_name;
   end if;
+
+  execute 'set local role authenticated';
+  update public.profiles
+  set
+    last_workspace_type = 'coach',
+    last_workspace_entity_id = coach_owned,
+    avatar_path = 'accounts/' || member_user_id::text || '/avatar',
+    avatar_updated_at = now()
+  where id = member_user_id;
+  get diagnostics n = row_count;
+  execute 'reset role';
+  if n <> 1 then
+    raise exception 'FAIL: user could not update permitted profile fields (row_count=%)', n;
+  end if;
+
+  begin
+    execute 'set local role authenticated';
+    update public.profiles set role = 'admin' where id = member_user_id;
+    execute 'reset role';
+    raise exception 'FAIL: user set profiles.role = admin';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.profiles set created_at = now() - interval '10 years' where id = member_user_id;
+    execute 'reset role';
+    raise exception 'FAIL: user modified profiles.created_at';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  execute 'set local role authenticated';
+  update public.coach_venues set is_primary = true where id = relationship_id;
+  get diagnostics n = row_count;
+  execute 'reset role';
+  if n <> 1 then
+    raise exception 'FAIL: coach member could not update is_primary (row_count=%)', n;
+  end if;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coach_venues set responded_at = now() where id = relationship_id;
+    execute 'reset role';
+    raise exception 'FAIL: client updated coach_venues.responded_at';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
+
+  begin
+    execute 'set local role authenticated';
+    update public.coach_venues set id = gen_random_uuid() where id = relationship_id;
+    execute 'reset role';
+    raise exception 'FAIL: client changed coach_venues.id';
+  exception
+    when insufficient_privilege then execute 'reset role';
+    when others then
+      execute 'reset role';
+      if sqlstate = '42501' then null; else raise; end if;
+  end;
 
   -- Membership writes stay admin-gated by RLS after the table GRANT.
   begin
@@ -553,6 +756,32 @@ begin
     raise exception 'FAIL: admin could not suspend coach (got %)', pub_after;
   end if;
 
+  execute 'set local role authenticated';
+  update public.coaches
+  set is_approved = true, data_quality_status = 'reviewed', reviewed_by = 'admin-test'
+  where id = created_coach;
+  get diagnostics n = row_count;
+  execute 'reset role';
+  if n <> 1 then
+    raise exception 'FAIL: profiles.manage admin could not update coach metadata (row_count=%)', n;
+  end if;
+  select is_approved into approved_after from public.coaches where id = created_coach;
+  if approved_after is not true then
+    raise exception 'FAIL: admin is_approved write did not land';
+  end if;
+
+  execute 'set local role authenticated';
+  update public.coach_venues set status = 'active' where id = relationship_pending;
+  get diagnostics n = row_count;
+  execute 'reset role';
+  if n <> 1 then
+    raise exception 'FAIL: admin could not activate coach_venues (row_count=%)', n;
+  end if;
+  select responded_at into responded_after from public.coach_venues where id = relationship_pending;
+  if responded_after is null then
+    raise exception 'FAIL: trigger must populate responded_at without a client column write';
+  end if;
+
   -- Approval through authenticated admin RLS must not auto-publish.
   execute 'set local role authenticated';
   update public.coach_profile_applications
@@ -575,12 +804,13 @@ begin
   end if;
 
   -- Public enquiry insert as anon (existing product journey).
+  -- INSERT ... RETURNING would also require SELECT, which anon must not have.
   execute 'set local role anon';
   insert into public.enquiries (status, full_name, email)
-  values ('new', 'Anon Enquirer', 'anon-enquirer@example.com')
-  returning id into enquiry_id;
+  values ('new', 'Anon Enquirer', 'anon-enquirer@example.com');
+  get diagnostics n = row_count;
   execute 'reset role';
-  if enquiry_id is null then
+  if n <> 1 then
     raise exception 'FAIL: anon could not insert enquiry';
   end if;
 
