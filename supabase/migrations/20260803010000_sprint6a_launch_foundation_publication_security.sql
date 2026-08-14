@@ -1486,6 +1486,72 @@ grant execute on function public.get_public_accepted_booking_ranges(
 ) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- 13c. Authenticated table privileges required for RLS-managed writes
+--
+-- Postgres evaluates table GRANTs before RLS. Several public tables already
+-- have authenticated INSERT/UPDATE/DELETE policies for real application
+-- journeys, but authenticated only had SELECT (or SELECT+DELETE) at the table
+-- level, so writes failed with "permission denied for table …" before the
+-- policy or lifecycle trigger could run.
+--
+-- Rule: grant an authenticated DML operation only when the final Sprint 6A
+-- schema has an authenticated RLS policy for that same operation AND the
+-- operation is required by an existing application journey. RLS remains the
+-- row-level boundary. Do not GRANT ALL. Do not grant writes on tables whose
+-- only policy is stale or unused.
+-- ---------------------------------------------------------------------------
+
+-- Own account settings / welcome name. Created by auth trigger, not by clients.
+grant update on public.profiles to authenticated;
+
+-- Admin create-and-approve inserts; admin and coach/venue members update.
+-- Lifecycle columns stay protected by private.protect_profile_lifecycle_fields.
+grant insert, update on public.coaches to authenticated;
+grant insert, update on public.venues to authenticated;
+
+-- Applicant drafts/submissions/withdrawals and admin review.
+-- DELETE is already granted; INSERT/UPDATE were missing.
+grant insert, update on public.coach_profile_applications to authenticated;
+grant insert, update on public.venue_profile_applications to authenticated;
+grant insert, update on public.coach_application_locations to authenticated;
+
+-- Member-initiated relationship requests and admin relationship management.
+grant insert, update on public.coach_venues to authenticated;
+
+-- Coach-member profile child tables. DELETE already granted where a DELETE
+-- policy exists; coach_attributes has INSERT/UPDATE policies only.
+grant insert, update on public.coach_attributes to authenticated;
+grant insert, update on public.coach_outcomes to authenticated;
+grant insert, update on public.coach_achievements to authenticated;
+grant insert, update on public.coach_images to authenticated;
+grant insert, update on public.coach_socials to authenticated;
+
+-- Venue-member gallery/socials. DELETE already granted.
+grant insert, update on public.venue_images to authenticated;
+grant insert, update on public.venue_socials to authenticated;
+
+-- Admin-only RLS (private.is_current_user_admin). Granting the table
+-- operation lets the authenticated admin client reach those policies.
+-- DELETE is already granted.
+grant insert, update on public.coach_memberships to authenticated;
+grant insert, update on public.venue_memberships to authenticated;
+
+-- Public enquiry form uses createClient() as anon or authenticated.
+-- Protected by INSERT RLS: status = 'new'. No SELECT/UPDATE/DELETE policy,
+-- so those operations are not granted here.
+grant insert on public.enquiries to authenticated;
+grant insert on public.enquiries to anon;
+
+-- Intentionally not granted:
+-- * public.coach_applications INSERT — legacy unused table; policy
+--   "Public can submit pending coach applications" is stale and overly broad
+--   (authenticated+anon, check only status='pending').
+-- * INSERT on public.profiles — no authenticated INSERT policy; rows are
+--   created by auth.users trigger handle_new_user.
+-- * DELETE on public.coaches / public.venues / public.profiles — no DELETE
+--   RLS policies.
+
+-- ---------------------------------------------------------------------------
 -- 14. SQL verification tests (lightweight structural assertions only)
 -- Detailed claim-withdrawal and RPC behaviour live in
 -- supabase/tests/sprint6a_publication_security.sql for disposable DBs.
@@ -1728,6 +1794,39 @@ begin
     raise exception
       'Sprint 6A verification failed after tests: published coaches/venues = % / %',
       published_coaches, published_venues;
+  end if;
+
+  if not has_table_privilege('authenticated', 'public.coaches', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.coaches', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.venues', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.venues', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.profiles', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.coach_profile_applications', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.coach_profile_applications', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.venue_profile_applications', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.venue_profile_applications', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.coach_application_locations', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.coach_application_locations', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.coach_venues', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.coach_venues', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.coach_memberships', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.coach_memberships', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.venue_memberships', 'INSERT')
+     or not has_table_privilege('authenticated', 'public.venue_memberships', 'UPDATE')
+     or not has_table_privilege('authenticated', 'public.enquiries', 'INSERT')
+     or not has_table_privilege('anon', 'public.enquiries', 'INSERT')
+  then
+    raise exception
+      'Sprint 6A verification failed: authenticated is missing required DML grants for RLS-managed writes';
+  end if;
+
+  if has_table_privilege('authenticated', 'public.coaches', 'DELETE')
+     or has_table_privilege('authenticated', 'public.venues', 'DELETE')
+     or has_table_privilege('authenticated', 'public.profiles', 'INSERT')
+     or has_table_privilege('authenticated', 'public.coach_applications', 'INSERT')
+  then
+    raise exception
+      'Sprint 6A verification failed: authenticated received an unexpected write grant';
   end if;
 
   raise notice

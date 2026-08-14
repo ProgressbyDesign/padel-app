@@ -129,14 +129,27 @@ create trigger protect_venue_lifecycle_fields
   for each row
   execute function private.protect_profile_lifecycle_fields();
 
--- Test-scope only. Some environments grant `authenticated` SELECT-only on these
--- tables, which makes writes fail on the table grant before RLS or the lifecycle
--- trigger is ever consulted. Granting UPDATE here keeps the assertions below
--- about RLS + trigger behaviour rather than about a missing grant.
-grant update on public.coaches to authenticated;
-grant update on public.venues to authenticated;
-grant update on public.coach_profile_applications to authenticated;
-grant update on public.venue_profile_applications to authenticated;
+-- Same authenticated DML grants as the Sprint 6A migration section 13c.
+-- Required on pre-migration DBs so RLS and the lifecycle trigger are actually
+-- reachable. RLS remains the row-level boundary.
+grant update on public.profiles to authenticated;
+grant insert, update on public.coaches to authenticated;
+grant insert, update on public.venues to authenticated;
+grant insert, update on public.coach_profile_applications to authenticated;
+grant insert, update on public.venue_profile_applications to authenticated;
+grant insert, update on public.coach_application_locations to authenticated;
+grant insert, update on public.coach_venues to authenticated;
+grant insert, update on public.coach_attributes to authenticated;
+grant insert, update on public.coach_outcomes to authenticated;
+grant insert, update on public.coach_achievements to authenticated;
+grant insert, update on public.coach_images to authenticated;
+grant insert, update on public.coach_socials to authenticated;
+grant insert, update on public.venue_images to authenticated;
+grant insert, update on public.venue_socials to authenticated;
+grant insert, update on public.coach_memberships to authenticated;
+grant insert, update on public.venue_memberships to authenticated;
+grant insert on public.enquiries to authenticated;
+grant insert on public.enquiries to anon;
 
 -- Publication-gated read access for coaches.
 drop policy if exists "Public read coaches" on public.coaches;
@@ -375,3 +388,95 @@ create trigger guard_venue_profile_application_mutations
   before insert or update on public.venue_profile_applications
   for each row
   execute function private.guard_profile_application_mutations();
+
+-- Match the final Sprint 6A INSERT policies so application-journey tests
+-- exercise create_new-only claiming lock rather than the pre-migration drafts.
+drop policy if exists "Users can create their coach application draft"
+  on public.coach_profile_applications;
+create policy "Users can create their coach application draft"
+  on public.coach_profile_applications
+  for insert
+  to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and status = 'draft'
+    and coach_id is null
+    and application_mode = 'create_new'
+    and target_coach_id is null
+  );
+
+drop policy if exists "Users can create their venue application draft"
+  on public.venue_profile_applications;
+create policy "Users can create their venue application draft"
+  on public.venue_profile_applications
+  for insert
+  to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and status = 'draft'
+    and approved_venue_id is null
+    and reviewed_by_user_id is null
+    and application_mode = 'create_new'
+    and target_venue_id is null
+  );
+
+drop policy if exists "Users can add coach application locations"
+  on public.coach_application_locations;
+create policy "Users can add coach application locations"
+  on public.coach_application_locations
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1
+      from public.coach_profile_applications application
+      where application.id = coach_application_locations.application_id
+        and application.user_id = (select auth.uid())
+        and application.application_mode = 'create_new'
+        and application.status in ('draft', 'changes_requested')
+    )
+  );
+
+drop policy if exists "Users can update coach application locations"
+  on public.coach_application_locations;
+create policy "Users can update coach application locations"
+  on public.coach_application_locations
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.coach_profile_applications application
+      where application.id = coach_application_locations.application_id
+        and application.user_id = (select auth.uid())
+        and application.application_mode = 'create_new'
+        and application.status in ('draft', 'changes_requested')
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.coach_profile_applications application
+      where application.id = coach_application_locations.application_id
+        and application.user_id = (select auth.uid())
+        and application.application_mode = 'create_new'
+        and application.status in ('draft', 'changes_requested')
+    )
+  );
+
+drop policy if exists "Users can delete coach application locations"
+  on public.coach_application_locations;
+create policy "Users can delete coach application locations"
+  on public.coach_application_locations
+  for delete
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.coach_profile_applications application
+      where application.id = coach_application_locations.application_id
+        and application.user_id = (select auth.uid())
+        and application.application_mode = 'create_new'
+        and application.status in ('draft', 'changes_requested')
+    )
+  );
