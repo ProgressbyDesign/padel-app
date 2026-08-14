@@ -5,8 +5,164 @@
 
 alter table public.coaches
   add column if not exists publication_status text not null default 'private';
+alter table public.coaches
+  add column if not exists launch_selection_status text not null default 'unselected';
+alter table public.coaches
+  add column if not exists onboarding_status text not null default 'not_started';
+alter table public.coaches
+  add column if not exists selected_at timestamptz null;
+alter table public.coaches
+  add column if not exists selected_by_user_id uuid null;
+alter table public.coaches
+  add column if not exists onboarding_started_at timestamptz null;
+alter table public.coaches
+  add column if not exists onboarding_completed_at timestamptz null;
+alter table public.coaches
+  add column if not exists published_at timestamptz null;
+alter table public.coaches
+  add column if not exists published_by_user_id uuid null;
+
 alter table public.venues
   add column if not exists publication_status text not null default 'private';
+alter table public.venues
+  add column if not exists launch_selection_status text not null default 'unselected';
+alter table public.venues
+  add column if not exists onboarding_status text not null default 'not_started';
+alter table public.venues
+  add column if not exists selected_at timestamptz null;
+alter table public.venues
+  add column if not exists selected_by_user_id uuid null;
+alter table public.venues
+  add column if not exists onboarding_started_at timestamptz null;
+alter table public.venues
+  add column if not exists onboarding_completed_at timestamptz null;
+alter table public.venues
+  add column if not exists published_at timestamptz null;
+alter table public.venues
+  add column if not exists published_by_user_id uuid null;
+
+-- Lifecycle guard: members cannot self-select or self-publish; the trigger owns
+-- the audit fields. Mirrors private.protect_profile_lifecycle_fields() in the
+-- Sprint 6A migration.
+create or replace function private.protect_profile_lifecycle_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  actor_id uuid := (select auth.uid());
+begin
+  if
+    new.launch_selection_status is not distinct from old.launch_selection_status
+    and new.onboarding_status is not distinct from old.onboarding_status
+    and new.publication_status is not distinct from old.publication_status
+    and new.selected_at is not distinct from old.selected_at
+    and new.selected_by_user_id is not distinct from old.selected_by_user_id
+    and new.onboarding_started_at is not distinct from old.onboarding_started_at
+    and new.onboarding_completed_at is not distinct from old.onboarding_completed_at
+    and new.published_at is not distinct from old.published_at
+    and new.published_by_user_id is not distinct from old.published_by_user_id
+  then
+    return new;
+  end if;
+
+  if not private.has_admin_permission('profiles.manage') then
+    raise exception
+      'Only administrators with profiles.manage may change launch, onboarding or publication fields.'
+      using errcode = '42501';
+  end if;
+
+  if new.launch_selection_status is distinct from old.launch_selection_status
+     and new.launch_selection_status = 'selected' then
+    new.selected_at := now();
+    new.selected_by_user_id := actor_id;
+  end if;
+
+  if new.selected_by_user_id is distinct from old.selected_by_user_id
+     and new.selected_by_user_id is distinct from actor_id then
+    new.selected_by_user_id := actor_id;
+  end if;
+
+  if new.publication_status is distinct from old.publication_status
+     and new.publication_status = 'published' then
+    new.published_at := now();
+    new.published_by_user_id := actor_id;
+  end if;
+
+  if new.published_by_user_id is distinct from old.published_by_user_id
+     and new.published_by_user_id is distinct from actor_id then
+    new.published_by_user_id := actor_id;
+  end if;
+
+  if new.onboarding_status is distinct from old.onboarding_status then
+    if new.onboarding_status in ('invited', 'in_progress') then
+      new.onboarding_started_at := coalesce(old.onboarding_started_at, now());
+    end if;
+    if new.onboarding_status = 'complete' then
+      new.onboarding_started_at := coalesce(
+        new.onboarding_started_at,
+        old.onboarding_started_at,
+        now()
+      );
+      new.onboarding_completed_at := now();
+    end if;
+  elsif new.onboarding_started_at is null
+        and old.onboarding_started_at is null
+        and new.onboarding_status in ('invited', 'in_progress', 'complete') then
+    new.onboarding_started_at := now();
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists protect_coach_lifecycle_fields on public.coaches;
+create trigger protect_coach_lifecycle_fields
+  before update on public.coaches
+  for each row
+  execute function private.protect_profile_lifecycle_fields();
+
+drop trigger if exists protect_venue_lifecycle_fields on public.venues;
+create trigger protect_venue_lifecycle_fields
+  before update on public.venues
+  for each row
+  execute function private.protect_profile_lifecycle_fields();
+
+-- Test-scope only. Some environments grant `authenticated` SELECT-only on these
+-- tables, which makes writes fail on the table grant before RLS or the lifecycle
+-- trigger is ever consulted. Granting UPDATE here keeps the assertions below
+-- about RLS + trigger behaviour rather than about a missing grant.
+grant update on public.coaches to authenticated;
+grant update on public.venues to authenticated;
+grant update on public.coach_profile_applications to authenticated;
+grant update on public.venue_profile_applications to authenticated;
+
+-- Publication-gated read access for coaches.
+drop policy if exists "Public read coaches" on public.coaches;
+drop policy if exists "Anonymous can read published coaches" on public.coaches;
+drop policy if exists "Authenticated can read permitted coaches" on public.coaches;
+
+create policy "Anonymous can read published coaches"
+  on public.coaches
+  for select
+  to anon
+  using (publication_status = 'published');
+
+create policy "Authenticated can read permitted coaches"
+  on public.coaches
+  for select
+  to authenticated
+  using (
+    publication_status = 'published'
+    or exists (
+      select 1
+      from public.coach_memberships membership
+      where membership.coach_id = coaches.id
+        and membership.user_id = (select auth.uid())
+    )
+    or private.has_admin_permission('profiles.read')
+  );
 
 create or replace function public.get_public_accepted_booking_ranges(
   p_range_start timestamp with time zone,

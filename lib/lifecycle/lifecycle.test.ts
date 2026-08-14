@@ -63,6 +63,75 @@ describe("lifecycle validation", () => {
   });
 });
 
+describe("launch curation via public coach queries", () => {
+  type CoachRow = {
+    id: string;
+    publication_status: string;
+    is_approved: boolean;
+    is_claimed: boolean;
+  };
+
+  const dataset: CoachRow[] = [
+    {
+      id: "approved-private",
+      publication_status: "private",
+      is_approved: true,
+      is_claimed: true,
+    },
+    {
+      id: "approved-suspended",
+      publication_status: "suspended",
+      is_approved: true,
+      is_claimed: true,
+    },
+    {
+      id: "published-unclaimed",
+      publication_status: "published",
+      is_approved: false,
+      is_claimed: false,
+    },
+    {
+      id: "published-managed",
+      publication_status: "published",
+      is_approved: true,
+      is_claimed: true,
+    },
+  ];
+
+  /** Applies the filters collected by applyPublishedCoachFilter to fixtures. */
+  function runPublicQuery(): string[] {
+    const query = applyPublishedCoachFilter(fakeQuery() as never) as FakeQuery;
+    return dataset
+      .filter((row) =>
+        query.eqs.every(
+          ([column, value]) => String(row[column as keyof CoachRow]) === value
+        )
+      )
+      .map((row) => row.id);
+  }
+
+  it("excludes approved-but-private and suspended coaches", () => {
+    const visible = runPublicQuery();
+    expect(visible).not.toContain("approved-private");
+    expect(visible).not.toContain("approved-suspended");
+  });
+
+  it("includes published coaches even when unclaimed and unapproved", () => {
+    expect(runPublicQuery()).toEqual([
+      "published-unclaimed",
+      "published-managed",
+    ]);
+  });
+
+  it("never filters public visibility on approval or claim state", () => {
+    const query = applyPublishedCoachFilter(fakeQuery() as never) as FakeQuery;
+    const columns = query.eqs.map(([column]) => column);
+    expect(columns).toEqual(["publication_status"]);
+    expect(columns).not.toContain("is_approved");
+    expect(columns).not.toContain("is_claimed");
+  });
+});
+
 describe("claim rejection semantics", () => {
   it("documents that new self-service claims must be rejected", () => {
     const rejectNewClaim = (mode: string, targetId: string | null) => {

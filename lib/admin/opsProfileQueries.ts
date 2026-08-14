@@ -21,6 +21,10 @@ export type OpsCoachOverview = {
     image_url: string | null;
     is_approved: boolean | null;
     level: string | null;
+    publication_status: string | null;
+    launch_selection_status: string | null;
+    onboarding_status: string | null;
+    published_at: string | null;
   };
   primaryLocation: string | null;
   hasPrimaryLocation: boolean;
@@ -35,6 +39,8 @@ export type OpsCoachOverview = {
   availabilityLive: boolean;
   pendingBookingCount: number;
   applicationId: string | null;
+  /** Someone manages this profile via coach_memberships. Not required to publish. */
+  hasAccount: boolean;
   completion: ReturnType<typeof buildCoachCompletion>;
 };
 
@@ -53,12 +59,18 @@ export type OpsVenueOverview = {
     coaching_description: string | null;
     opening_hours_structured: unknown;
     is_approved: boolean | null;
+    publication_status: string | null;
+    launch_selection_status: string | null;
+    onboarding_status: string | null;
+    published_at: string | null;
   };
   imageCount: number;
   socialCount: number;
   activeCoachCount: number;
   hasCoachAvailability: boolean;
   applicationId: string | null;
+  /** Someone manages this venue via venue_memberships. Not required to publish. */
+  hasAccount: boolean;
   completion: ReturnType<typeof buildVenueCompletion>;
 };
 
@@ -79,6 +91,7 @@ export async function loadOpsCoachOverview(
     achievementsResult,
     bookingsResult,
     applicationResult,
+    membershipResult,
   ] = await Promise.all([
     supabase
       .from("coaches")
@@ -121,6 +134,11 @@ export async function loadOpsCoachOverview(
       .order("submitted_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("coach_memberships")
+      .select("user_id")
+      .eq("coach_id", coachId)
+      .limit(1),
   ]);
 
   if (coachResult.error || !coachResult.data) return null;
@@ -196,6 +214,7 @@ export async function loadOpsCoachOverview(
     applicationId: applicationResult.data?.id
       ? String(applicationResult.data.id)
       : null,
+    hasAccount: Boolean(membershipResult.data?.length),
     completion,
   };
 }
@@ -212,6 +231,7 @@ export async function loadOpsVenueOverview(
     socialsResult,
     coachesResult,
     applicationResult,
+    membershipResult,
   ] = await Promise.all([
     supabase
       .from("venues")
@@ -234,6 +254,11 @@ export async function loadOpsVenueOverview(
       .order("submitted_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("venue_memberships")
+      .select("user_id")
+      .eq("venue_id", venueId)
+      .limit(1),
   ]);
 
   if (venueResult.error || !venueResult.data) return null;
@@ -284,6 +309,7 @@ export async function loadOpsVenueOverview(
     applicationId: applicationResult.data?.id
       ? String(applicationResult.data.id)
       : null,
+    hasAccount: Boolean(membershipResult.data?.length),
     completion,
   };
 }
