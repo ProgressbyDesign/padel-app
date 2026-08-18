@@ -2,7 +2,7 @@
 
 export const VENUE_APPLICATION_STEPS = [
   { step: 1, slug: "role", label: "Your role" },
-  { step: 2, slug: "venue", label: "Find your venue" },
+  { step: 2, slug: "venue", label: "Venue details" },
   { step: 3, slug: "confirmation", label: "Confirmation" },
   { step: 4, slug: "review", label: "Review" },
 ] as const;
@@ -27,18 +27,25 @@ export const EDITABLE_VENUE_APPLICATION_STATUSES = [
   "changes_requested",
 ] as const satisfies readonly VenueApplicationStatus[];
 
+export const WITHDRAWABLE_VENUE_APPLICATION_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "changes_requested",
+] as const satisfies readonly VenueApplicationStatus[];
+
 export const VENUE_APPLICATION_MODES = [
   {
     value: "claim_existing",
-    label: "Claim an existing listing",
+    label: "Existing listing claim",
     description:
-      "The venue is already on Padel Pathways. You are requesting ownership or management access.",
+      "Historical mode. Public claiming is closed; kept for existing applications.",
   },
   {
     value: "create_new",
-    label: "Propose a new venue",
+    label: "Submit your venue details",
     description:
-      "The venue is not listed yet. We will review the proposed details before creating it.",
+      "Tell us about your venue. We will review the details before publishing.",
   },
 ] as const;
 
@@ -100,6 +107,14 @@ export function isEditableVenueApplicationStatus(
   return (EDITABLE_VENUE_APPLICATION_STATUSES as readonly string[]).includes(
     status
   );
+}
+
+export function isWithdrawableVenueApplicationStatus(
+  status: string
+): status is (typeof WITHDRAWABLE_VENUE_APPLICATION_STATUSES)[number] {
+  return (
+    WITHDRAWABLE_VENUE_APPLICATION_STATUSES as readonly string[]
+  ).includes(status);
 }
 
 export function venueRelationshipLabel(value: string | null): string {

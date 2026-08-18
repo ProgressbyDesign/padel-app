@@ -4,6 +4,10 @@ import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
 import { createClient } from "../lib/supabase/server";
 import { fetchPadelCountries } from "../lib/queries/padelCountries";
 import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../lib/lifecycle/publicationFilters";
 import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 
 export const metadata = {
@@ -27,6 +31,13 @@ function buildHomeStats(
 
 export default async function Home() {
   const supabase = await createClient();
+  let coachCountQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  coachCountQuery = applyPublishedCoachFilter(coachCountQuery);
+  let venueCountQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+  venueCountQuery = applyPublishedVenueFilter(venueCountQuery);
+  let countriesQuery = supabase.from("venues").select("country").not("country", "is", null).limit(2000);
+  countriesQuery = applyPublishedVenueFilter(countriesQuery);
+
   const [
     featuredCoaches,
     featuredVenues,
@@ -39,9 +50,9 @@ export default async function Home() {
     fetchTopRatedCoachesForHome(),
     fetchTopRatedVenuesForHome(),
     fetchPadelCountries(),
-    supabase.from("coaches").select("*", { count: "exact", head: true }),
-    supabase.from("venues").select("*", { count: "exact", head: true }),
-    supabase.from("venues").select("country").not("country", "is", null).limit(2000),
+    coachCountQuery,
+    venueCountQuery,
+    countriesQuery,
     supabase.from("enquiries").select("*", { count: "exact", head: true }),
   ]);
 

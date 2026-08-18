@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
+import { AdminLifecycleStatus } from "@/components/admin/AdminLifecycleStatus";
 import { loadOpsVenueOverview } from "@/lib/admin/opsProfileQueries";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,23 @@ export default async function OpsVenueOverviewPage({ params }: PageProps) {
           ))}
         </ul>
       ) : null}
+
+      <section className="rounded-[24px] border border-primary/10 bg-white p-5">
+        <h2 className="text-lg font-bold">Launch &amp; visibility</h2>
+        <p className="mt-1 text-sm text-primary/60">
+          Read-only in this sprint. Venue launch curation is managed through the
+          existing venue lifecycle architecture.
+        </p>
+        <div className="mt-5">
+          <AdminLifecycleStatus
+            isApproved={venue.is_approved}
+            hasAccount={data.hasAccount}
+            launchSelectionStatus={venue.launch_selection_status}
+            publicationStatus={venue.publication_status}
+            onboardingStatus={venue.onboarding_status}
+          />
+        </div>
+      </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg font-bold">Key fields</h2>

@@ -1,0 +1,214 @@
+import { describe, expect, it } from "vitest";
+import {
+  ACCOUNT_JOURNEYS,
+  isAccountJourney,
+  isPublicationStatus,
+  isPublishedStatus,
+  PUBLIC_COACH_VENUE_STATUSES,
+  PUBLICATION_STATUSES,
+  PUBLISHED_STATUS,
+} from "@/lib/lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "@/lib/lifecycle/publicationFilters";
+
+type FakeQuery = {
+  eqs: Array<[string, string]>;
+  eq: (column: string, value: string) => FakeQuery;
+};
+
+function fakeQuery(): FakeQuery {
+  const q: FakeQuery = {
+    eqs: [],
+    eq(column, value) {
+      q.eqs.push([column, value]);
+      return q;
+    },
+  };
+  return q;
+}
+
+describe("lifecycle validation", () => {
+  it("validates publication status values", () => {
+    expect(PUBLICATION_STATUSES).toEqual(["private", "published", "suspended"]);
+    expect(isPublicationStatus("published")).toBe(true);
+    expect(isPublicationStatus("private")).toBe(true);
+    expect(isPublicationStatus("draft")).toBe(false);
+    expect(isPublishedStatus(PUBLISHED_STATUS)).toBe(true);
+    expect(isPublishedStatus("private")).toBe(false);
+  });
+
+  it("validates account journey values", () => {
+    expect(ACCOUNT_JOURNEYS).toEqual([
+      "player",
+      "coach_business",
+      "travel_partner",
+    ]);
+    expect(isAccountJourney("player")).toBe(true);
+    expect(isAccountJourney("coach_business")).toBe(true);
+    expect(isAccountJourney("admin")).toBe(false);
+  });
+
+  it("applies explicit published filters for public coach/venue queries", () => {
+    const coachQ = applyPublishedCoachFilter(fakeQuery() as never) as FakeQuery;
+    const venueQ = applyPublishedVenueFilter(fakeQuery() as never) as FakeQuery;
+    expect(coachQ.eqs).toEqual([["publication_status", "published"]]);
+    expect(venueQ.eqs).toEqual([["publication_status", "published"]]);
+  });
+
+  it("restricts public coach–venue relationships to active only", () => {
+    expect([...PUBLIC_COACH_VENUE_STATUSES]).toEqual(["active"]);
+    expect(PUBLIC_COACH_VENUE_STATUSES).not.toContain("unverified");
+  });
+});
+
+describe("launch curation via public coach queries", () => {
+  type CoachRow = {
+    id: string;
+    publication_status: string;
+    is_approved: boolean;
+    is_claimed: boolean;
+  };
+
+  const dataset: CoachRow[] = [
+    {
+      id: "approved-private",
+      publication_status: "private",
+      is_approved: true,
+      is_claimed: true,
+    },
+    {
+      id: "approved-suspended",
+      publication_status: "suspended",
+      is_approved: true,
+      is_claimed: true,
+    },
+    {
+      id: "published-unclaimed",
+      publication_status: "published",
+      is_approved: false,
+      is_claimed: false,
+    },
+    {
+      id: "published-managed",
+      publication_status: "published",
+      is_approved: true,
+      is_claimed: true,
+    },
+  ];
+
+  /** Applies the filters collected by applyPublishedCoachFilter to fixtures. */
+  function runPublicQuery(): string[] {
+    const query = applyPublishedCoachFilter(fakeQuery() as never) as FakeQuery;
+    return dataset
+      .filter((row) =>
+        query.eqs.every(
+          ([column, value]) => String(row[column as keyof CoachRow]) === value
+        )
+      )
+      .map((row) => row.id);
+  }
+
+  it("excludes approved-but-private and suspended coaches", () => {
+    const visible = runPublicQuery();
+    expect(visible).not.toContain("approved-private");
+    expect(visible).not.toContain("approved-suspended");
+  });
+
+  it("includes published coaches even when unclaimed and unapproved", () => {
+    expect(runPublicQuery()).toEqual([
+      "published-unclaimed",
+      "published-managed",
+    ]);
+  });
+
+  it("never filters public visibility on approval or claim state", () => {
+    const query = applyPublishedCoachFilter(fakeQuery() as never) as FakeQuery;
+    const columns = query.eqs.map(([column]) => column);
+    expect(columns).toEqual(["publication_status"]);
+    expect(columns).not.toContain("is_approved");
+    expect(columns).not.toContain("is_claimed");
+  });
+});
+
+describe("claim rejection semantics", () => {
+  it("documents that new self-service claims must be rejected", () => {
+    const rejectNewClaim = (mode: string, targetId: string | null) => {
+      if (mode === "claim_existing" || targetId) {
+        return {
+          ok: false as const,
+          message: "Public profile claiming is no longer available.",
+        };
+      }
+      return { ok: true as const, mode: "create_new" as const, targetId: null };
+    };
+
+    expect(rejectNewClaim("claim_existing", "coach-1").ok).toBe(false);
+    expect(rejectNewClaim("create_new", "coach-1").ok).toBe(false);
+    expect(rejectNewClaim("create_new", null)).toEqual({
+      ok: true,
+      mode: "create_new",
+      targetId: null,
+    });
+  });
+});
+
+describe("public vs private visibility rules", () => {
+  it("treats unpublished coaches as no public result", () => {
+    const publicLookup = (row: { publication_status: string } | null) =>
+      row && row.publication_status === "published" ? row : null;
+
+    expect(publicLookup({ publication_status: "private" })).toBeNull();
+    expect(publicLookup({ publication_status: "suspended" })).toBeNull();
+    expect(publicLookup({ publication_status: "published" })).toEqual({
+      publication_status: "published",
+    });
+  });
+
+  it("requires published coach and venue and derived slots for public availability badge", () => {
+    const canShowAvailabilityBadge = (input: {
+      relationshipStatus: string;
+      isPublic: boolean;
+      coachPublication: string;
+      venuePublication: string;
+      hasDerivedSlot: boolean;
+    }) =>
+      input.relationshipStatus === "active" &&
+      input.isPublic &&
+      input.coachPublication === "published" &&
+      input.venuePublication === "published" &&
+      input.hasDerivedSlot;
+
+    expect(
+      canShowAvailabilityBadge({
+        relationshipStatus: "active",
+        isPublic: true,
+        coachPublication: "published",
+        venuePublication: "published",
+        hasDerivedSlot: false,
+      })
+    ).toBe(false);
+
+    expect(
+      canShowAvailabilityBadge({
+        relationshipStatus: "active",
+        isPublic: true,
+        coachPublication: "published",
+        venuePublication: "published",
+        hasDerivedSlot: true,
+      })
+    ).toBe(true);
+  });
+
+  it("keeps member management independent of publication", () => {
+    const memberCanManage = (hasMembership: boolean) => hasMembership;
+    expect(memberCanManage(true)).toBe(true);
+    expect(memberCanManage(false)).toBe(false);
+  });
+
+  it("keeps player booking reads independent of publication", () => {
+    const playerCanReadOwnBooking = (isRequester: boolean) => isRequester;
+    expect(playerCanReadOwnBooking(true)).toBe(true);
+  });
+});

@@ -19,8 +19,8 @@ import {
   loadCurrentVenueApplication,
   loadOwnedEditableVenueApplication,
   loadOwnedVenueApplication,
-  searchVenuesForApplication,
 } from "@/lib/queries/venueProfileApplication";
+import type { VenueApplicationTargetVenue } from "@/lib/venueProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
 
 function errorResult(
@@ -60,6 +60,18 @@ function revalidateVenueApplicationPaths() {
   revalidatePath("/account/personal");
 }
 
+const HISTORICAL_VENUE_CLAIM_LOCKED =
+  "This historical venue claim is read-only. You may withdraw it if it is still open, but you cannot edit, submit, or convert it.";
+
+function rejectHistoricalVenueClaimMutation(
+  mode: string | null | undefined
+): VenueApplicationActionResult | null {
+  if (mode === "claim_existing") {
+    return errorResult(HISTORICAL_VENUE_CLAIM_LOCKED);
+  }
+  return null;
+}
+
 export async function createVenueApplicationDraft(): Promise<VenueApplicationActionResult> {
   const userId = await requireUserId();
   if (!userId) return errorResult("Sign in to start a venue application.");
@@ -90,6 +102,8 @@ export async function createVenueApplicationDraft(): Promise<VenueApplicationAct
       user_id: userId,
       status: "draft",
       current_step: 1,
+      application_mode: "create_new",
+      target_venue_id: null,
       applicant_email: applicantEmail,
     })
     .select("id")
@@ -121,6 +135,9 @@ export async function saveVenueApplicationRole(input: {
   if (!application) {
     return errorResult("This application cannot be edited right now.");
   }
+
+  const locked = rejectHistoricalVenueClaimMutation(application.application_mode);
+  if (locked) return locked;
 
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 1;
   const fieldErrors = advancing
@@ -175,6 +192,9 @@ export async function saveVenueApplicationVenue(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const locked = rejectHistoricalVenueClaimMutation(application.application_mode);
+  if (locked) return locked;
+
   const advancing = !input.exit && input.nextStep != null && input.nextStep > 2;
   const fieldErrors = advancing
     ? validateVenueChoiceForSubmit(input.values)
@@ -185,18 +205,20 @@ export async function saveVenueApplicationVenue(input: {
 
   const payload = parseVenueChoicePayload(input.values);
 
-  if (payload.application_mode === "claim_existing" && payload.target_venue_id) {
-    const supabaseCheck = await createClient();
-    const { data: venue } = await supabaseCheck
-      .from("venues")
-      .select("id")
-      .eq("id", payload.target_venue_id)
-      .maybeSingle();
-    if (!venue) {
-      return errorResult("Select a venue from the search results.", {
-        target_venue_id: "Select a venue from the search results.",
-      });
-    }
+  if (payload.application_mode === "claim_existing") {
+    return errorResult(
+      "Public venue claiming is no longer available. Submit your venue details instead.",
+      {
+        application_mode:
+          "Public venue claiming is no longer available. Submit your venue details instead.",
+      }
+    );
+  }
+
+  if (payload.application_mode !== "create_new") {
+    return errorResult("Submit your venue details to continue.", {
+      application_mode: "Submit your venue details to continue.",
+    });
   }
 
   const currentStep = Math.min(
@@ -208,8 +230,8 @@ export async function saveVenueApplicationVenue(input: {
   const { error } = await supabase
     .from("venue_profile_applications")
     .update({
-      application_mode: payload.application_mode,
-      target_venue_id: payload.target_venue_id,
+      application_mode: "create_new",
+      target_venue_id: null,
       proposed_venue_name: payload.proposed_venue_name,
       proposed_country: payload.proposed_country,
       proposed_city: payload.proposed_city,
@@ -247,6 +269,11 @@ export async function saveVenueApplicationConfirmation(input: {
   if (!application) {
     return errorResult("This application cannot be edited right now.");
   }
+
+  const lockedConfirm = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedConfirm) return lockedConfirm;
 
   const fieldErrors = validateVenueConfirmationDraft(input.values);
   if (Object.keys(fieldErrors).length > 0) {
@@ -294,6 +321,11 @@ export async function setVenueApplicationStep(input: {
     return errorResult("This application cannot be edited right now.");
   }
 
+  const lockedStep = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedStep) return lockedStep;
+
   const step = Math.min(Math.max(Math.trunc(input.step), 1), 4);
   const supabase = await createClient();
   const { error } = await supabase
@@ -320,6 +352,11 @@ export async function submitVenueApplication(input: {
   if (!application || !isEditableVenueApplicationStatus(application.status)) {
     return errorResult("This application cannot be submitted right now.");
   }
+
+  const lockedSubmit = rejectHistoricalVenueClaimMutation(
+    application.application_mode
+  );
+  if (lockedSubmit) return lockedSubmit;
 
   const fieldErrors = {
     ...validateVenueRoleForSubmit({
@@ -429,18 +466,13 @@ export async function withdrawVenueApplication(
 export async function searchVenueApplicationTargets(
   term: string
 ): Promise<
-  | {
-      ok: true;
-      venues: Awaited<ReturnType<typeof searchVenuesForApplication>>;
-    }
+  | { ok: true; venues: VenueApplicationTargetVenue[] }
   | { ok: false; message: string }
 > {
-  const userId = await requireUserId();
-  if (!userId) return { ok: false, message: "Sign in to search venues." };
-  try {
-    const venues = await searchVenuesForApplication(term);
-    return { ok: true, venues };
-  } catch {
-    return { ok: false, message: "Venue search failed. Please try again." };
-  }
+  void term;
+  return {
+    ok: false,
+    message:
+      "Public venue claiming is no longer available. Submit your venue details instead.",
+  };
 }

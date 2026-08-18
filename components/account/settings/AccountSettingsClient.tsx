@@ -223,7 +223,7 @@ export default function AccountSettingsClient({
                 href="/join"
                 className="font-semibold text-primary underline-offset-2 hover:underline"
               >
-                Add or claim a profile
+                Join Padel Pathways
               </Link>
             </p>
           ) : (

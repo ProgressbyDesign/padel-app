@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
+import { AdminCoachLaunchControls } from "@/components/admin/AdminCoachLaunchControls";
+import { AdminLifecycleStatus } from "@/components/admin/AdminLifecycleStatus";
 import { loadOpsCoachOverview } from "@/lib/admin/opsProfileQueries";
+import {
+  accountHasPermission,
+  requireAdminPermission,
+} from "@/lib/auth/adminSession";
 import { coachOutcomeLabel } from "@/lib/coachManagement";
 import { optionLabel, PLAYER_LEVELS } from "@/lib/coachProfileApplication/constants";
 
@@ -13,11 +19,13 @@ type PageProps = {
 
 export default async function OpsCoachOverviewPage({ params }: PageProps) {
   const { coachId } = await params;
+  const admin = await requireAdminPermission("profiles.read", "not-found");
   const data = await loadOpsCoachOverview(coachId);
   if (!data) notFound();
 
   const { coach, completion } = data;
   const name = coach.name?.trim() || "Coach";
+  const canManageProfiles = accountHasPermission(admin, "profiles.manage");
 
   return (
     <div className="space-y-6">
@@ -41,6 +49,32 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
           ))}
         </ul>
       ) : null}
+
+      <section className="rounded-[24px] border border-primary/10 bg-white p-5">
+        <h2 className="text-lg font-bold">Launch &amp; visibility</h2>
+        <p className="mt-1 text-sm text-primary/60">
+          Imported coaches stay in the database and remain private until an
+          admin selects them for launch and publishes them. A claim or coach
+          account is not required.
+        </p>
+        <div className="mt-5">
+          <AdminLifecycleStatus
+            isApproved={coach.is_approved}
+            hasAccount={data.hasAccount}
+            launchSelectionStatus={coach.launch_selection_status}
+            publicationStatus={coach.publication_status}
+            onboardingStatus={coach.onboarding_status}
+          />
+        </div>
+        <div className="mt-6 border-t border-primary/10 pt-5">
+          <AdminCoachLaunchControls
+            coachId={coach.id}
+            launchSelectionStatus={coach.launch_selection_status}
+            publicationStatus={coach.publication_status}
+            canManage={canManageProfiles}
+          />
+        </div>
+      </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg font-bold">Key fields</h2>

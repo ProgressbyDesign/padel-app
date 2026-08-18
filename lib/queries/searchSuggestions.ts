@@ -7,6 +7,11 @@ import {
 } from "../venueSearchFilters";
 import { resolveCoachImageUrl } from "../coachImageResolve";
 import { conciseCoachLocationSummary, type CoachWithVenueLinks } from "../coachVenueGeo";
+import { PUBLIC_COACH_VENUE_STATUSES } from "../lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../lifecycle/publicationFilters";
 import { createClient } from "../supabase/server";
 import type { SearchMode } from "../marketplaceSearch";
 
@@ -104,12 +109,14 @@ export async function fetchWhereSuggestions(query: string): Promise<WhereSuggest
   const q = query.trim();
   const key = q ? normalizeSearchKey(q) : "";
 
-  const countriesPromise = supabase
+  let countriesPromise = supabase
     .from("venues")
     .select("country")
     .not("country", "is", null);
+  countriesPromise = applyPublishedVenueFilter(countriesPromise);
 
   let venueQuery = supabase.from("venues").select("city, country, search_key").limit(SUGGESTION_FETCH_CAP);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
   if (key) {
     venueQuery = venueQuery.ilike("search_key", `%${key}%`);
   }
@@ -119,6 +126,7 @@ export async function fetchWhereSuggestions(query: string): Promise<WhereSuggest
   let venueRows: { city?: string | null; country?: string | null }[] = [];
   if (venuesResInitial.error && isMissingColumnError(venuesResInitial.error.message, "search_key")) {
     let fallbackQuery = supabase.from("venues").select("city, country").limit(SUGGESTION_FETCH_CAP);
+    fallbackQuery = applyPublishedVenueFilter(fallbackQuery);
     if (key) {
       fallbackQuery = applyVenueKeywordFilterFallback(fallbackQuery, q);
     }
@@ -174,6 +182,7 @@ export async function fetchVenueNameSuggestions(
 
   const buildQuery = (select: string, useSearchKey: boolean) => {
     let dbQuery = supabase.from("venues").select(select).limit(SUGGESTION_FETCH_CAP);
+    dbQuery = applyPublishedVenueFilter(dbQuery);
 
     if (q) {
       dbQuery = useSearchKey ? applyVenueNameFilter(dbQuery, q) : applyVenueKeywordFilterFallback(dbQuery, q);
@@ -218,6 +227,7 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
 
   const supabase = await createClient();
   let venueQuery = supabase.from("venues").select("id").limit(100);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
   venueQuery = applyVenueLocationFilter(venueQuery, loc);
 
   let { data: venues, error } = await venueQuery;
@@ -231,8 +241,10 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
         .ilike("city", `%${parsed.city}%`)
         .ilike("country", `%${parsed.country}%`)
         .limit(100);
+      venueQuery = applyPublishedVenueFilter(venueQuery);
     } else if (parsed) {
       venueQuery = supabase.from("venues").select("id").ilike("country", `%${parsed.country}%`).limit(100);
+      venueQuery = applyPublishedVenueFilter(venueQuery);
     }
     ({ data: venues, error } = await venueQuery);
   }
@@ -246,7 +258,7 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
       "venue_id",
       venues.map((v) => v.id)
     )
-    .in("status", ["active", "unverified"]);
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES]);
 
   return links?.length ? [...new Set(links.map((l) => String(l.coach_id)))] : [];
 }
@@ -330,14 +342,11 @@ export async function fetchCoachEntitySuggestions(
       role,
       search_key,
       image_url,
-      coach_images ( image_url, is_primary ),
-      coach_venues (
-        is_primary,
-        venues ( city, country )
-      )
+      coach_images ( image_url, is_primary )
     `
     )
     .limit(SUGGESTION_FETCH_CAP);
+  dbQuery = applyPublishedCoachFilter(dbQuery);
 
   if (key) {
     dbQuery = dbQuery.ilike("search_key", `%${key}%`);
@@ -351,13 +360,20 @@ export async function fetchCoachEntitySuggestions(
     return { outcomes, coaches: [] };
   }
 
-  const rows: EntityCoachSuggestion[] = data.map((c) => ({
+  const { attachPublicCoachVenueRelationships } = await import(
+    "./publicCoachVenues"
+  );
+  const withVenues = await attachPublicCoachVenueRelationships(
+    data as Array<{ id?: string | null; coach_venues?: CoachWithVenueLinks["coach_venues"] }>
+  );
+
+  const rows: EntityCoachSuggestion[] = withVenues.map((c) => ({
     id: String(c.id),
-    name: c.name?.trim() || "Coach",
-    role: c.role?.trim() ?? null,
+    name: (c as { name?: string | null }).name?.trim() || "Coach",
+    role: (c as { role?: string | null }).role?.trim() ?? null,
     imageUrl: resolveCoachImageUrl(
       (c as { coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] }).coach_images,
-      c.image_url
+      (c as { image_url?: string | null }).image_url
     ),
     locationSummary: conciseCoachLocationSummary(c as CoachWithVenueLinks),
   }));

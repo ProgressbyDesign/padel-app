@@ -170,7 +170,7 @@ export default function AccountNavMenu({
 
       <div className="my-2 border-t border-primary/10" />
       <Link href="/join" role="menuitem" className={itemClass} onClick={close}>
-        Add or claim a profile
+        Join Padel Pathways
       </Link>
       <form action={logoutAction}>
         <button

@@ -477,11 +477,6 @@ export default function CoachesListingClient({
                   priceFrom={c.priceFrom}
                   distanceMiles={c.distance}
                   href={coachListingProfileHref(c.id)}
-                  claimHref={
-                    c.isClaimed === false
-                      ? `/account/applications/coach?mode=claim_existing&coach=${encodeURIComponent(c.id)}`
-                      : null
-                  }
                 />
               </li>
             ))}

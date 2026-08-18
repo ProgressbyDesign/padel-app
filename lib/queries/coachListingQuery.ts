@@ -10,11 +10,14 @@ import {
 } from "../coachListing";
 import type { CoachSkillLevel } from "../coaches";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
+import { PUBLIC_COACH_VENUE_STATUSES } from "../lifecycle/constants";
+import { applyPublishedCoachFilter, applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { clampPage, listingPageCount } from "../listingUrlParams";
 import { normalizeSearchKey, searchMatchScore } from "../searchFuzzy";
 import { createClient } from "../supabase/server";
 import type { Coach } from "../coaches";
 import type { Venue } from "../venueFilters";
+import { attachPublicCoachVenueRelationships } from "./publicCoachVenues";
 
 export type CoachListingQueryInput = {
   page: number;
@@ -74,10 +77,12 @@ async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
   const key = normalizeSearchKey(search);
   if (!key) return [];
 
-  const { data: venues, error } = await supabase
+  let venuesQuery = supabase
     .from("venues")
     .select("id")
     .ilike("search_key", `%${key}%`);
+  venuesQuery = applyPublishedVenueFilter(venuesQuery);
+  const { data: venues, error } = await venuesQuery;
 
   if (error || !venues?.length) return [];
 
@@ -86,7 +91,7 @@ async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
     .from("coach_venues")
     .select("coach_id")
     .in("venue_id", venueIds)
-    .in("status", ["active", "unverified"]);
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES]);
 
   if (linkErr || !links?.length) return [];
 
@@ -229,7 +234,8 @@ export async function fetchCoachListingPage(
   const locationCoachIds = location ? await coachIdsMatchingLocationSearch(location) : null;
   const goalCoachIds = coachGoal ? await coachIdsMatchingOutcomeSearch(coachGoal) : null;
 
-  const countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  let countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  countQuery = applyPublishedCoachFilter(countQuery);
   const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds, goalCoachIds);
   if (countFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
@@ -255,6 +261,7 @@ export async function fetchCoachListingPage(
     Number.isFinite(input.nearLng);
 
   let dataQuery = supabase.from("coaches").select(COACH_LISTING_SELECT);
+  dataQuery = applyPublishedCoachFilter(dataQuery);
   const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds, goalCoachIds);
   if (dataFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
@@ -276,9 +283,12 @@ export async function fetchCoachListingPage(
   }
 
   const rows = (data ?? []) as Coach[];
-  const venuesRes = await supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  const withPublicVenues = await attachPublicCoachVenueRelationships(rows, supabase);
+  let venuesQuery = supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  venuesQuery = applyPublishedVenueFilter(venuesQuery);
+  const venuesRes = await venuesQuery;
   const venues = (venuesRes.data ?? []) as Venue[];
-  const hydrated = hydrateCoachVenueEmbeds(rows, venues);
+  const hydrated = hydrateCoachVenueEmbeds(withPublicVenues, venues);
   let coaches = coachesRowsToListingItems(hydrated);
 
   if (useDistanceSort) {

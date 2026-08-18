@@ -1,7 +1,12 @@
 import { createClient } from "./supabase/server";
-import { COACH_VENUES_WITH_VENUE_SELECT } from "./coachVenueGeo";
-import { rawCoachRowToProfileView, type CoachPdpQueryRow, type CoachProfileView } from "./coachProfileView";
-import { coachHasLivePublicAvailability } from "./queries/coachAvailability";
+import {
+  rawCoachRowToProfileView,
+  type CoachPdpQueryRow,
+  type CoachProfileView,
+} from "./coachProfileView";
+import { applyPublishedCoachFilter } from "./lifecycle/publicationFilters";
+import { coachHasDisplayedPublicAvailability } from "./queries/coachAvailability";
+import { attachPublicCoachVenueRelationships } from "./queries/publicCoachVenues";
 
 const COACH_PDP_NESTED_SELECT = `
     id,
@@ -57,37 +62,39 @@ const COACH_PDP_NESTED_SELECT = `
       url,
       is_primary,
       created_at
-    ),
-
-    ${COACH_VENUES_WITH_VENUE_SELECT}
+    )
   `;
 
 /**
  * Load a coach for `/coach/[id]`. Tries nested relations first; if PostgREST errors
  * (missing table, RLS, etc.), falls back to `select("*")` so real rows still resolve.
+ * Venue relationships are loaded via the public relationship loader.
  */
 export async function fetchCoachPdpById(id: string): Promise<CoachProfileView | null> {
   const supabase = await createClient();
-  const availability = await coachHasLivePublicAvailability(id);
+  const availability = await coachHasDisplayedPublicAvailability(id);
   const availabilityLive = availability.status === "live";
 
-  const nested = await supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id).maybeSingle();
+  let nestedQuery = supabase.from("coaches").select(COACH_PDP_NESTED_SELECT).eq("id", id);
+  nestedQuery = applyPublishedCoachFilter(nestedQuery);
+  const nested = await nestedQuery.maybeSingle();
   if (!nested.error && nested.data) {
-    return rawCoachRowToProfileView(nested.data as CoachPdpQueryRow, { availabilityLive });
+    const [withVenues] = await attachPublicCoachVenueRelationships(
+      [nested.data as CoachPdpQueryRow],
+      supabase
+    );
+    return rawCoachRowToProfileView(withVenues, { availabilityLive });
   }
 
-  const withVenues = await supabase
-    .from("coaches")
-    .select(`*, ${COACH_VENUES_WITH_VENUE_SELECT}`)
-    .eq("id", id)
-    .maybeSingle();
-  if (!withVenues.error && withVenues.data) {
-    return rawCoachRowToProfileView(withVenues.data as CoachPdpQueryRow, { availabilityLive });
-  }
-
-  const basic = await supabase.from("coaches").select("*").eq("id", id).maybeSingle();
+  let basicQuery = supabase.from("coaches").select("*").eq("id", id);
+  basicQuery = applyPublishedCoachFilter(basicQuery);
+  const basic = await basicQuery.maybeSingle();
   if (!basic.error && basic.data) {
-    return rawCoachRowToProfileView(basic.data as CoachPdpQueryRow, { availabilityLive });
+    const [withVenues] = await attachPublicCoachVenueRelationships(
+      [basic.data as CoachPdpQueryRow],
+      supabase
+    );
+    return rawCoachRowToProfileView(withVenues, { availabilityLive });
   }
 
   return null;

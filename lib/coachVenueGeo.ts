@@ -3,7 +3,7 @@
  * Venues own city, country, and coordinates.
  */
 
-/** PostgREST embed fragment — append to `coaches` selects. */
+/** PostgREST embed fragment — management / internal selects only. */
 export const COACH_VENUES_WITH_VENUE_SELECT = `
   coach_venues (
     is_primary,
@@ -18,6 +18,39 @@ export const COACH_VENUES_WITH_VENUE_SELECT = `
     )
   )
 `;
+
+/**
+ * Public embed: active relationships with published venues only.
+ * Do not use `!inner` on `coach_venues` — published coaches with no published
+ * venue must remain visible (empty relationship array).
+ */
+export const PUBLIC_COACH_VENUES_WITH_VENUE_SELECT = `
+  coach_venues (
+    is_primary,
+    venue_id,
+    status,
+    venues!inner (
+      id,
+      name,
+      city,
+      country,
+      lat,
+      lng,
+      publication_status
+    )
+  )
+`;
+
+/** Apply public relationship filters to a coaches query that embeds venues. */
+export function applyPublicCoachVenueEmbedFilters<
+  T extends {
+    eq: (column: string, value: string) => T;
+  },
+>(query: T): T {
+  return query
+    .eq("coach_venues.status", "active")
+    .eq("coach_venues.venues.publication_status", "published");
+}
 
 export type VenueGeoRow = {
   id?: string | number;

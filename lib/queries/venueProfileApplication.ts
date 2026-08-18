@@ -118,6 +118,29 @@ export async function loadCurrentVenueApplication(): Promise<VenueApplicationWit
   return { application, targetVenue };
 }
 
+/** Latest application for the signed-in user, including approved/history rows. */
+export async function loadLatestVenueApplication(): Promise<VenueApplicationWithVenue | null> {
+  const account = await requireAuthenticatedAccount(
+    "/account/applications/venue"
+  );
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("venue_profile_applications")
+    .select(APPLICATION_SELECT)
+    .eq("user_id", account.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const application = asApplication(data as Record<string, unknown>);
+  const targetVenue = await loadTargetVenue(
+    application.target_venue_id ?? application.approved_venue_id
+  );
+  return { application, targetVenue };
+}
+
 export async function loadUserVenueApplications(): Promise<
   VenueProfileApplicationRow[]
 > {
@@ -167,32 +190,7 @@ export async function loadOwnedVenueApplication(
 export async function searchVenuesForApplication(
   term: string
 ): Promise<VenueApplicationTargetVenue[]> {
-  const q = term.trim();
-  if (q.length < 2) return [];
-  const supabase = await createClient();
-  const safe = q.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
-  if (safe.length < 2) return [];
-  const pattern = `%${safe}%`;
-
-  // Quote patterns so spaces/special chars are valid in PostgREST `.or()` filters.
-  const quoted = `"${pattern.replace(/"/g, "")}"`;
-  const { data, error } = await supabase
-    .from("venues")
-    .select("id, name, city, country, image_url, website")
-    .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
-    .order("name", { ascending: true })
-    .limit(12);
-
-  if (error) {
-    // Fallback without OR filter if PostgREST rejects the pattern
-    const fallback = await supabase
-      .from("venues")
-      .select("id, name, city, country, image_url, website")
-      .ilike("name", pattern)
-      .order("name", { ascending: true })
-      .limit(12);
-    if (fallback.error) return [];
-    return (fallback.data ?? []) as VenueApplicationTargetVenue[];
-  }
-  return (data ?? []) as VenueApplicationTargetVenue[];
+  void term;
+  // Public claiming is disabled; do not expose imported venues for applicants.
+  return [];
 }

@@ -81,7 +81,7 @@ export default async function JoinPage() {
             </p>
             <h3 className="mt-3 text-xl font-bold text-primary">Academy or venue</h3>
             <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
-              Manage or claim a venue if you own it, manage it, or are
+              Submit your venue details if you own it, manage it, or are
               authorised to represent it. Coaches who only coach at a venue
               should use the individual coach application.
             </p>
@@ -89,7 +89,7 @@ export default async function JoinPage() {
               href={venueHref}
               className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent transition hover:bg-primary/90"
             >
-              {account ? "Manage or claim a venue" : "Apply for a venue"}
+              {account ? "Submit your venue details" : "Apply as a coaching business"}
             </Link>
             {!account ? (
               <p className="mt-3 text-xs text-primary/55">

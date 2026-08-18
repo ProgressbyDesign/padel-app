@@ -1,13 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   createVenueApplicationDraft,
   saveVenueApplicationConfirmation,
   saveVenueApplicationRole,
   saveVenueApplicationVenue,
-  searchVenueApplicationTargets,
   setVenueApplicationStep,
   submitVenueApplication,
 } from "@/app/account/applications/venue/actions";
@@ -20,17 +19,13 @@ import {
 } from "@/components/forms/FormField";
 import {
   VENUE_APPLICATION_COUNTRIES,
-  VENUE_APPLICATION_MODES,
   VENUE_APPLICATION_STEPS,
   VENUE_APPLICATION_TOTAL_STEPS,
   VENUE_RELATIONSHIPS,
   venueApplicationModeLabel,
   venueRelationshipLabel,
 } from "@/lib/venueProfileApplication/constants";
-import type {
-  VenueApplicationTargetVenue,
-  VenueApplicationWithVenue,
-} from "@/lib/venueProfileApplication/types";
+import type { VenueApplicationWithVenue } from "@/lib/venueProfileApplication/types";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-primary/15 bg-white px-3.5 py-3 text-base text-primary outline-none transition placeholder:text-primary/35 focus:border-primary/35 focus:ring-2 focus:ring-primary/10";
@@ -60,40 +55,27 @@ export default function VenueApplicationWizard({
     initial.application.relationship_to_venue ?? ""
   );
   const [phone, setPhone] = useState(initial.application.phone ?? "");
-  const [applicationMode, setApplicationMode] = useState(
-    initial.application.application_mode ?? ""
-  );
-  const [targetVenueId, setTargetVenueId] = useState(
-    initial.application.target_venue_id ?? ""
-  );
-  const [selectedVenue, setSelectedVenue] =
-    useState<VenueApplicationTargetVenue | null>(initial.targetVenue);
-  const [searchQuery, setSearchQuery] = useState(
-    initial.targetVenue?.name ?? ""
-  );
-  const [searchResults, setSearchResults] = useState<
-    VenueApplicationTargetVenue[]
-  >([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [proposeDuplicates, setProposeDuplicates] = useState<
-    VenueApplicationTargetVenue[]
-  >([]);
-  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const wasHistoricalClaim =
+    initial.application.application_mode === "claim_existing";
   const [proposedName, setProposedName] = useState(
-    initial.application.proposed_venue_name ?? ""
+    initial.application.proposed_venue_name ??
+      (wasHistoricalClaim ? initial.targetVenue?.name ?? "" : "")
   );
   const [proposedCountry, setProposedCountry] = useState<string>(
-    initial.application.proposed_country ?? VENUE_APPLICATION_COUNTRIES[0]
+    initial.application.proposed_country ??
+      initial.targetVenue?.country ??
+      VENUE_APPLICATION_COUNTRIES[0]
   );
   const [proposedCity, setProposedCity] = useState(
-    initial.application.proposed_city ?? ""
+    initial.application.proposed_city ??
+      (wasHistoricalClaim ? initial.targetVenue?.city ?? "" : "")
   );
   const [proposedAddress, setProposedAddress] = useState(
     initial.application.proposed_address ?? ""
   );
   const [proposedWebsite, setProposedWebsite] = useState(
-    initial.application.proposed_website ?? ""
+    initial.application.proposed_website ??
+      (wasHistoricalClaim ? initial.targetVenue?.website ?? "" : "")
   );
   const [supportingNote, setSupportingNote] = useState(
     initial.application.supporting_note ?? ""
@@ -108,82 +90,6 @@ export default function VenueApplicationWizard({
   const [submittedAt, setSubmittedAt] = useState(
     initial.application.submitted_at
   );
-
-  useEffect(() => {
-    if (applicationMode !== "claim_existing") return;
-
-    const term = searchQuery.trim();
-    if (term.length < 2) return;
-
-    let cancelled = false;
-    const timeout = window.setTimeout(() => {
-      startTransition(async () => {
-        const result = await searchVenueApplicationTargets(term);
-        if (cancelled) return;
-        if (!result.ok) {
-          setSearchResults([]);
-          setSearchError(result.message);
-          setSearching(false);
-          return;
-        }
-        setSearchError(null);
-        setSearchResults(result.venues);
-        setSearching(false);
-      });
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [applicationMode, searchQuery]);
-
-  useEffect(() => {
-    if (applicationMode !== "create_new") return;
-
-    const name = proposedName.trim();
-    const city = proposedCity.trim();
-    const country = proposedCountry.trim();
-    if (name.length < 2 || city.length < 2 || !country) {
-      return;
-    }
-
-    let cancelled = false;
-    const timeout = window.setTimeout(() => {
-      startTransition(async () => {
-        if (cancelled) return;
-        setCheckingDuplicates(true);
-        const result = await searchVenueApplicationTargets(name);
-        if (cancelled) return;
-        if (!result.ok) {
-          setProposeDuplicates([]);
-          setCheckingDuplicates(false);
-          return;
-        }
-        const matches = result.venues.filter((venue) => {
-          const sameName =
-            (venue.name ?? "").trim().toLowerCase() === name.toLowerCase();
-          const sameCity =
-            (venue.city ?? "").trim().toLowerCase() === city.toLowerCase();
-          const sameCountry =
-            (venue.country ?? "").trim().toLowerCase() === country.toLowerCase();
-          return sameName && sameCity && sameCountry;
-        });
-        setProposeDuplicates(matches);
-        setCheckingDuplicates(false);
-      });
-    }, 400);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [applicationMode, proposedName, proposedCity, proposedCountry]);
-
-  const visibleProposeDuplicates =
-    applicationMode === "create_new" ? proposeDuplicates : [];
-  const showCheckingDuplicates =
-    applicationMode === "create_new" && checkingDuplicates;
 
   const stepMeta = VENUE_APPLICATION_STEPS[step - 1];
   const progress = (step / VENUE_APPLICATION_TOTAL_STEPS) * 100;
@@ -253,8 +159,8 @@ export default function VenueApplicationWizard({
       const result = await saveVenueApplicationVenue({
         applicationId: initial.application.id,
         values: {
-          application_mode: applicationMode,
-          target_venue_id: targetVenueId,
+          application_mode: "create_new",
+          target_venue_id: "",
           proposed_venue_name: proposedName,
           proposed_country: proposedCountry,
           proposed_city: proposedCity,
@@ -284,35 +190,6 @@ export default function VenueApplicationWizard({
     });
   }
 
-  function changeMode(mode: string) {
-    setApplicationMode(mode);
-    if (mode === "claim_existing") {
-      setProposedName("");
-      setProposedCountry(VENUE_APPLICATION_COUNTRIES[0]);
-      setProposedCity("");
-      setProposedAddress("");
-      setProposedWebsite("");
-      return;
-    }
-    setTargetVenueId("");
-    setSelectedVenue(null);
-    setSearchQuery("");
-    setSearchResults([]);
-    setSearching(false);
-    setSearchError(null);
-    setProposeDuplicates([]);
-    setCheckingDuplicates(false);
-  }
-
-  function selectVenue(venue: VenueApplicationTargetVenue) {
-    setTargetVenueId(venue.id);
-    setSelectedVenue(venue);
-    setSearchQuery(venue.name ?? "");
-    setSearchResults([]);
-    setSearching(false);
-    setSearchError(null);
-  }
-
   function handleSubmit() {
     clearFeedback();
     startTransition(async () => {
@@ -333,19 +210,14 @@ export default function VenueApplicationWizard({
     });
   }
 
-  const venueSummary =
-    applicationMode === "claim_existing"
-      ? selectedVenue
-        ? venueLocationLabel(selectedVenue)
-        : "Existing venue not selected"
-      : [
-          proposedName || "Venue name not set",
-          [proposedCity, proposedCountry].filter(Boolean).join(", "),
-          proposedAddress,
-          proposedWebsite,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+  const venueSummary = [
+    proposedName || "Venue name not set",
+    [proposedCity, proposedCountry].filter(Boolean).join(", "),
+    proposedAddress,
+    proposedWebsite,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   if (submitted) {
     const dateLabel = submittedAt
@@ -542,143 +414,29 @@ export default function VenueApplicationWizard({
 
       {step === 2 ? (
         <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
-          <fieldset>
-            <legend className="text-sm font-medium text-primary">
-              Claim or propose?
-            </legend>
-            <p className="mt-1 text-xs text-primary/55">
-              Claim links you to an existing listing. Propose creates a new
-              venue for review.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {VENUE_APPLICATION_MODES.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => changeMode(option.value)}
-                  className={`rounded-xl border px-4 py-4 text-left transition ${
-                    applicationMode === option.value ? cardSelected : cardIdle
-                  }`}
-                  aria-pressed={applicationMode === option.value}
-                >
-                  <span className="block text-sm font-semibold">
-                    {option.label}
-                  </span>
-                  <span
-                    className={`mt-1 block text-xs leading-5 ${
-                      applicationMode === option.value
-                        ? "text-accent/75"
-                        : "text-primary/55"
-                    }`}
-                  >
-                    {option.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {fieldErrors.application_mode ? (
-              <p className="mt-2 text-sm text-red-700">
-                {fieldErrors.application_mode}
+          {wasHistoricalClaim ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <p className="text-sm font-semibold">
+                Public venue claiming is no longer available
               </p>
-            ) : null}
-          </fieldset>
-
-          {applicationMode === "claim_existing" ? (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-primary">
-                Search by venue name, city, or country
-                <input
-                  className={inputClass}
-                  value={searchQuery}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setSearchQuery(value);
-                    if (value.trim().length < 2) {
-                      setSearchResults([]);
-                      setSearching(false);
-                      setSearchError(null);
-                    } else {
-                      setSearching(true);
-                    }
-                    if (selectedVenue && value !== (selectedVenue.name ?? "")) {
-                      setSelectedVenue(null);
-                      setTargetVenueId("");
-                    }
-                  }}
-                  placeholder="Start typing…"
-                  autoComplete="off"
-                  aria-invalid={Boolean(fieldErrors.target_venue_id)}
-                />
-              </label>
-              {searching ? (
-                <p className="text-sm text-primary/55">Searching venues…</p>
-              ) : null}
-              {searchError ? (
-                <p className="text-sm text-red-700" role="alert">
-                  {searchError}
-                </p>
-              ) : null}
-              {fieldErrors.target_venue_id ? (
-                <p className="text-sm text-red-700">
-                  {fieldErrors.target_venue_id}
-                </p>
-              ) : null}
-              {selectedVenue ? (
-                <div className="rounded-2xl border border-primary bg-surface/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
-                    Selected venue
-                  </p>
-                  <p className="mt-2 text-sm font-bold text-primary">
-                    {selectedVenue.name || "Unnamed venue"}
-                  </p>
-                  <p className="mt-1 text-sm text-primary/65">
-                    {[selectedVenue.city, selectedVenue.country]
-                      .filter(Boolean)
-                      .join(", ") || "Location not available"}
-                  </p>
-                </div>
-              ) : null}
-              {searchResults.length > 0 ? (
-                <ul className="space-y-2" aria-label="Venue search results">
-                  {searchResults.map((venue) => (
-                    <li key={venue.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectVenue(venue)}
-                        className="w-full rounded-xl border border-primary/15 bg-white px-4 py-3 text-left transition hover:border-primary/30 hover:bg-surface"
-                      >
-                        <span className="block text-sm font-semibold text-primary">
-                          {venue.name || "Unnamed venue"}
-                        </span>
-                        <span className="mt-1 block text-xs text-primary/55">
-                          {[venue.city, venue.country]
-                            .filter(Boolean)
-                            .join(", ") || "Location not available"}
-                        </span>
-                        {venue.website?.trim() ? (
-                          <span className="mt-1 block truncate text-xs text-primary/45">
-                            {venue.website.trim()}
-                          </span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : searchQuery.trim().length >= 2 &&
-                !searching &&
-                !selectedVenue &&
-                !searchError ? (
-                <p className="text-sm text-primary/55">
-                  No matching venues found. Try another search or propose a new
-                  listing.
-                </p>
-              ) : null}
+              <p className="mt-1 text-sm leading-6">
+                Submit your venue details below to continue this application.
+              </p>
             </div>
           ) : null}
 
-          {applicationMode === "create_new" ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-medium text-primary">
+              Submit your venue details
+            </h3>
+            <p className="mt-1 text-xs text-primary/55">
+              Tell us about your venue. We will review the details before
+              publishing.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label="Venue name"
                 value={proposedName}
@@ -728,52 +486,8 @@ export default function VenueApplicationWizard({
                   inputMode="url"
                 />
               </div>
-              </div>
-              {showCheckingDuplicates ? (
-                <p className="text-sm text-primary/55">Checking for similar listings…</p>
-              ) : null}
-              {visibleProposeDuplicates.length > 0 ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-                  <p className="text-sm font-semibold">
-                    A listing with this name, city, and country already exists
-                  </p>
-                  <p className="mt-1 text-sm leading-6">
-                    Prefer claiming the existing venue instead of proposing a
-                    duplicate.
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {visibleProposeDuplicates.map((venue) => (
-                      <li key={venue.id} className="text-sm">
-                        <span className="font-semibold">
-                          {venue.name || "Unnamed venue"}
-                        </span>
-                        <span className="text-amber-900/70">
-                          {" "}
-                          · {[venue.city, venue.country]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const first = visibleProposeDuplicates[0];
-                      changeMode("claim_existing");
-                      if (first) {
-                        setSearchQuery(first.name ?? "");
-                        selectVenue(first);
-                      }
-                    }}
-                    className="mt-3 text-sm font-semibold underline-offset-2 hover:underline"
-                  >
-                    Switch to claim existing
-                  </button>
-                </div>
-              ) : null}
             </div>
-          ) : null}
+          </div>
 
           <WizardActions
             pending={pending}
@@ -796,7 +510,7 @@ export default function VenueApplicationWizard({
           />
           <ReviewBlock
             title="Venue"
-            lines={[venueApplicationModeLabel(applicationMode), venueSummary]}
+            lines={[venueApplicationModeLabel("create_new"), venueSummary]}
           />
 
           <label className="block text-sm font-medium text-primary">
@@ -845,7 +559,7 @@ export default function VenueApplicationWizard({
           <ReviewBlock
             title="Venue"
             onEdit={() => goToStep(2)}
-            lines={[venueApplicationModeLabel(applicationMode), venueSummary]}
+            lines={[venueApplicationModeLabel("create_new"), venueSummary]}
           />
           <ReviewBlock
             title="Supporting note"
@@ -924,11 +638,6 @@ export default function VenueApplicationWizard({
       ) : null}
     </div>
   );
-}
-
-function venueLocationLabel(venue: VenueApplicationTargetVenue) {
-  const location = [venue.city, venue.country].filter(Boolean).join(", ");
-  return `${venue.name || "Unnamed venue"}${location ? ` · ${location}` : ""}`;
 }
 
 function Field({

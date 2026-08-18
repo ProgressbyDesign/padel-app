@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import CoachProfilePage from "../../../components/CoachProfilePage";
 import { fetchCoachPdpById } from "../../../lib/fetchCoachPdp";
+import { PUBLIC_COACH_VENUE_STATUSES } from "../../../lib/lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "../../../lib/lifecycle/publicationFilters";
 import type { Venue } from "../../../lib/venueFilters";
 import { loadPublicCoachAvailability } from "../../../lib/queries/coachAvailability";
 
@@ -12,7 +17,9 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data } = await supabase.from("coaches").select("name, role").eq("id", id).maybeSingle();
+  let metaQuery = supabase.from("coaches").select("name, role").eq("id", id);
+  metaQuery = applyPublishedCoachFilter(metaQuery);
+  const { data } = await metaQuery.maybeSingle();
 
   if (!data?.name) {
     return { title: "Coach | Padel" };
@@ -39,7 +46,7 @@ export default async function CoachPdpPage({ params }: PageProps) {
       .from("coach_venues")
       .select("venue_id, is_primary, status")
       .eq("coach_id", id)
-      .in("status", ["active", "unverified"])
+      .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
       .order("is_primary", { ascending: false }),
     loadPublicCoachAvailability(id, 14),
   ]);
@@ -54,7 +61,9 @@ export default async function CoachPdpPage({ params }: PageProps) {
 
   let venues: Venue[] = [];
   if (venueIds.length > 0) {
-    const { data: venueRows } = await supabase.from("venues").select("*").in("id", venueIds);
+    let venueQuery = supabase.from("venues").select("*").in("id", venueIds);
+    venueQuery = applyPublishedVenueFilter(venueQuery);
+    const { data: venueRows } = await venueQuery;
     const byId = new Map((venueRows as Venue[] | null)?.map((v) => [String(v.id), v]) ?? []);
     venues = venueIds.map((vid) => byId.get(vid)).filter((v): v is Venue => Boolean(v));
   }

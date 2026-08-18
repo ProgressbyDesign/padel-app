@@ -8,6 +8,10 @@ import {
   venueLocationLabels,
 } from "@/lib/coachVenueGeo";
 import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiryPayload";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "@/lib/lifecycle/publicationFilters";
 
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
 
@@ -40,7 +44,7 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
   let subjectLocation: string | null = null;
 
   if (coachId) {
-    const { data: coach, error: coachFetchError } = await supabase
+    let coachQuery = supabase
       .from("coaches")
       .select(
         `
@@ -55,35 +59,57 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
         )
       `
       )
-      .eq("id", coachId)
-      .maybeSingle();
+      .eq("id", coachId);
+    coachQuery = applyPublishedCoachFilter(coachQuery);
+    const { data: coach, error: coachFetchError } = await coachQuery.maybeSingle();
 
     if (coachFetchError) {
-      console.warn("[enquiry] coach lookup failed (using id fallback in email):", coachFetchError.message);
+      console.warn("[enquiry] coach lookup failed:", coachFetchError.message);
+      return {
+        ok: false,
+        message: "This coach is not available for enquiries.",
+      };
+    }
+    if (!coach) {
+      return {
+        ok: false,
+        message: "This coach is not available for enquiries.",
+      };
     }
 
     subjectType = "coach";
-    subjectName = coach?.name?.trim() ?? null;
-    subjectSlug = coach?.slug?.trim() ?? null;
-    const primaryVenue = coach ? pickPrimaryVenueFromCoachRow(coach) : null;
+    subjectName = coach.name?.trim() ?? null;
+    subjectSlug = coach.slug?.trim() ?? null;
+    const primaryVenue = pickPrimaryVenueFromCoachRow(coach);
     const loc = venueLocationLabels(primaryVenue);
     subjectLocation = loc.full || null;
   } else if (venueId) {
-    const { data: venue, error: venueFetchError } = await supabase
+    let venueQuery = supabase
       .from("venues")
       .select("name, city, country")
-      .eq("id", venueId)
-      .maybeSingle();
+      .eq("id", venueId);
+    venueQuery = applyPublishedVenueFilter(venueQuery);
+    const { data: venue, error: venueFetchError } = await venueQuery.maybeSingle();
 
     if (venueFetchError) {
-      console.warn("[enquiry] venue lookup failed (using id fallback in email):", venueFetchError.message);
+      console.warn("[enquiry] venue lookup failed:", venueFetchError.message);
+      return {
+        ok: false,
+        message: "This venue is not available for enquiries.",
+      };
+    }
+    if (!venue) {
+      return {
+        ok: false,
+        message: "This venue is not available for enquiries.",
+      };
     }
 
     subjectType = "venue";
-    subjectName = venue?.name?.trim() ?? null;
+    subjectName = venue.name?.trim() ?? null;
     subjectSlug = null;
     subjectLocation =
-      [venue?.city, venue?.country]
+      [venue.city, venue.country]
         .filter((x): x is string => Boolean(x && String(x).trim()))
         .join(", ") || null;
   }

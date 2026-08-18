@@ -189,70 +189,10 @@ export async function searchClaimableCoaches(
   term: string,
   userId: string
 ): Promise<CoachClaimTargetSummary[]> {
-  const q = term.trim();
-  if (q.length < 2) return [];
-  const supabase = await createClient();
-  const safe = q.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
-  if (safe.length < 2) return [];
-  const pattern = `%${safe}%`;
-  const quoted = `"${pattern.replace(/"/g, "")}"`;
-
-  const { data: memberships } = await supabase
-    .from("coach_memberships")
-    .select("coach_id")
-    .eq("user_id", userId);
-  const excluded = new Set(
-    (memberships ?? []).map((row) => String(row.coach_id))
-  );
-
-  const { data, error } = await supabase
-    .from("coaches")
-    .select("id, name, role, image_url, is_claimed")
-    .eq("is_claimed", false)
-    .or(`name.ilike.${quoted},role.ilike.${quoted}`)
-    .order("name", { ascending: true })
-    .limit(24);
-
-  let rows = data;
-  if (error) {
-    const fallback = await supabase
-      .from("coaches")
-      .select("id, name, role, image_url, is_claimed")
-      .eq("is_claimed", false)
-      .ilike("name", pattern)
-      .order("name", { ascending: true })
-      .limit(24);
-    if (fallback.error) return [];
-    rows = fallback.data;
-  }
-
-  const candidates = (rows ?? [])
-    .filter((row) => !excluded.has(String(row.id)))
-    .slice(0, 12);
-
-  const results: CoachClaimTargetSummary[] = [];
-  for (const row of candidates) {
-    const summary = await loadTargetCoachSummary(String(row.id));
-    if (summary && !summary.is_claimed) results.push(summary);
-  }
-
-  // Also try location-based matches when name search is thin
-  if (results.length < 6) {
-    const { data: locMatches } = await supabase
-      .from("coach_locations")
-      .select("coach_id, city, country")
-      .or(`city.ilike.${quoted},country.ilike.${quoted}`)
-      .limit(20);
-    for (const loc of locMatches ?? []) {
-      const id = String(loc.coach_id);
-      if (excluded.has(id) || results.some((r) => r.id === id)) continue;
-      const summary = await loadClaimTargetCoach(id);
-      if (summary) results.push(summary);
-      if (results.length >= 12) break;
-    }
-  }
-
-  return results.slice(0, 12);
+  void term;
+  void userId;
+  // Public claiming is disabled; keep the helper for call-site compatibility.
+  return [];
 }
 
 export async function loadCurrentCoachApplication(): Promise<CoachApplicationWithLocations | null> {

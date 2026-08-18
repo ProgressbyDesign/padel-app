@@ -5,7 +5,6 @@ import { optionLabel, PLAYER_LEVELS } from "./coachProfileApplication/constants"
 import type { CoachPdpQueryRow } from "./coachProfileView";
 import { rawCoachRowToProfileView } from "./coachProfileView";
 import {
-  COACH_VENUES_WITH_VENUE_SELECT,
   listingLocationFromCoachRow,
   pickPrimaryVenueFromCoachRow,
   venueCoordPair,
@@ -619,7 +618,10 @@ const COACH_IMAGES_EMBED = `
   )
 `;
 
-/** Shared nested select for coach listing / explorer queries. */
+/** Shared nested select for coach listing / explorer queries.
+ * Venue relationships are attached separately via the public relationship loader
+ * so unpublished venues never leak into public surfaces.
+ */
 export const COACH_LISTING_SELECT = `
   *,
   coach_outcomes (
@@ -636,8 +638,7 @@ export const COACH_LISTING_SELECT = `
     city,
     is_primary
   ),
-  ${COACH_IMAGES_EMBED},
-  ${COACH_VENUES_WITH_VENUE_SELECT}
+  ${COACH_IMAGES_EMBED}
 `;
 
 export function coachesRowsToListingItems(rows: Coach[]): CoachListingItem[] {

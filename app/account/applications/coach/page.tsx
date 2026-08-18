@@ -1,20 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import CoachApplicationClaimConflict, {
+import {
   CoachApplicationApprovedNotice,
 } from "@/components/account/applications/CoachApplicationClaimConflict";
 import CoachApplicationEntry from "@/components/account/applications/CoachApplicationEntry";
 import CoachApplicationReadOnly from "@/components/account/applications/CoachApplicationReadOnly";
 import CoachApplicationWizard from "@/components/account/applications/CoachApplicationWizard";
-import {
-  isCoachApplicationMode,
-  isEditableApplicationStatus,
-} from "@/lib/coachProfileApplication/constants";
+import CoachLegacyClaimApplication from "@/components/account/applications/CoachLegacyClaimApplication";
+import { isEditableApplicationStatus } from "@/lib/coachProfileApplication/constants";
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import {
-  isValidCoachApplicationUuid,
-  loadClaimTargetCoach,
   loadCurrentCoachApplication,
   loadLatestCoachApplication,
 } from "@/lib/queries/coachProfileApplication";
@@ -29,37 +25,16 @@ type PageProps = {
 };
 
 export default async function CoachApplicationPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const claimQuery = new URLSearchParams();
-  if (params.mode) claimQuery.set("mode", params.mode);
-  if (params.coach) claimQuery.set("coach", params.coach);
-  const claimQueryString = claimQuery.toString();
-  const requestedPath = `/account/applications/coach${
-    claimQueryString ? `?${claimQueryString}` : ""
-  }`;
+  // Ignore legacy claim deep-links (mode=claim_existing&coach=…).
+  await searchParams;
 
-  const account = await requireAuthenticatedAccount(requestedPath);
+  const account = await requireAuthenticatedAccount(
+    "/account/applications/coach"
+  );
   const [active, latest] = await Promise.all([
     loadCurrentCoachApplication(),
     loadLatestCoachApplication(),
   ]);
-
-  const requestedMode = isCoachApplicationMode(params.mode) ? params.mode : null;
-  const requestedCoachId =
-    typeof params.coach === "string" && isValidCoachApplicationUuid(params.coach)
-      ? params.coach
-      : null;
-  const intendingClaim =
-    requestedMode === "claim_existing" && Boolean(requestedCoachId);
-  const initialTarget =
-    intendingClaim && requestedCoachId
-      ? await loadClaimTargetCoach(requestedCoachId)
-      : null;
-
-  const intendedClaimHref =
-    intendingClaim && requestedCoachId && initialTarget
-      ? `/account/applications/coach?mode=claim_existing&coach=${encodeURIComponent(requestedCoachId)}`
-      : null;
 
   const approvedApp =
     latest?.application.status === "approved" ? latest : null;
@@ -73,43 +48,9 @@ export default async function CoachApplicationPage({ searchParams }: PageProps) 
       />
     );
   } else if (!active) {
-    // Declined / withdrawn / none — permit new application (validated target).
-    content = (
-      <CoachApplicationEntry
-        initialMode={
-          intendingClaim && initialTarget ? "claim_existing" : requestedMode
-        }
-        initialCoachId={
-          intendingClaim && initialTarget ? requestedCoachId : null
-        }
-        initialTarget={initialTarget}
-      />
-    );
-  } else if (intendingClaim && requestedCoachId) {
-    const sameClaimTarget =
-      active.application.application_mode === "claim_existing" &&
-      active.application.target_coach_id === requestedCoachId;
-
-    if (sameClaimTarget) {
-      content = isEditableApplicationStatus(active.application.status) ? (
-        <CoachApplicationWizard
-          initial={active}
-          verifiedEmail={account.email}
-        />
-      ) : (
-        <CoachApplicationReadOnly
-          data={active}
-          verifiedEmail={account.email}
-        />
-      );
-    } else {
-      content = (
-        <CoachApplicationClaimConflict
-          current={active}
-          intendedClaimHref={intendedClaimHref}
-        />
-      );
-    }
+    content = <CoachApplicationEntry />;
+  } else if (active.application.application_mode === "claim_existing") {
+    content = <CoachLegacyClaimApplication data={active} />;
   } else if (isEditableApplicationStatus(active.application.status)) {
     content = (
       <CoachApplicationWizard

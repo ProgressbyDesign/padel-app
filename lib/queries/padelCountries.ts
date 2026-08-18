@@ -5,6 +5,7 @@ import {
   slugifyCountryName,
   type PadelCountry,
 } from "../padelCountries";
+import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { createClient } from "../supabase/server";
 
 type VenueGeoRow = {
@@ -21,11 +22,13 @@ function parseCoord(v: number | string | null | undefined): number | null {
 
 export async function fetchPadelCountries(): Promise<PadelCountry[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let venueQuery = supabase
     .from("venues")
     .select("country, lat, lng")
     .not("country", "is", null)
     .limit(3000);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
+  const { data, error } = await venueQuery;
 
   if (error) {
     console.warn("[padelCountries] venue fetch failed:", error.message);

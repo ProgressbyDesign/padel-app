@@ -19,7 +19,16 @@ import {
   normalizeTimeHm,
 } from "@/lib/coachAvailability/timezone";
 import {
+  PUBLIC_COACH_VENUE_STATUSES,
+  PUBLISHED_STATUS,
+} from "@/lib/lifecycle/constants";
+import {
+  applyPublishedCoachFilter,
+  applyPublishedVenueFilter,
+} from "@/lib/lifecycle/publicationFilters";
+import {
   loadAcceptedBlockedRangesForCoach,
+  loadPublicAcceptedBlockedRangesForCoach,
   loadRequestedCountsForRelationship,
 } from "@/lib/queries/coachBookingBlocks";
 import { createClient } from "@/lib/supabase/server";
@@ -434,17 +443,24 @@ export async function loadPublicCoachAvailability(
   days = 14
 ): Promise<PublicVenueAvailabilityGroup[]> {
   const supabase = await createClient();
+
+  let coachQuery = supabase.from("coaches").select("id").eq("id", coachId);
+  coachQuery = applyPublishedCoachFilter(coachQuery);
+  const { data: publishedCoach } = await coachQuery.maybeSingle();
+  if (!publishedCoach) return [];
+
   const { data: links, error } = await supabase
     .from("coach_venues")
     .select(
       `
       id,
       venue_id,
-      venues ( id, name, city, country )
+      venues!inner ( id, name, city, country )
     `
     )
     .eq("coach_id", coachId)
-    .eq("status", "active");
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
+    .eq("venues.publication_status", PUBLISHED_STATUS);
 
   if (error || !links?.length) return [];
 
@@ -452,7 +468,7 @@ export async function loadPublicCoachAvailability(
   const rangeTo = new Date(
     Date.now() + (days + 2) * 24 * 60 * 60 * 1000
   ).toISOString();
-  const blockedRanges = await loadAcceptedBlockedRangesForCoach(
+  const blockedRanges = await loadPublicAcceptedBlockedRangesForCoach(
     coachId,
     rangeFrom,
     rangeTo
@@ -504,17 +520,24 @@ export async function loadPublicVenueCoachAvailability(
   days = 14
 ): Promise<PublicCoachAvailabilityCard[]> {
   const supabase = await createClient();
+
+  let venueQuery = supabase.from("venues").select("id").eq("id", venueId);
+  venueQuery = applyPublishedVenueFilter(venueQuery);
+  const { data: publishedVenue } = await venueQuery.maybeSingle();
+  if (!publishedVenue) return [];
+
   const { data: links, error } = await supabase
     .from("coach_venues")
     .select(
       `
       id,
       coach_id,
-      coaches ( id, name, role, image_url )
+      coaches!inner ( id, name, role, image_url )
     `
     )
     .eq("venue_id", venueId)
-    .eq("status", "active");
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
+    .eq("coaches.publication_status", PUBLISHED_STATUS);
 
   if (error || !links?.length) return [];
 
@@ -539,7 +562,7 @@ export async function loadPublicVenueCoachAvailability(
     const rangeTo = new Date(
       Date.now() + (days + 2) * 24 * 60 * 60 * 1000
     ).toISOString();
-    const blockedRanges = await loadAcceptedBlockedRangesForCoach(
+    const blockedRanges = await loadPublicAcceptedBlockedRangesForCoach(
       String(link.coach_id),
       rangeFrom,
       rangeTo
@@ -932,5 +955,30 @@ export async function coachHasLivePublicAvailability(
     };
   }
 
+  return { status: "none", nextSlotStartsAt: null };
+}
+
+/**
+ * Public coach badge / PDP availability signal.
+ * Matches displayed public availability: published coach + published venue +
+ * active relationship + public setting + at least one derived slot.
+ */
+export async function coachHasDisplayedPublicAvailability(
+  coachId: string
+): Promise<{
+  status: "none" | "live";
+  nextSlotStartsAt: string | null;
+}> {
+  const groups = await loadPublicCoachAvailability(coachId, 14);
+  for (const group of groups) {
+    for (const day of group.days) {
+      if (day.slots.length > 0) {
+        return {
+          status: "live",
+          nextSlotStartsAt: day.slots[0]?.startsAt ?? null,
+        };
+      }
+    }
+  }
   return { status: "none", nextSlotStartsAt: null };
 }
