@@ -13,6 +13,7 @@ import {
   countActiveOwners,
 } from "@/lib/admin/ownerSafety";
 import {
+  ADMIN_NAV_ITEMS,
   ADMIN_PERMISSIONS,
   hasAdminPermission,
   listPermissionsForRole,
@@ -96,6 +97,8 @@ describe("admin permission matrix", () => {
     expect(opsHrefs).not.toContain("/admin/audit");
     expect(opsHrefs).not.toContain("/admin/data-quality");
     expect(opsHrefs).toContain("/admin/bookings");
+    expect(opsHrefs).toContain("/admin/coaches");
+    expect(opsHrefs).toContain("/admin/venues");
 
     const reviewerHrefs = navItemsForMembership({
       role: "reviewer",
@@ -103,6 +106,8 @@ describe("admin permission matrix", () => {
     }).map((i) => i.href);
     expect(reviewerHrefs).not.toContain("/admin/bookings");
     expect(reviewerHrefs).toContain("/admin/relationships");
+    expect(reviewerHrefs).toContain("/admin/coaches");
+    expect(reviewerHrefs).toContain("/admin/venues");
 
     const supportHrefs = navItemsForMembership({
       role: "support",
@@ -110,6 +115,37 @@ describe("admin permission matrix", () => {
     }).map((i) => i.href);
     expect(supportHrefs).toContain("/admin/account-deletions");
     expect(supportHrefs).not.toContain("/admin/team");
+    expect(supportHrefs).toContain("/admin/coaches");
+    expect(supportHrefs).toContain("/admin/venues");
+  });
+
+  it("shows Coaches and Venues nav only when profiles.read is present", () => {
+    const coachesItem = ADMIN_NAV_ITEMS.find((item) => item.href === "/admin/coaches");
+    const venuesItem = ADMIN_NAV_ITEMS.find((item) => item.href === "/admin/venues");
+    expect(coachesItem?.permission).toBe("profiles.read");
+    expect(venuesItem?.permission).toBe("profiles.read");
+    expect(
+      ADMIN_NAV_ITEMS.findIndex((item) => item.href === "/admin/coaches")
+    ).toBeLessThan(
+      ADMIN_NAV_ITEMS.findIndex(
+        (item) => item.href === "/admin/applications/coaches"
+      )
+    );
+
+    expect(
+      navItemsForMembership({ role: "support", status: "active" }).map(
+        (item) => item.href
+      )
+    ).toEqual(
+      expect.arrayContaining(["/admin/coaches", "/admin/venues"])
+    );
+    const revokedHrefs = navItemsForMembership({
+      role: "owner",
+      status: "revoked",
+    }).map((item) => item.href);
+    expect(revokedHrefs).not.toContain("/admin/coaches");
+    expect(revokedHrefs).not.toContain("/admin/venues");
+    expect(hasAdminPermission(null, "profiles.read")).toBe(false);
   });
 
   it("maps routes to permissions", () => {
@@ -118,6 +154,10 @@ describe("admin permission matrix", () => {
     expect(permissionForAdminPath("/admin/audit")).toBe("audit.read");
     expect(permissionForAdminPath("/admin/bookings")).toBe("bookings.read");
     expect(permissionForAdminPath("/admin/data-quality")).toBe("data-quality-owner");
+    expect(permissionForAdminPath("/admin/coaches")).toBe("profiles.read");
+    expect(permissionForAdminPath("/admin/coaches/abc")).toBe("profiles.read");
+    expect(permissionForAdminPath("/admin/venues")).toBe("profiles.read");
+    expect(permissionForAdminPath("/admin/venues/abc")).toBe("profiles.read");
   });
 });
 

@@ -131,6 +131,16 @@ export type AdminNavItem = {
 export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   { href: "/admin", label: "Overview", permission: "admin.access", exact: true },
   {
+    href: "/admin/coaches",
+    label: "Coaches",
+    permission: "profiles.read",
+  },
+  {
+    href: "/admin/venues",
+    label: "Venues",
+    permission: "profiles.read",
+  },
+  {
     href: "/admin/applications/coaches",
     label: "Coach applications",
     permission: "applications.read",

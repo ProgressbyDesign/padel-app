@@ -7,6 +7,7 @@ import {
   Database,
   LayoutDashboard,
   Link2,
+  MapPin,
   Menu,
   ScrollText,
   UserRound,
@@ -28,6 +29,8 @@ import {
 
 const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
   "/admin": LayoutDashboard,
+  "/admin/coaches": UserRound,
+  "/admin/venues": MapPin,
   "/admin/applications/coaches": UserRoundCheck,
   "/admin/applications/venues": Building2,
   "/admin/relationships": Link2,
@@ -40,15 +43,11 @@ const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
 
 function navIsActive(pathname: string, item: AdminNavItem) {
   if (item.exact) return pathname === item.href;
-  if (item.href === "/admin/applications/coaches") {
-    return (
-      pathname.startsWith(item.href) || pathname.startsWith("/admin/coaches/")
-    );
+  if (item.href === "/admin/coaches") {
+    return pathname === "/admin/coaches" || pathname.startsWith("/admin/coaches/");
   }
-  if (item.href === "/admin/applications/venues") {
-    return (
-      pathname.startsWith(item.href) || pathname.startsWith("/admin/venues/")
-    );
+  if (item.href === "/admin/venues") {
+    return pathname === "/admin/venues" || pathname.startsWith("/admin/venues/");
   }
   return pathname.startsWith(item.href);
 }
@@ -90,13 +89,6 @@ export default function OpsAdminShell({
           </Link>
         );
       })}
-      {(pathname.startsWith("/admin/coaches/") ||
-        pathname.startsWith("/admin/venues/")) && (
-        <p className="mt-4 flex items-center gap-2 px-3 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
-          <UserRound className="h-3.5 w-3.5" aria-hidden />
-          Profile inspection
-        </p>
-      )}
     </nav>
   );
 

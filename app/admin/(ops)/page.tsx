@@ -4,6 +4,8 @@ import {
   hasAdminPermission,
   ROLE_LABELS,
 } from "@/lib/admin/permissions";
+import type { ProfileDirectoryStats } from "@/lib/admin/profileDirectory";
+import { loadAdminProfileDirectoryStats } from "@/lib/admin/profileDirectoryQueries";
 import { requireAdminAccess } from "@/lib/auth/adminSession";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,18 +18,20 @@ const STATUSES = [
 export default async function AdminOverviewPage() {
   const account = await requireAdminAccess();
   const canApps = hasAdminPermission(account, "applications.read");
+  const canProfiles = hasAdminPermission(account, "profiles.read");
   const canRelationships = hasAdminPermission(account, "relationships.read");
   const canDeletions = hasAdminPermission(account, "deletions.read");
   const canTeam = hasAdminPermission(account, "team.manage");
   const canBookings = hasAdminPermission(account, "bookings.read");
   const canAudit = hasAdminPermission(account, "audit.read");
 
-  const [counts, pendingInvites, openDeletions, pendingRelationships] =
+  const [counts, pendingInvites, openDeletions, pendingRelationships, profileStats] =
     await Promise.all([
       canApps ? countApplicationStatuses() : Promise.resolve(null),
       canTeam ? countPendingInvitations() : Promise.resolve(null),
       canDeletions ? countOpenDeletions() : Promise.resolve(null),
       canRelationships ? countPendingRelationships() : Promise.resolve(null),
+      canProfiles ? loadAdminProfileDirectoryStats() : Promise.resolve(null),
     ]);
 
   return (
@@ -38,10 +42,25 @@ export default async function AdminOverviewPage() {
         </p>
         <h1 className="mt-2">Overview</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-primary/60">
-          Tools available for your role across applications, relationships, and
-          operational queues.
+          Tools available for your role across profiles, applications,
+          relationships, and operational queues.
         </p>
       </div>
+
+      {profileStats ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ProfileDirectoryCard
+            title="Coaches"
+            href="/admin/coaches"
+            stats={profileStats.coaches}
+          />
+          <ProfileDirectoryCard
+            title="Venues"
+            href="/admin/venues"
+            stats={profileStats.venues}
+          />
+        </div>
+      ) : null}
 
       {counts ? (
         <div className="grid gap-6 xl:grid-cols-2">
@@ -101,6 +120,29 @@ export default async function AdminOverviewPage() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function ProfileDirectoryCard({
+  title,
+  href,
+  stats,
+}: {
+  title: string;
+  href: string;
+  stats: ProfileDirectoryStats;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-[24px] border border-primary/10 bg-white p-5 transition hover:border-primary/20"
+    >
+      <p className="text-sm font-semibold text-primary">{title}</p>
+      <p className="mt-3 text-3xl font-bold tracking-tight">{stats.total}</p>
+      <p className="mt-1 text-xs text-primary/50">
+        {stats.selected} selected · {stats.published} published
+      </p>
+    </Link>
   );
 }
 

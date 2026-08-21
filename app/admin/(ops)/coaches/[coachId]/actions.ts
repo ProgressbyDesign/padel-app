@@ -28,6 +28,7 @@ async function authorizeLifecycleAction() {
 function revalidateCoachLifecycle(coachId: string) {
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/admin/coaches");
   revalidatePath(`/admin/coaches/${coachId}`);
   revalidatePath("/coaches");
   revalidatePath(`/coach/${coachId}`);
