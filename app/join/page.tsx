@@ -3,9 +3,9 @@ import Link from "next/link";
 import { getAuthenticatedAccount } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: "Join Padel Pathways",
+  title: "Partner with Padel Pathways",
   description:
-    "Apply as an individual coach, academy, or padel travel partner on Padel Pathways.",
+    "Apply as an individual coach, academy, venue, or padel travel partner on Padel Pathways.",
 };
 
 const benefits = [
@@ -36,18 +36,24 @@ export default async function JoinPage() {
             Partners
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
-            Join Padel Pathways
+            Partner with Padel Pathways
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-primary/75 sm:text-lg">
-            Choose how you want to partner with us. Coaches and venue
-            representatives can start a short account-based application today.
+            Coach, academy, venue, and travel partner registration. Player
+            accounts are created separately.
+          </p>
+          <p className="mt-5 text-sm text-primary/60">
+            Looking for a player account?{" "}
+            <Link href="/signup" className="font-semibold text-primary underline">
+              Create a player account
+            </Link>
           </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
         <h2 className="text-xl font-semibold text-primary sm:text-2xl">
-          How do you want to join?
+          How do you want to partner?
         </h2>
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
           <article className="flex h-full flex-col rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
@@ -79,7 +85,7 @@ export default async function JoinPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
               Available now
             </p>
-            <h3 className="mt-3 text-xl font-bold text-primary">Academy or venue</h3>
+            <h3 className="mt-3 text-xl font-bold text-primary">Academy / Venue</h3>
             <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
               Submit your venue details if you own it, manage it, or are
               authorised to represent it. Coaches who only coach at a venue
@@ -109,7 +115,7 @@ export default async function JoinPage() {
               Coming next
             </p>
             <h3 className="mt-3 text-xl font-bold text-primary">
-              Padel holiday or travel partner
+              Travel Partner
             </h3>
             <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
               Travel and holiday packages will get a dedicated partner journey. This is

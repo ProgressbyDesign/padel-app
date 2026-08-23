@@ -30,7 +30,13 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
+        <Link
+          href="/admin/coaches"
+          className="text-sm font-semibold text-primary/60 hover:text-primary"
+        >
+          ← Coaches
+        </Link>
+        <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Ops · Coach profile
         </p>
         <h1 className="mt-2">{name}</h1>

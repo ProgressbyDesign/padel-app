@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE } from "@/lib/admin/auth";
+import { redirectedAdminPath } from "@/lib/admin/legacyAdminRedirect";
 import { updateSession } from "@/lib/supabase/proxy";
 
 function copyResponseCookies(source: NextResponse, target: NextResponse) {
@@ -11,55 +11,14 @@ export async function proxy(request: NextRequest) {
   const response = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  // Legacy shared-secret tools live under /admin/data-quality.
-  if (pathname === "/admin/login") {
+  const redirected = redirectedAdminPath(pathname);
+  if (redirected) {
     const url = request.nextUrl.clone();
-    url.pathname = "/admin/data-quality/login";
-    return copyResponseCookies(response, NextResponse.redirect(url));
-  }
-
-  // Exact list paths only for coaches/venues — nested IDs are ops overview pages.
-  const legacyExactPaths = ["/admin/venues", "/admin/coaches"];
-  const legacyPrefixedPaths = [
-    "/admin/review-queue",
-    "/admin/coach-venue-links",
-  ];
-  for (const legacy of legacyExactPaths) {
-    if (pathname === legacy) {
-      const url = request.nextUrl.clone();
-      url.pathname = pathname.replace("/admin", "/admin/data-quality");
-      return copyResponseCookies(response, NextResponse.redirect(url));
+    url.pathname = redirected;
+    if (pathname === "/admin/login") {
+      url.search = "";
+      url.searchParams.set("next", "/admin");
     }
-  }
-  for (const legacy of legacyPrefixedPaths) {
-    if (pathname === legacy || pathname.startsWith(`${legacy}/`)) {
-      const url = request.nextUrl.clone();
-      url.pathname = pathname.replace("/admin", "/admin/data-quality");
-      return copyResponseCookies(response, NextResponse.redirect(url));
-    }
-  }
-
-  const isDataQuality =
-    pathname.startsWith("/admin/data-quality") &&
-    pathname !== "/admin/data-quality/login";
-
-  if (!isDataQuality) {
-    return response;
-  }
-
-  const secret = process.env.ADMIN_SECRET?.trim();
-  if (!secret) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/data-quality/login";
-    url.searchParams.set("error", "config");
-    return copyResponseCookies(response, NextResponse.redirect(url));
-  }
-
-  const token = request.cookies.get(ADMIN_COOKIE)?.value;
-  if (token !== secret) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/data-quality/login";
-    url.searchParams.set("next", pathname);
     return copyResponseCookies(response, NextResponse.redirect(url));
   }
 

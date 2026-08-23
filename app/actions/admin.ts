@@ -1,9 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { ADMIN_COOKIE, getAdminSecret, isAdminAuthenticated } from "@/lib/admin/auth";
 import {
   COACH_IMAGES_BUCKET,
   coachImageStoragePublicUrl,
@@ -12,16 +9,21 @@ import {
   slugifyCoachImageBase,
   syncCoachImageUrlFromPrimary,
 } from "@/lib/admin/coachImageAdmin";
+import { canAccessDataQuality } from "@/lib/admin/permissions";
 import { searchVenuesForAdmin } from "@/lib/admin/queries";
 import { DATA_QUALITY_OPTIONS, type DataQualityStatus } from "@/lib/admin/types";
+import { getAdminAccount } from "@/lib/auth/adminSession";
 import { normalizeCoachImageUrl } from "@/lib/coachImageResolve";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type AdminActionResult = { ok: true } | { ok: false; message: string };
 
-async function requireAdmin(): Promise<string | null> {
-  if (!(await isAdminAuthenticated())) {
-    return "Not authenticated.";
+/** Owner-only Data Quality gate. Runs before any service-role write. */
+async function requireDataQualityAdmin(): Promise<string | null> {
+  const account = await getAdminAccount();
+  if (!account) return "Not authenticated.";
+  if (!canAccessDataQuality(account)) {
+    return "Data quality tools are available to owners only.";
   }
   return null;
 }
@@ -44,30 +46,11 @@ function revalidateAdmin(...paths: string[]) {
   for (const p of paths) revalidatePath(p);
 }
 
-export async function adminLogin(password: string): Promise<AdminActionResult> {
-  const secret = getAdminSecret();
-  if (!secret) {
-    return { ok: false, message: "ADMIN_SECRET is not configured on the server." };
-  }
-  if (password.trim() !== secret) {
-    return { ok: false, message: "Invalid password." };
-  }
-  const jar = await cookies();
-  jar.set(ADMIN_COOKIE, secret, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-  return { ok: true };
-}
-
 export async function searchVenuesAdminAction(term: string): Promise<
   | { ok: true; venues: { id: string; name: string; city: string | null; country: string | null; website: string | null }[] }
   | { ok: false; message: string }
 > {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   try {
     const venues = await searchVenuesForAdmin(term);
@@ -75,12 +58,6 @@ export async function searchVenuesAdminAction(term: string): Promise<
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "Search failed" };
   }
-}
-
-export async function adminLogout(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(ADMIN_COOKIE);
-  redirect("/admin/data-quality/login");
 }
 
 export async function updateVenueAdmin(
@@ -98,7 +75,7 @@ export async function updateVenueAdmin(
     data_quality_status: string;
   }
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const status = payload.data_quality_status.trim();
@@ -141,7 +118,7 @@ export async function upsertVenueSocialAdmin(payload: {
   url: string;
   is_primary: boolean;
 }): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const platform = payload.platform.trim();
@@ -174,7 +151,7 @@ export async function upsertVenueSocialAdmin(payload: {
 }
 
 export async function deleteVenueSocialAdmin(id: string, venueId: string): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("venue_socials").delete().eq("id", id);
   if (error) return adminFailure(error);
@@ -198,7 +175,7 @@ export async function updateCoachAdmin(
     data_quality_status: string;
   }
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const status = payload.data_quality_status.trim();
@@ -239,7 +216,7 @@ export async function linkCoachVenuesAdmin(
   venueIds: string[],
   primaryVenueId?: string | null
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const unique = [...new Set(venueIds.map((id) => id.trim()).filter(Boolean))];
@@ -291,7 +268,7 @@ export async function unlinkCoachVenueAdmin(
   coachId: string,
   venueId: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin()
     .from("coach_venues")
@@ -308,7 +285,7 @@ export async function upsertCoachOutcomeAdmin(payload: {
   coach_id: string;
   outcome: string;
 }): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const outcome = payload.outcome.trim();
   if (!outcome) return { ok: false, message: "Outcome text is required." };
@@ -328,7 +305,7 @@ export async function deleteCoachOutcomeAdmin(
   id: string,
   coachId: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_outcomes").delete().eq("id", id);
   if (error) return adminFailure(error);
@@ -343,7 +320,7 @@ export async function upsertCoachSocialAdmin(payload: {
   url: string;
   is_primary: boolean;
 }): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const platform = payload.platform.trim();
   const url = payload.url.trim();
@@ -375,7 +352,7 @@ export async function deleteCoachSocialAdmin(
   id: string,
   coachId: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const { error } = await getSupabaseAdmin().from("coach_socials").delete().eq("id", id);
   if (error) return adminFailure(error);
@@ -395,7 +372,7 @@ export async function addCoachImageUrlAdmin(
   coachId: string,
   imageUrl: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const url = normalizeCoachImageUrl(imageUrl);
@@ -413,7 +390,7 @@ export async function addCoachImageUrlAdmin(
 }
 
 export async function uploadCoachImageAdmin(formData: FormData): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
 
   const coachId = String(formData.get("coachId") ?? "").trim();
@@ -478,7 +455,7 @@ export async function setPrimaryCoachImageAdmin(
   coachId: string,
   imageId: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const db = getSupabaseAdmin();
 
@@ -511,7 +488,7 @@ export async function deleteCoachImageAdmin(
   id: string,
   coachId: string
 ): Promise<AdminActionResult> {
-  const authErr = await requireAdmin();
+  const authErr = await requireDataQualityAdmin();
   if (authErr) return { ok: false, message: authErr };
   const db = getSupabaseAdmin();
 

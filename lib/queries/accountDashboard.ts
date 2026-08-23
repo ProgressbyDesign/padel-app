@@ -14,6 +14,10 @@ import { getStructuredOpeningHours } from "@/lib/openingHours";
 import { coachHasLivePublicAvailability } from "@/lib/queries/coachAvailability";
 import { loadBookingAttention } from "@/lib/queries/coachBookings";
 import { createClient } from "@/lib/supabase/server";
+import {
+  isAccountJourney,
+  type AccountJourney,
+} from "@/lib/lifecycle/constants";
 import type { VenueApplicationStatus } from "@/lib/venueProfileApplication/constants";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -26,6 +30,7 @@ const ACTIVE_VENUE_APPLICATION_STATUSES = [
 
 type ProfileRow = {
   full_name: string | null;
+  account_journey: string | null;
 };
 
 type CoachSummary = {
@@ -144,6 +149,8 @@ export type AccountDashboardData = {
     email: string;
     fullName: string | null;
   };
+  /** UX hint only — never used as an authorization mechanism. */
+  accountJourney: AccountJourney;
   coaches: ManagedCoach[];
   venues: ManagedVenue[];
   coachApplication: AccountCoachApplicationSummary;
@@ -537,7 +544,7 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, account_journey")
       .eq("id", account.id)
       .maybeSingle(),
     supabase
@@ -649,6 +656,10 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
   }
 
   const profile = profileResult.data as ProfileRow | null;
+  const journeyValue = profile?.account_journey;
+  const accountJourney = isAccountJourney(journeyValue)
+    ? journeyValue
+    : "player";
   const coachMemberships = (coachResult.data ??
     []) as unknown as CoachMembershipRow[];
   const venueMemberships = (venueResult.data ??
@@ -825,6 +836,7 @@ export async function loadAccountDashboard(): Promise<AccountDashboardData> {
       email: account.email,
       fullName: profile?.full_name?.trim() || null,
     },
+    accountJourney,
     coaches,
     venues,
     coachApplication: coachApplicationRow

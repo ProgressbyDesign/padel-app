@@ -7,6 +7,7 @@ import {
   INITIAL_AUTH_ACTION_STATE,
   type AuthActionState,
 } from "@/lib/auth/types";
+import { isPartnerSignupPath } from "@/lib/auth/signupCopy";
 import AuthSubmitButton from "./AuthSubmitButton";
 import FormMessage from "./FormMessage";
 
@@ -90,6 +91,15 @@ export default function SignupForm({ nextPath = "/account" }: { nextPath?: strin
           Log in
         </Link>
       </p>
+
+      {isPartnerSignupPath(nextPath) ? null : (
+        <p className="text-center text-sm text-primary/65">
+          Are you a coach, academy or venue?{" "}
+          <Link href="/join" className="font-semibold text-primary underline underline-offset-4">
+            Join as a partner
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

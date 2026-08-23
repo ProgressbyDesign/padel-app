@@ -1,14 +1,8 @@
-import { Suspense } from "react";
-import AdminLoginForm from "@/components/admin/AdminLoginForm";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminLoginPage() {
-  return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4 py-12">
-      <Suspense fallback={<p className="text-sm text-primary/60">Loading…</p>}>
-        <AdminLoginForm />
-      </Suspense>
-    </div>
-  );
+/** Shared-secret login is retired. Owners enter via admin membership. */
+export default function RetiredDataQualityLoginPage() {
+  redirect("/admin/data-quality");
 }
