@@ -5,6 +5,10 @@ import {
   parseProfileDirectorySearchParams,
 } from "@/lib/admin/profileDirectory";
 import { listAdminVenueDirectory } from "@/lib/admin/profileDirectoryQueries";
+import {
+  accountHasPermission,
+  requireAdminPermission,
+} from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +21,7 @@ type PageProps = {
 };
 
 export default async function AdminVenueDirectoryPage({ searchParams }: PageProps) {
+  const admin = await requireAdminPermission("profiles.read");
   const raw = await searchParams;
   const params = parseProfileDirectorySearchParams(raw);
   const allRows = await listAdminVenueDirectory();
@@ -29,6 +34,8 @@ export default async function AdminVenueDirectoryPage({ searchParams }: PageProp
       eyebrow="Profiles"
       nameColumn="Venue"
       countNoun="venues"
+      kind="venue"
+      canManage={accountHasPermission(admin, "profiles.manage")}
       allCount={allRows.length}
       rows={filtered}
       pageRows={paged.rows}

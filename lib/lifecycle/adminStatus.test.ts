@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   accountAdminLabel,
   buildAdminLifecycleSummary,
-  canPublishForLaunch,
   isPubliclyVisibleForDirectory,
   launchSelectionAdminLabel,
   onboardingAdminLabel,
@@ -31,11 +30,13 @@ describe("admin lifecycle labels", () => {
     );
     expect(launchSelectionAdminLabel("unselected")).toBe("Not selected");
     expect(publicationAdminLabel("published")).toBe("Published");
+    expect(publicationAdminLabel("private")).toBe("Draft");
+    expect(publicationAdminLabel("suspended")).toBe("Suspended");
   });
 
   it("falls back to the safest state for unknown values", () => {
     expect(launchSelectionAdminLabel("banana")).toBe("Not selected");
-    expect(publicationAdminLabel(null)).toBe("Private");
+    expect(publicationAdminLabel(null)).toBe("Draft");
     expect(onboardingAdminLabel(undefined)).toBe("Not started");
   });
 
@@ -51,7 +52,7 @@ describe("admin lifecycle labels", () => {
 });
 
 describe("admin lifecycle summary", () => {
-  it("shows approved + unclaimed imported coaches as not selected and private", () => {
+  it("shows approved + unclaimed imported coaches as draft, without a Launch axis", () => {
     const rows = buildAdminLifecycleSummary({
       isApproved: true,
       hasAccount: false,
@@ -61,9 +62,9 @@ describe("admin lifecycle summary", () => {
     expect(rows.map((row) => [row.label, row.value])).toEqual([
       ["Verification", "Approved"],
       ["Account", "Unclaimed"],
-      ["Launch", "Not selected"],
-      ["Visibility", "Private"],
+      ["Status", "Draft"],
     ]);
+    expect(rows.some((row) => row.label === "Launch")).toBe(false);
   });
 
   it("shows a published unclaimed coach as publicly visible", () => {
@@ -76,23 +77,13 @@ describe("admin lifecycle summary", () => {
     expect(rows.map((row) => [row.label, row.value])).toEqual([
       ["Verification", "Not approved"],
       ["Account", "Unclaimed"],
-      ["Launch", "Top 10 / Selected for launch"],
-      ["Visibility", "Published"],
+      ["Status", "Published"],
     ]);
   });
 });
 
-describe("publication safeguard", () => {
-  it("only allows publishing coaches selected for launch", () => {
-    expect(canPublishForLaunch("selected")).toBe(true);
-    expect(canPublishForLaunch("unselected")).toBe(false);
-    expect(canPublishForLaunch("excluded")).toBe(false);
-    expect(canPublishForLaunch(null)).toBe(false);
-  });
-});
-
 describe("directory visibility depends only on publication status", () => {
-  it("excludes approved but private coaches", () => {
+  it("excludes approved but draft coaches", () => {
     expect(
       isPubliclyVisibleForDirectory({
         publicationStatus: "private",

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  directoryLaunchLabel,
   directorySourceLabel,
+  directoryStatusLabel,
   directoryVerificationLabel,
-  directoryVisibilityLabel,
   filterProfileDirectoryRows,
   mapCoachDirectoryRow,
   mapVenueDirectoryRow,
   matchesProfileDirectoryFilter,
   parseProfileDirectorySearchParams,
+  PROFILE_DIRECTORY_FILTERS,
   profileDirectoryHref,
   type ProfileDirectoryRow,
 } from "@/lib/admin/profileDirectory";
@@ -31,7 +31,7 @@ function row(
 }
 
 describe("admin profile directory mapping", () => {
-  it("includes private unselected imported coaches and links to lifecycle pages", () => {
+  it("includes draft unselected imported coaches and links to lifecycle pages", () => {
     const mapped = mapCoachDirectoryRow({
       id: "coach-imported",
       name: "Imported Coach",
@@ -45,6 +45,7 @@ describe("admin profile directory mapping", () => {
     });
 
     expect(mapped.publicationStatus).toBe("private");
+    expect(directoryStatusLabel(mapped.publicationStatus)).toBe("Draft");
     expect(mapped.launchSelectionStatus).toBe("unselected");
     expect(mapped.sourceLabel).toBe("Imported");
     expect(mapped.hasAccount).toBe(false);
@@ -69,8 +70,7 @@ describe("admin profile directory mapping", () => {
     expect(mapped.hasAccount).toBe(true);
     expect(mapped.sourceLabel).toBe("Application");
     expect(directoryVerificationLabel(mapped.isApproved)).toBe("Needs review");
-    expect(directoryLaunchLabel(mapped.launchSelectionStatus)).toBe("Selected");
-    expect(directoryVisibilityLabel(mapped.publicationStatus)).toBe("Published");
+    expect(directoryStatusLabel(mapped.publicationStatus)).toBe("Published");
   });
 });
 
@@ -101,16 +101,16 @@ describe("admin profile directory filters", () => {
       hasAccount: true,
     }),
     row({
-      id: "excluded",
-      name: "Excluded Coach",
+      id: "suspended",
+      name: "Suspended Coach",
       source: "crawler",
       launchSelectionStatus: "excluded",
-      publicationStatus: "private",
+      publicationStatus: "suspended",
       hasAccount: false,
     }),
   ];
 
-  it("does not hide private or unselected imported profiles from the default list", () => {
+  it("does not hide draft or unselected imported profiles from the default list", () => {
     const ids = filterProfileDirectoryRows(dataset, {
       q: "",
       filter: "all",
@@ -120,24 +120,24 @@ describe("admin profile directory filters", () => {
     expect(ids).toContain("published-managed");
   });
 
-  it("filters selected, private, published, managed, unclaimed, imported and application", () => {
+  it("filters draft, published, suspended, managed, unclaimed, imported and application", () => {
     expect(
-      filterProfileDirectoryRows(dataset, { q: "", filter: "selected" }).map(
+      filterProfileDirectoryRows(dataset, { q: "", filter: "draft" }).map(
         (item) => item.id
       )
-    ).toEqual(["selected-private", "published-managed"]);
-
-    expect(
-      filterProfileDirectoryRows(dataset, { q: "", filter: "private" }).map(
-        (item) => item.id
-      )
-    ).toEqual(["imported-private", "selected-private", "excluded"]);
+    ).toEqual(["imported-private", "selected-private"]);
 
     expect(
       filterProfileDirectoryRows(dataset, { q: "", filter: "published" }).map(
         (item) => item.id
       )
     ).toEqual(["published-managed"]);
+
+    expect(
+      filterProfileDirectoryRows(dataset, { q: "", filter: "suspended" }).map(
+        (item) => item.id
+      )
+    ).toEqual(["suspended"]);
 
     expect(
       filterProfileDirectoryRows(dataset, { q: "", filter: "managed" }).map(
@@ -149,13 +149,13 @@ describe("admin profile directory filters", () => {
       filterProfileDirectoryRows(dataset, { q: "", filter: "unclaimed" }).map(
         (item) => item.id
       )
-    ).toEqual(["imported-private", "selected-private", "excluded"]);
+    ).toEqual(["imported-private", "selected-private", "suspended"]);
 
     expect(
       filterProfileDirectoryRows(dataset, { q: "", filter: "imported" }).map(
         (item) => item.id
       )
-    ).toEqual(["imported-private", "selected-private", "excluded"]);
+    ).toEqual(["imported-private", "selected-private", "suspended"]);
 
     expect(
       filterProfileDirectoryRows(dataset, { q: "", filter: "application" }).map(
@@ -164,15 +164,20 @@ describe("admin profile directory filters", () => {
     ).toEqual(["published-managed"]);
   });
 
-  it("lets Top 10 coaches be found with Launch=Selected", () => {
-    const selected = filterProfileDirectoryRows(dataset, {
-      q: "",
-      filter: "selected",
-    });
-    expect(selected.every((item) => item.launchSelectionStatus === "selected")).toBe(
-      true
-    );
-    expect(selected.map((item) => item.name)).toContain("Top Ten Coach");
+  it("does not expose selected/unselected launch filters", () => {
+    expect(PROFILE_DIRECTORY_FILTERS).toEqual([
+      "all",
+      "draft",
+      "published",
+      "suspended",
+      "managed",
+      "unclaimed",
+      "imported",
+      "application",
+    ]);
+    expect(PROFILE_DIRECTORY_FILTERS).not.toContain("selected");
+    expect(PROFILE_DIRECTORY_FILTERS).not.toContain("unselected");
+    expect(PROFILE_DIRECTORY_FILTERS).not.toContain("private");
   });
 
   it("searches by coach name without applying public publication rules", () => {
@@ -182,20 +187,24 @@ describe("admin profile directory filters", () => {
     });
     expect(matches.map((item) => item.id)).toEqual(["imported-private"]);
     expect(matches[0]?.publicationStatus).toBe("private");
-    expect(
-      matchesProfileDirectoryFilter(dataset[0], "all")
-    ).toBe(true);
+    expect(matchesProfileDirectoryFilter(dataset[0], "all")).toBe(true);
   });
 
-  it("parses filter query params", () => {
+  it("parses filter query params and maps legacy private to draft", () => {
     expect(parseProfileDirectorySearchParams({})).toEqual({
       q: "",
       filter: "all",
       page: 1,
     });
     expect(
-      parseProfileDirectorySearchParams({ filter: "selected", q: " Ana ", page: "2" })
-    ).toMatchObject({ filter: "selected", q: "Ana", page: 2 });
+      parseProfileDirectorySearchParams({ filter: "draft", q: " Ana ", page: "2" })
+    ).toMatchObject({ filter: "draft", q: "Ana", page: 2 });
+    expect(parseProfileDirectorySearchParams({ filter: "private" }).filter).toBe(
+      "draft"
+    );
+    expect(parseProfileDirectorySearchParams({ filter: "selected" }).filter).toBe(
+      "all"
+    );
     expect(parseProfileDirectorySearchParams({ filter: "banana" }).filter).toBe(
       "all"
     );
@@ -205,5 +214,8 @@ describe("admin profile directory filters", () => {
     expect(directorySourceLabel("import")).toBe("Imported");
     expect(directorySourceLabel("crawler")).toBe("Crawler");
     expect(directorySourceLabel("application")).toBe("Application");
+    expect(directoryStatusLabel("private")).toBe("Draft");
+    expect(directoryStatusLabel("published")).toBe("Published");
+    expect(directoryStatusLabel("suspended")).toBe("Suspended");
   });
 });

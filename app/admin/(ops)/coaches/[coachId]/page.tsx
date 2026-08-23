@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
-import { AdminCoachLaunchControls } from "@/components/admin/AdminCoachLaunchControls";
 import { AdminLifecycleStatus } from "@/components/admin/AdminLifecycleStatus";
+import { AdminPublicationControls } from "@/components/admin/AdminPublicationControls";
 import { loadOpsCoachOverview } from "@/lib/admin/opsProfileQueries";
 import {
   accountHasPermission,
@@ -57,25 +57,23 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
       ) : null}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Launch &amp; visibility</h2>
+        <h2 className="text-lg font-bold">Publication</h2>
         <p className="mt-1 text-sm text-primary/60">
-          Imported coaches stay in the database and remain private until an
-          admin selects them for launch and publishes them. A claim or coach
-          account is not required.
+          Draft profiles remain hidden until an administrator publishes them. A
+          claim or coach account is not required.
         </p>
         <div className="mt-5">
           <AdminLifecycleStatus
             isApproved={coach.is_approved}
             hasAccount={data.hasAccount}
-            launchSelectionStatus={coach.launch_selection_status}
             publicationStatus={coach.publication_status}
             onboardingStatus={coach.onboarding_status}
           />
         </div>
         <div className="mt-6 border-t border-primary/10 pt-5">
-          <AdminCoachLaunchControls
-            coachId={coach.id}
-            launchSelectionStatus={coach.launch_selection_status}
+          <AdminPublicationControls
+            kind="coach"
+            profileId={coach.id}
             publicationStatus={coach.publication_status}
             canManage={canManageProfiles}
           />
