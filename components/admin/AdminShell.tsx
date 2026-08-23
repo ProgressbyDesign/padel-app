@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { adminLogout } from "@/app/actions/admin";
-import { adminAuthConfigured } from "@/lib/admin/auth";
 
 const NAV = [
   { href: "/admin/data-quality", label: "Dashboard" },
@@ -11,8 +9,6 @@ const NAV = [
 ];
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
-  const configured = adminAuthConfigured();
-
   return (
     <div className="min-h-screen bg-surface">
       <header className="border-b border-primary/10 bg-white">
@@ -22,18 +18,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               Data quality admin
             </Link>
             <p className="text-xs text-primary/50">
-              Legacy crawler / repair tools
-              {!configured ? " · ADMIN_SECRET not set" : null}
+              Owner-only crawler / repair tools
             </p>
           </div>
-          <form action={adminLogout}>
-            <button
-              type="submit"
-              className="rounded border border-primary/15 px-3 py-1.5 text-sm text-primary hover:bg-surface"
-            >
-              Sign out
-            </button>
-          </form>
+          <Link
+            href="/admin"
+            className="rounded border border-primary/15 px-3 py-1.5 text-sm text-primary hover:bg-surface"
+          >
+            Back to Admin
+          </Link>
         </div>
       </header>
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6">
@@ -49,9 +42,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               </Link>
             ))}
           </nav>
-          <p className="mt-6 rounded border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] leading-snug text-amber-900">
-            TODO: Replace shared-secret auth with Supabase Auth admin role.
-          </p>
         </aside>
         <div className="min-w-0 flex-1">{children}</div>
       </div>

@@ -1,3 +1,4 @@
+import { requireDataQualityNavAccess } from "@/lib/auth/adminSession";
 import { normalizeSearchKey } from "../searchFuzzy";
 import { getSupabaseAdmin } from "../supabaseAdmin";
 import type {
@@ -18,6 +19,11 @@ import type {
 
 const PAGE_SIZE = 25;
 
+async function dataQualityDb() {
+  await requireDataQualityNavAccess();
+  return getSupabaseAdmin();
+}
+
 function domainFromUrl(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
   try {
@@ -34,7 +40,7 @@ function domainFromEmail(email: string | null | undefined): string | null {
 }
 
 export async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
 
   const [venueRes, coachRes, linksRes, imagesRes, venueSocialsRes, coachesRes, venuesRes] =
     await Promise.all([
@@ -94,7 +100,7 @@ export async function fetchAdminVenuesList(opts: {
   page: number;
   search?: string;
 }): Promise<{ rows: AdminVenueRow[]; total: number; pageSize: number }> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const page = Math.max(1, opts.page);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -128,7 +134,7 @@ export async function fetchAdminVenueDetail(id: string): Promise<{
   venue: AdminVenueDetail | null;
   socials: VenueSocialRow[];
 }> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const [venueRes, socialsRes] = await Promise.all([
     db.from("venues").select("*").eq("id", id).maybeSingle(),
     db.from("venue_socials").select("*").eq("venue_id", id).order("is_primary", { ascending: false }),
@@ -145,7 +151,7 @@ export async function fetchAdminCoachesList(opts: {
   page: number;
   search?: string;
 }): Promise<{ rows: AdminCoachRow[]; total: number; pageSize: number }> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const page = Math.max(1, opts.page);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -185,7 +191,7 @@ export async function fetchAdminCoachDetail(id: string): Promise<{
   socials: CoachSocialRow[];
   images: CoachImageRow[];
 }> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const [coachRes, linksRes, outcomesRes, socialsRes, imagesRes] = await Promise.all([
     db.from("coaches").select("*").eq("id", id).maybeSingle(),
     db
@@ -211,7 +217,7 @@ export async function fetchAdminCoachDetail(id: string): Promise<{
 export async function searchVenuesForAdmin(term: string, limit = 20): Promise<
   { id: string; name: string; city: string | null; country: string | null; website: string | null }[]
 > {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   let q = db.from("venues").select("id, name, city, country, website").limit(limit);
   const t = term.trim();
   if (t) {
@@ -280,7 +286,7 @@ export async function fetchCoachesForVenueLinking(opts: {
   search?: string;
   limit?: number;
 }): Promise<CoachForLinking[]> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const limit = opts.limit ?? 40;
 
   let coachQuery = db
@@ -344,7 +350,7 @@ export async function fetchReviewQueue(filter: ReviewQueueFilter, page: number):
   venues: AdminVenueRow[];
   total: number;
 }> {
-  const db = getSupabaseAdmin();
+  const db = await dataQualityDb();
   const p = Math.max(1, page);
   const from = (p - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;

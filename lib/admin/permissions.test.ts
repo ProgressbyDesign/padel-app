@@ -15,6 +15,7 @@ import {
 import {
   ADMIN_NAV_ITEMS,
   ADMIN_PERMISSIONS,
+  canAccessDataQuality,
   hasAdminPermission,
   listPermissionsForRole,
   navItemsForMembership,
@@ -158,6 +159,37 @@ describe("admin permission matrix", () => {
     expect(permissionForAdminPath("/admin/coaches/abc")).toBe("profiles.read");
     expect(permissionForAdminPath("/admin/venues")).toBe("profiles.read");
     expect(permissionForAdminPath("/admin/venues/abc")).toBe("profiles.read");
+  });
+
+  it("keeps Data Quality owner-only without a second password", () => {
+    expect(
+      canAccessDataQuality({ role: "owner", status: "active" })
+    ).toBe(true);
+    expect(
+      canAccessDataQuality({ role: "operations", status: "active" })
+    ).toBe(false);
+    expect(
+      canAccessDataQuality({ role: "reviewer", status: "active" })
+    ).toBe(false);
+    expect(
+      canAccessDataQuality({ role: "support", status: "active" })
+    ).toBe(false);
+    expect(
+      canAccessDataQuality({ role: "owner", status: "suspended" })
+    ).toBe(false);
+    expect(canAccessDataQuality(null)).toBe(false);
+
+    const ownerNav = navItemsForMembership({
+      role: "owner",
+      status: "active",
+    }).map((item) => item.href);
+    expect(ownerNav).toContain("/admin/data-quality");
+
+    const opsNav = navItemsForMembership({
+      role: "operations",
+      status: "active",
+    }).map((item) => item.href);
+    expect(opsNav).not.toContain("/admin/data-quality");
   });
 });
 
