@@ -5,8 +5,8 @@ import {
 } from "@/lib/lifecycle/adminStatus";
 
 /**
- * Four-axis lifecycle summary. Verification, Account, Launch and Visibility are
- * deliberately shown side by side so Approved is never read as Published.
+ * Operational lifecycle summary. Verification, Account and Status are shown
+ * side by side so Approved is never read as Published.
  */
 export function AdminLifecycleStatus({
   isApproved,
@@ -17,7 +17,7 @@ export function AdminLifecycleStatus({
 }: {
   isApproved: boolean | null | undefined;
   hasAccount: boolean | null | undefined;
-  launchSelectionStatus: unknown;
+  launchSelectionStatus?: unknown;
   publicationStatus: unknown;
   onboardingStatus?: unknown;
 }) {
@@ -30,7 +30,7 @@ export function AdminLifecycleStatus({
 
   return (
     <div className="space-y-4">
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => (
           <div
             key={row.id}
@@ -60,7 +60,7 @@ export function AdminLifecycleStatus({
       )}
 
       <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
-        Approved does not mean Published. Only Visibility = Published makes a
+        Approved does not mean Published. Only Status = Published makes a
         profile visible to anonymous visitors.
       </p>
     </div>

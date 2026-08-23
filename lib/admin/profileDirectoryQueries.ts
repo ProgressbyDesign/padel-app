@@ -115,29 +115,29 @@ export async function loadAdminProfileDirectoryStats(): Promise<{
 
   const [
     coachTotal,
-    coachSelected,
+    coachDraft,
     coachPublished,
     venueTotal,
-    venueSelected,
+    venueDraft,
     venuePublished,
   ] = await Promise.all([
     countRows(supabase, "coaches"),
-    countRows(supabase, "coaches", "launch_selection_status", "selected"),
+    countRows(supabase, "coaches", "publication_status", "private"),
     countRows(supabase, "coaches", "publication_status", "published"),
     countRows(supabase, "venues"),
-    countRows(supabase, "venues", "launch_selection_status", "selected"),
+    countRows(supabase, "venues", "publication_status", "private"),
     countRows(supabase, "venues", "publication_status", "published"),
   ]);
 
   return {
     coaches: {
       total: coachTotal,
-      selected: coachSelected,
+      draft: coachDraft,
       published: coachPublished,
     },
     venues: {
       total: venueTotal,
-      selected: venueSelected,
+      draft: venueDraft,
       published: venuePublished,
     },
   };
@@ -146,7 +146,7 @@ export async function loadAdminProfileDirectoryStats(): Promise<{
 async function countRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
   table: "coaches" | "venues",
-  column?: "launch_selection_status" | "publication_status",
+  column?: "publication_status",
   value?: string
 ): Promise<number> {
   let query = supabase.from(table).select("id", { count: "exact", head: true });

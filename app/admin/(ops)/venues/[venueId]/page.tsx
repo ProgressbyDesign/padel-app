@@ -2,7 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { AdminLifecycleStatus } from "@/components/admin/AdminLifecycleStatus";
+import { AdminPublicationControls } from "@/components/admin/AdminPublicationControls";
 import { loadOpsVenueOverview } from "@/lib/admin/opsProfileQueries";
+import {
+  accountHasPermission,
+  requireAdminPermission,
+} from "@/lib/auth/adminSession";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +17,14 @@ type PageProps = {
 
 export default async function OpsVenueOverviewPage({ params }: PageProps) {
   const { venueId } = await params;
+  const admin = await requireAdminPermission("profiles.read", "not-found");
   const data = await loadOpsVenueOverview(venueId);
   if (!data) notFound();
 
   const { venue, completion } = data;
   const name = venue.name?.trim() || "Venue";
   const location = [venue.city, venue.country].filter(Boolean).join(", ");
+  const canManageProfiles = accountHasPermission(admin, "profiles.manage");
 
   return (
     <div className="space-y-6">
@@ -49,18 +56,25 @@ export default async function OpsVenueOverviewPage({ params }: PageProps) {
       ) : null}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Launch &amp; visibility</h2>
+        <h2 className="text-lg font-bold">Publication</h2>
         <p className="mt-1 text-sm text-primary/60">
-          Read-only in this sprint. Venue launch curation is managed through the
-          existing venue lifecycle architecture.
+          Draft profiles remain hidden until an administrator publishes them. A
+          claim or venue account is not required.
         </p>
         <div className="mt-5">
           <AdminLifecycleStatus
             isApproved={venue.is_approved}
             hasAccount={data.hasAccount}
-            launchSelectionStatus={venue.launch_selection_status}
             publicationStatus={venue.publication_status}
             onboardingStatus={venue.onboarding_status}
+          />
+        </div>
+        <div className="mt-6 border-t border-primary/10 pt-5">
+          <AdminPublicationControls
+            kind="venue"
+            profileId={venue.id}
+            publicationStatus={venue.publication_status}
+            canManage={canManageProfiles}
           />
         </div>
       </section>

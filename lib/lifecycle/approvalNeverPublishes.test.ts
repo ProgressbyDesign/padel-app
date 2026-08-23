@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest";
 const ROOT = path.resolve(__dirname, "..", "..");
 
 /**
- * Approval is a data-quality decision; publication is a launch decision.
- * These guards fail if an approval path ever starts writing lifecycle columns.
+ * Approval is a data-quality decision; publication is an explicit admin
+ * curation decision. These guards fail if an approval path ever starts
+ * writing lifecycle columns.
  */
 const APPROVAL_SOURCES = [
   "app/admin/(ops)/applications/coach-actions.ts",
@@ -34,15 +35,31 @@ describe("approval never auto-publishes", () => {
 
   it("admin lifecycle actions never populate trigger-owned audit fields", () => {
     const source = readFileSync(
-      path.join(ROOT, "app/admin/(ops)/coaches/[coachId]/actions.ts"),
+      path.join(ROOT, "app/admin/(ops)/publicationActions.ts"),
       "utf8"
     );
     expect(/published_at\s*:/.test(source)).toBe(false);
     expect(/published_by_user_id\s*:/.test(source)).toBe(false);
     expect(/selected_at\s*:/.test(source)).toBe(false);
     expect(/selected_by_user_id\s*:/.test(source)).toBe(false);
-    expect(source).toContain('requireAdminPermission("profiles.manage"');
+    expect(source).toContain('hasAdminPermission(account, "profiles.manage")');
     expect(source).not.toContain("service_role");
     expect(source).not.toContain("SERVICE_ROLE");
   });
+});
+
+const CLAIM_SOURCES = [
+  "app/account/coaches/[coachId]/actions.ts",
+  "app/account/venues/[venueId]/actions.ts",
+  "app/admin/(ops)/applications/coach-actions.ts",
+  "app/admin/(ops)/applications/venue-actions.ts",
+];
+
+describe("claiming and approval never auto-publish", () => {
+  for (const relativePath of CLAIM_SOURCES) {
+    it(`${relativePath} does not write publication_status`, () => {
+      const source = readFileSync(path.join(ROOT, relativePath), "utf8");
+      expect(/publication_status\s*:/.test(source)).toBe(false);
+    });
+  }
 });

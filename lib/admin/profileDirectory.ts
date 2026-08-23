@@ -9,10 +9,9 @@ import type {
 
 export const PROFILE_DIRECTORY_FILTERS = [
   "all",
-  "selected",
-  "unselected",
+  "draft",
   "published",
-  "private",
+  "suspended",
   "managed",
   "unclaimed",
   "imported",
@@ -26,10 +25,9 @@ export const PROFILE_DIRECTORY_FILTER_LABELS: Record<
   string
 > = {
   all: "All",
-  selected: "Selected",
-  unselected: "Unselected",
+  draft: "Draft",
   published: "Published",
-  private: "Private",
+  suspended: "Suspended",
   managed: "Managed",
   unclaimed: "Unclaimed",
   imported: "Imported",
@@ -62,7 +60,7 @@ export type ParsedProfileDirectoryParams = {
 
 export type ProfileDirectoryStats = {
   total: number;
-  selected: number;
+  draft: number;
   published: number;
 };
 
@@ -82,10 +80,16 @@ export function parseProfileDirectorySearchParams(raw: {
 }): ParsedProfileDirectoryParams {
   const q = firstParam(raw.q)?.trim() ?? "";
   const filterRaw = firstParam(raw.filter)?.trim();
-  const filter = isProfileDirectoryFilter(filterRaw) ? filterRaw : "all";
+  const filter = normalizeDirectoryFilter(filterRaw);
   const pageNum = Number.parseInt(firstParam(raw.page) ?? "1", 10);
   const page = Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1;
   return { q, filter, page };
+}
+
+function normalizeDirectoryFilter(value: string | undefined): ProfileDirectoryFilter {
+  if (value === "private") return "draft";
+  if (isProfileDirectoryFilter(value)) return value;
+  return "all";
 }
 
 export function profileDirectoryHref(
@@ -136,10 +140,15 @@ export function directoryLaunchLabel(status: LaunchSelectionStatus): string {
   return "Unselected";
 }
 
-export function directoryVisibilityLabel(status: PublicationStatus): string {
+export function directoryStatusLabel(status: PublicationStatus): string {
   if (status === "published") return "Published";
   if (status === "suspended") return "Suspended";
-  return "Private";
+  return "Draft";
+}
+
+/** @deprecated Use directoryStatusLabel — kept for existing tests during rename. */
+export function directoryVisibilityLabel(status: PublicationStatus): string {
+  return directoryStatusLabel(status);
 }
 
 export function directoryAccountLabel(hasAccount: boolean): string {
@@ -161,14 +170,12 @@ export function matchesProfileDirectoryFilter(
   switch (filter) {
     case "all":
       return true;
-    case "selected":
-      return row.launchSelectionStatus === "selected";
-    case "unselected":
-      return row.launchSelectionStatus === "unselected";
+    case "draft":
+      return row.publicationStatus === "private";
     case "published":
       return row.publicationStatus === "published";
-    case "private":
-      return row.publicationStatus === "private";
+    case "suspended":
+      return row.publicationStatus === "suspended";
     case "managed":
       return row.hasAccount;
     case "unclaimed":

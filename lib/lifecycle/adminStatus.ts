@@ -1,9 +1,9 @@
 /**
  * Admin-facing lifecycle presentation for coaches and venues.
  *
- * Verification (is_approved), Account (membership/claim), Launch
- * (launch_selection_status) and Visibility (publication_status) are four
- * independent axes. Approved never implies Published.
+ * Verification (is_approved), Account (membership/claim) and Status
+ * (publication_status) are independent axes. Approved never implies Published.
+ * The database value `private` is shown to admins as Draft.
  */
 
 import {
@@ -34,17 +34,10 @@ export const LAUNCH_SELECTION_ADMIN_LABELS: Record<
 };
 
 export const PUBLICATION_ADMIN_LABELS: Record<PublicationStatus, string> = {
-  private: "Private",
+  private: "Draft",
   published: "Published",
   suspended: "Suspended",
 };
-
-const LAUNCH_SELECTION_TONES: Record<LaunchSelectionStatus, LifecycleBadgeTone> =
-  {
-    unselected: "neutral",
-    selected: "ok",
-    excluded: "bad",
-  };
 
 const PUBLICATION_TONES: Record<PublicationStatus, LifecycleBadgeTone> = {
   private: "neutral",
@@ -84,16 +77,8 @@ export function accountAdminLabel(hasAccount: boolean | null | undefined) {
   return hasAccount ? "Managed" : "Unclaimed";
 }
 
-/**
- * Publishing is deliberate: a profile must be selected for launch first so
- * Launch and Visibility stay independently meaningful.
- */
-export function canPublishForLaunch(launchSelectionStatus: unknown): boolean {
-  return launchSelectionStatusOf(launchSelectionStatus) === "selected";
-}
-
 export type LifecycleSummaryRow = {
-  id: "verification" | "account" | "launch" | "visibility";
+  id: "verification" | "account" | "status";
   label: string;
   value: string;
   tone: LifecycleBadgeTone;
@@ -103,10 +88,10 @@ export type LifecycleSummaryRow = {
 export function buildAdminLifecycleSummary(input: {
   isApproved: boolean | null | undefined;
   hasAccount: boolean | null | undefined;
-  launchSelectionStatus: unknown;
+  launchSelectionStatus?: unknown;
   publicationStatus: unknown;
 }): LifecycleSummaryRow[] {
-  const launch = launchSelectionStatusOf(input.launchSelectionStatus);
+  void input.launchSelectionStatus;
   const publication = publicationStatusOf(input.publicationStatus);
 
   return [
@@ -125,18 +110,11 @@ export function buildAdminLifecycleSummary(input: {
       hint: "Whether someone manages this profile. Not required to publish.",
     },
     {
-      id: "launch",
-      label: "Launch",
-      value: LAUNCH_SELECTION_ADMIN_LABELS[launch],
-      tone: LAUNCH_SELECTION_TONES[launch],
-      hint: "Curation for the launch shortlist. Does not publish on its own.",
-    },
-    {
-      id: "visibility",
-      label: "Visibility",
+      id: "status",
+      label: "Status",
       value: PUBLICATION_ADMIN_LABELS[publication],
       tone: PUBLICATION_TONES[publication],
-      hint: "The only state that controls anonymous public visibility.",
+      hint: "Draft profiles remain hidden until an administrator publishes them.",
     },
   ];
 }

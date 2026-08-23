@@ -140,7 +140,7 @@ function ProfileDirectoryCard({
       <p className="text-sm font-semibold text-primary">{title}</p>
       <p className="mt-3 text-3xl font-bold tracking-tight">{stats.total}</p>
       <p className="mt-1 text-xs text-primary/50">
-        {stats.selected} selected · {stats.published} published
+        {stats.draft} draft · {stats.published} published
       </p>
     </Link>
   );
