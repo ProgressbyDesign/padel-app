@@ -14,7 +14,13 @@ import FormMessage from "./FormMessage";
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-primary/15 bg-white px-3.5 py-3 text-base text-primary outline-none transition placeholder:text-primary/35 focus:border-primary/35 focus:ring-2 focus:ring-primary/10";
 
-export default function SignupForm({ nextPath = "/account" }: { nextPath?: string }) {
+export default function SignupForm({
+  nextPath = "/account",
+  submitLabel = "Create account",
+}: {
+  nextPath?: string;
+  submitLabel?: string;
+}) {
   const [state, formAction] = useActionState<AuthActionState, FormData>(
     signupAction,
     INITIAL_AUTH_ACTION_STATE
@@ -83,7 +89,7 @@ export default function SignupForm({ nextPath = "/account" }: { nextPath?: strin
         />
       </label>
 
-      <AuthSubmitButton idleLabel="Create account" pendingLabel="Creating account…" />
+      <AuthSubmitButton idleLabel={submitLabel} pendingLabel="Creating account…" />
 
       <p className="text-center text-sm text-primary/65">
         Already have an account?{" "}

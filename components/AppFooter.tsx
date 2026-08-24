@@ -4,7 +4,7 @@ import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
 const links = [
   { href: "/about", label: "About Us" },
   { href: "/coaches", label: "Find a coach" },
-  { href: "/signup", label: "Create player account" },
+  { href: "/join/player", label: "Join as a player" },
   { href: "/join", label: "Join as a partner" },
   { href: "/contact", label: "Contact us" },
 ] as const;
