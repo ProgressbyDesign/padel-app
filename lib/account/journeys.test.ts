@@ -37,24 +37,38 @@ describe("player and partner journey pages", () => {
     );
   });
 
-  it("keeps /join partner-specific and points players to /signup", () => {
+  it("keeps /join partner-specific and points players to /join/player", () => {
     const source = read("app/join/page.tsx");
+    expect(source).toContain("PartnerJoinLanding");
     expect(source).toContain("Partner with Padel Pathways");
-    expect(source).toContain("Individual coach");
-    expect(source).toContain("Academy / Venue");
-    expect(source).toContain("Travel Partner");
-    expect(source).toContain('href="/signup"');
-    expect(source).toContain("Create a player account");
     expect(source).not.toContain("claim_existing");
+
+    const landing = read("components/join/PartnerJoinLanding.tsx");
+    expect(landing).toContain("Put your coaching in front of players looking to improve.");
+    expect(landing).toContain('href="/join/player"');
+    expect(landing).toContain("Create a player account");
+
+    const types = read("components/join/PartnerTypeCards.tsx");
+    expect(types).toContain("Individual coach");
+    expect(types).toContain("Academy / Venue");
+    expect(types).toContain("Travel Partner");
+    expect(types).toContain("Coming soon");
+    expect(types).toContain("Apply as a coach");
+    expect(types).toContain("Register your venue / academy");
+    expect(types).toContain("COACH_APPLICATION_PATH");
+    expect(types).toContain("VENUE_APPLICATION_PATH");
+    expect(types).not.toContain("claim_existing");
   });
 
-  it("exposes create player account and join as a partner in public navigation", () => {
+  it("exposes one Join control plus Log in in public navigation", () => {
     const header = read("components/AppHeader.tsx");
-    expect(header).toContain('href="/signup"');
-    expect(header).toContain("Create player account");
-    expect(header).toContain('href="/join"');
-    expect(header).toContain("Join as a partner");
-    expect(header).not.toContain("Join PadelPathways");
+    expect(header).toContain("JoinNavMenu");
+    expect(header).toContain("JoinMobileSection");
+    expect(header).toContain('href="/login"');
+    expect(header).toContain("Log in");
+    expect(header).not.toContain("Create player account");
+    expect(header).not.toContain("Join as a partner");
+    expect(header).not.toContain('href="/signup"');
   });
 
   it("does not show prominent coach/venue start cards on the player dashboard", () => {

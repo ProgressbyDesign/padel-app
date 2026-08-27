@@ -72,7 +72,7 @@ export default function LoginForm({ nextPath, initialError }: LoginFormProps) {
 
       <p className="text-center text-sm text-primary/65">
         New to Padel Pathways?{" "}
-        <Link href="/signup" className="font-semibold text-primary underline underline-offset-4">
+        <Link href="/join/player" className="font-semibold text-primary underline underline-offset-4">
           Create a player account
         </Link>
       </p>

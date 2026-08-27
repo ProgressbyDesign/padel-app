@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import AccountNavMenu from "@/components/AccountNavMenu";
 import PadelPathwaysLogo from "@/components/brand/PadelPathwaysLogo";
+import JoinMobileSection from "@/components/join/JoinMobileSection";
+import JoinNavMenu from "@/components/join/JoinNavMenu";
 import type { AccountNavContext } from "@/lib/workspace/resolve";
 
 const nav = [
@@ -79,27 +81,13 @@ export default function AppHeader({
             <AccountNavMenu account={accountNav} overlay={overlay} />
           ) : (
             <>
+              <JoinNavMenu overlay={overlay} />
               <Link
                 href="/login"
+                data-cta="header-login"
                 className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${linkIdle}`}
               >
                 Log in
-              </Link>
-              <Link
-                href="/join"
-                className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${linkIdle}`}
-              >
-                Join as a partner
-              </Link>
-              <Link
-                href="/signup"
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${
-                  overlay
-                    ? "bg-white text-primary shadow-md hover:bg-white/95"
-                    : "bg-primary text-accent shadow-sm hover:bg-primary/90"
-                }`}
-              >
-                Create player account
               </Link>
             </>
           )}
@@ -149,26 +137,14 @@ export default function AppHeader({
               />
             ) : (
               <>
+                <JoinMobileSection onNavigate={() => setMenuPath(null)} />
                 <Link
                   href="/login"
+                  data-cta="header-login-mobile"
                   onClick={() => setMenuPath(null)}
-                  className="rounded-xl px-4 py-3 text-base font-medium text-primary/75 transition hover:bg-surface"
+                  className="mt-1 rounded-xl px-4 py-3 text-base font-semibold text-primary transition hover:bg-surface"
                 >
                   Log in
-                </Link>
-                <Link
-                  href="/join"
-                  onClick={() => setMenuPath(null)}
-                  className="rounded-xl px-4 py-3 text-base font-medium text-primary/75 transition hover:bg-surface"
-                >
-                  Join as a partner
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setMenuPath(null)}
-                  className="mt-1 rounded-xl bg-primary px-4 py-3 text-center text-base font-semibold text-accent shadow-sm transition hover:bg-primary/90"
-                >
-                  Create player account
                 </Link>
               </>
             )}
