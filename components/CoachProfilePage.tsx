@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ExternalLink, Mail, MapPin, Phone, Star } from "lucide-react";
+import { ArrowLeft, MapPin, Star } from "lucide-react";
 import type { CoachProfileView } from "../lib/coachProfileView";
-import type { Venue } from "../lib/venueFilters";
+import type { PublicVenue } from "../lib/venueFilters";
 import type { PublicVenueAvailabilityGroup } from "../lib/coachAvailability/types";
 import EnquiryButton from "./enquiry/EnquiryButton";
 import VenueCardsWithDistance from "./VenueCardsWithDistance";
@@ -12,7 +12,7 @@ import CoachPublicAvailabilitySection from "./CoachPublicAvailabilitySection";
 
 type CoachProfilePageProps = {
   coach: CoachProfileView;
-  venues: Venue[];
+  venues: PublicVenue[];
   availabilityGroups?: PublicVenueAvailabilityGroup[];
 };
 
@@ -31,8 +31,6 @@ export default function CoachProfilePage({
   const scoreLabel = formatRatingScore(coach.rating.score);
   const hasRating = scoreLabel != null;
   const hasReviews = coach.rating.count != null && coach.rating.count > 0;
-  const hasContact =
-    Boolean(coach.contact.email?.trim()) || Boolean(coach.contact.phone?.trim());
   const locationFull = coach.location.full?.trim() || "";
   const role = coach.role?.trim() || "";
   const gallery =
@@ -330,69 +328,13 @@ export default function CoachProfilePage({
         </section>
       ) : null}
 
-      {coach.socials.length > 0 ? (
-        <section
-          className="mt-10 border-t border-primary/10 pt-10"
-          aria-labelledby="coach-socials-heading"
-        >
-          <h2
-            id="coach-socials-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
-          >
-            Social
-          </h2>
-          <ul className="mt-4 flex flex-wrap gap-3">
-            {coach.socials.map((social) => (
-              <li key={`${social.platform}-${social.url}`}>
-                <a
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/15 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-surface"
-                >
-                  {social.label}
-                  <ExternalLink className="h-3.5 w-3.5 text-primary/45" aria-hidden />
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {hasContact ? (
-        <ul className="mt-10 flex flex-wrap gap-4 border-t border-primary/10 pt-10 text-sm">
-          {coach.contact.email?.trim() ? (
-            <li>
-              <a
-                href={`mailto:${coach.contact.email.trim()}`}
-                className="inline-flex items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
-              >
-                <Mail className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
-                {coach.contact.email.trim()}
-              </a>
-            </li>
-          ) : null}
-          {coach.contact.phone?.trim() ? (
-            <li>
-              <a
-                href={`tel:${coach.contact.phone.trim().replace(/\s+/g, "")}`}
-                className="inline-flex items-center gap-2 font-medium text-primary underline-offset-4 hover:underline"
-              >
-                <Phone className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
-                {coach.contact.phone.trim()}
-              </a>
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-
       <div className="mt-10 rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
-        <h2 className="text-lg font-semibold text-primary">Book a session</h2>
+        <h2 className="text-lg font-semibold text-primary">Send a coaching enquiry</h2>
         <p className="mt-2 text-sm text-primary/65">
-          Send a request to this coach. They will follow up to confirm details.
+          Message this coach through Padel Pathways. They will follow up to confirm details.
         </p>
         <div className="mt-5">
-          <EnquiryButton coachId={coach.id} />
+          <EnquiryButton coachId={coach.id} label="Send a coaching enquiry" />
         </div>
       </div>
     </div>

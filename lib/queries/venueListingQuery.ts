@@ -2,9 +2,16 @@ import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { LISTING_PAGE_SIZE } from "../constants/listings";
 import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { clampPage, listingPageCount } from "../listingUrlParams";
+import {
+  PUBLIC_VENUE_SELECT,
+  VENUE_PUBLIC_PROFILES_TABLE,
+  asPublicRows,
+  type PublicVenueRow,
+} from "../publicProfiles";
 import { applyVenueLocationFilter, applyVenueNameFilter } from "../venueSearchFilters";
 import { createClient } from "../supabase/server";
-import type { FilterState, SortBy, SortDirection, Venue } from "../venueFilters";
+import type { FilterState, PublicVenue, SortBy, SortDirection } from "../venueFilters";
+import { mapPublicVenueRow } from "./mapPublicVenue";
 import { hydrateVenueImages } from "./venueImages";
 
 export type VenueListingQueryInput = {
@@ -19,7 +26,7 @@ export type VenueListingQueryInput = {
 };
 
 export type VenueListingQueryResult = {
-  venues: Venue[];
+  venues: PublicVenue[];
   totalCount: number;
   page: number;
   pageSize: number;
@@ -85,7 +92,9 @@ export async function fetchVenueListingPage(
   const supabase = await createClient();
   const pageSize = input.pageSize ?? LISTING_PAGE_SIZE;
 
-  let countQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+  let countQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id", { count: "exact", head: true });
   countQuery = applyPublishedVenueFilter(countQuery);
   countQuery = applyVenueFilters(countQuery, input.filters);
   const countRes = await countQuery;
@@ -108,10 +117,10 @@ export async function fetchVenueListingPage(
     Number.isFinite(input.nearLat) &&
     Number.isFinite(input.nearLng);
 
-  let venues: Venue[] = [];
+  let venues: PublicVenue[] = [];
 
   if (useDistanceSort) {
-    let idQuery = supabase.from("venues").select("id, lat, lng");
+    let idQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("id, lat, lng");
     idQuery = applyPublishedVenueFilter(idQuery);
     idQuery = applyVenueFilters(idQuery, input.filters);
     const { data: idRows, error: idErr } = await idQuery;
@@ -121,22 +130,26 @@ export async function fetchVenueListingPage(
     const lat0 = input.nearLat!;
     const lng0 = input.nearLng!;
     const asc = input.sortDirection === "asc";
-    const sortedIds = [...(idRows as Pick<Venue, "id" | "lat" | "lng">[])].sort((a, b) => {
+    const sortedIds = [...asPublicRows<Pick<PublicVenue, "id" | "lat" | "lng">>(idRows)].sort((a, b) => {
       const da = venueDistanceScore(a, lat0, lng0);
       const db = venueDistanceScore(b, lat0, lng0);
       return asc ? da - db : db - da;
     });
     const pageIds = sortedIds.slice(from, to + 1).map((r) => r.id);
-    let pageQuery = supabase.from("venues").select("*").in("id", pageIds);
+    let pageQuery = supabase
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
+      .select(PUBLIC_VENUE_SELECT)
+      .in("id", pageIds);
     pageQuery = applyPublishedVenueFilter(pageQuery);
     const { data: pageRows, error: pageErr } = await pageQuery;
     if (pageErr || !pageRows) {
       return { venues: [], totalCount, page, pageSize, totalPages };
     }
-    const byId = new Map(pageRows.map((v) => [String((v as Venue).id), v as Venue]));
-    venues = pageIds.map((id) => byId.get(String(id))).filter((v): v is Venue => v != null);
+    const mapped = asPublicRows<PublicVenueRow>(pageRows).map(mapPublicVenueRow);
+    const byId = new Map(mapped.map((v) => [String(v.id), v]));
+    venues = pageIds.map((id) => byId.get(String(id))).filter((v): v is PublicVenue => v != null);
   } else {
-    let dataQuery = supabase.from("venues").select("*");
+    let dataQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select(PUBLIC_VENUE_SELECT);
     dataQuery = applyPublishedVenueFilter(dataQuery);
     dataQuery = applyVenueFilters(dataQuery, input.filters);
     dataQuery = applyVenueSort(dataQuery, input.sortBy, input.sortDirection);
@@ -147,7 +160,7 @@ export async function fetchVenueListingPage(
       console.warn("[venues] listing page failed:", error.message);
       return { venues: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
     }
-    venues = (data ?? []) as Venue[];
+    venues = asPublicRows<PublicVenueRow>(data).map(mapPublicVenueRow);
   }
 
   const venuesWithImages = await hydrateVenueImages(supabase, venues);
@@ -161,7 +174,7 @@ export async function fetchVenueListingPage(
   };
 }
 
-function venueDistanceScore(v: Venue, lat0: number, lng0: number): number {
+function venueDistanceScore(v: PublicVenue, lat0: number, lng0: number): number {
   const lat = typeof v.lat === "number" ? v.lat : Number(v.lat);
   const lng = typeof v.lng === "number" ? v.lng : Number(v.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;

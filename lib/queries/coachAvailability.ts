@@ -20,12 +20,15 @@ import {
 } from "@/lib/coachAvailability/timezone";
 import {
   PUBLIC_COACH_VENUE_STATUSES,
-  PUBLISHED_STATUS,
 } from "@/lib/lifecycle/constants";
 import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "@/lib/lifecycle/publicationFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "@/lib/publicProfiles";
 import {
   loadAcceptedBlockedRangesForCoach,
   loadPublicAcceptedBlockedRangesForCoach,
@@ -444,25 +447,35 @@ export async function loadPublicCoachAvailability(
 ): Promise<PublicVenueAvailabilityGroup[]> {
   const supabase = await createClient();
 
-  let coachQuery = supabase.from("coaches").select("id").eq("id", coachId);
+  let coachQuery = supabase.from(COACH_PUBLIC_PROFILES_TABLE).select("id").eq("id", coachId);
   coachQuery = applyPublishedCoachFilter(coachQuery);
   const { data: publishedCoach } = await coachQuery.maybeSingle();
   if (!publishedCoach) return [];
 
   const { data: links, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      venue_id,
-      venues!inner ( id, name, city, country )
-    `
-    )
+    .select("id, venue_id")
     .eq("coach_id", coachId)
-    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
-    .eq("venues.publication_status", PUBLISHED_STATUS);
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES]);
 
   if (error || !links?.length) return [];
+
+  const venueIds = [
+    ...new Set(
+      links
+        .map((link) => String((link as { venue_id?: string }).venue_id ?? ""))
+        .filter(Boolean)
+    ),
+  ];
+  const { data: publicVenues } = await supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id, name, city, country")
+    .in("id", venueIds);
+  const venuesById = new Map(
+    ((publicVenues ?? []) as { id: string; name?: string | null; city?: string | null; country?: string | null }[]).map(
+      (venue) => [String(venue.id), venue]
+    )
+  );
 
   const rangeFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const rangeTo = new Date(
@@ -478,11 +491,8 @@ export async function loadPublicCoachAvailability(
 
   for (const link of links as Record<string, unknown>[]) {
     const relationshipId = String(link.id);
-    const venues = link.venues as
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | null;
-    const venue = Array.isArray(venues) ? venues[0] : venues;
+    const venue = venuesById.get(String(link.venue_id));
+    if (!venue) continue;
     const settings = await loadAvailabilitySettings(relationshipId);
     if (!settings?.is_public) continue;
 
@@ -521,35 +531,42 @@ export async function loadPublicVenueCoachAvailability(
 ): Promise<PublicCoachAvailabilityCard[]> {
   const supabase = await createClient();
 
-  let venueQuery = supabase.from("venues").select("id").eq("id", venueId);
+  let venueQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("id").eq("id", venueId);
   venueQuery = applyPublishedVenueFilter(venueQuery);
   const { data: publishedVenue } = await venueQuery.maybeSingle();
   if (!publishedVenue) return [];
 
   const { data: links, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      coaches!inner ( id, name, role, image_url )
-    `
-    )
+    .select("id, coach_id")
     .eq("venue_id", venueId)
-    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
-    .eq("coaches.publication_status", PUBLISHED_STATUS);
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES]);
 
   if (error || !links?.length) return [];
+
+  const coachIds = [
+    ...new Set(
+      links
+        .map((link) => String((link as { coach_id?: string }).coach_id ?? ""))
+        .filter(Boolean)
+    ),
+  ];
+  const { data: publicCoaches } = await supabase
+    .from(COACH_PUBLIC_PROFILES_TABLE)
+    .select("id, name, role, image_url")
+    .in("id", coachIds);
+  const coachesById = new Map(
+    ((publicCoaches ?? []) as { id: string; name?: string | null; role?: string | null; image_url?: string | null }[]).map(
+      (coach) => [String(coach.id), coach]
+    )
+  );
 
   const cards: PublicCoachAvailabilityCard[] = [];
 
   for (const link of links as Record<string, unknown>[]) {
     const relationshipId = String(link.id);
-    const coaches = link.coaches as
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | null;
-    const coach = Array.isArray(coaches) ? coaches[0] : coaches;
+    const coach = coachesById.get(String(link.coach_id));
+    if (!coach) continue;
     const settings = await loadAvailabilitySettings(relationshipId);
     if (!settings?.is_public) continue;
 

@@ -3,14 +3,22 @@ import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "../../../../lib/lifecycle/publicationFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "../../../../lib/publicProfiles";
 import { createClient } from "../../../../lib/supabase/server";
 
 export async function GET() {
   try {
     const supabase = await createClient();
-    let venueQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+    let venueQuery = supabase
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
+      .select("id", { count: "exact", head: true });
     venueQuery = applyPublishedVenueFilter(venueQuery);
-    let coachQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+    let coachQuery = supabase
+      .from(COACH_PUBLIC_PROFILES_TABLE)
+      .select("id", { count: "exact", head: true });
     coachQuery = applyPublishedCoachFilter(coachQuery);
 
     const [venueRes, coachRes] = await Promise.all([venueQuery, coachQuery]);

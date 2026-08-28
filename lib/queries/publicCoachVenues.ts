@@ -5,29 +5,18 @@ import {
   type CoachVenueLinkRow,
   type VenueGeoRow,
 } from "@/lib/coachVenueGeo";
-import { PUBLIC_COACH_VENUE_STATUSES, PUBLISHED_STATUS } from "@/lib/lifecycle/constants";
+import { PUBLIC_COACH_VENUE_STATUSES } from "@/lib/lifecycle/constants";
+import {
+  VENUE_PUBLIC_PROFILES_TABLE,
+  asPublicRows,
+  type PublicVenueRow,
+} from "@/lib/publicProfiles";
 import { createClient } from "@/lib/supabase/server";
-
-const PUBLIC_VENUE_GEO_SELECT = `
-  coach_id,
-  is_primary,
-  venue_id,
-  status,
-  venues!inner (
-    id,
-    name,
-    city,
-    country,
-    lat,
-    lng,
-    publication_status
-  )
-`;
 
 /**
  * Load public coach↔venue relationships for listings, PDP, search, and badges.
- * Requires active relationship + published venue. Does not filter coaches out
- * when they have zero matching venues.
+ * Venue cores come from venue_public_profiles so unpublished/private venue
+ * columns never leak. Does not filter coaches out when they have zero venues.
  */
 export async function loadPublicCoachVenueRelationships(
   coachIds: string[],
@@ -40,20 +29,47 @@ export async function loadPublicCoachVenueRelationships(
   const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(PUBLIC_VENUE_GEO_SELECT)
+    .select("coach_id, is_primary, venue_id, status")
     .in("coach_id", ids)
-    .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
-    .eq("venues.publication_status", PUBLISHED_STATUS);
+    .in("status", [...PUBLIC_COACH_VENUE_STATUSES]);
 
   if (error || !data?.length) return result;
 
+  const venueIds = [
+    ...new Set(
+      data
+        .map((link) => String((link as { venue_id?: string }).venue_id ?? ""))
+        .filter(Boolean)
+    ),
+  ];
+
+  const venuesById = new Map<string, VenueGeoRow>();
+  if (venueIds.length > 0) {
+    const { data: venues } = await supabase
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
+      .select("id, name, city, country, lat, lng")
+      .in("id", venueIds);
+    for (const venue of asPublicRows<PublicVenueRow>(venues)) {
+      venuesById.set(String(venue.id), {
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        country: venue.country,
+        lat: venue.lat,
+        lng: venue.lng,
+      });
+    }
+  }
+
   for (const link of data) {
     const coachId = String((link as { coach_id?: string }).coach_id ?? "");
-    if (!coachId) continue;
+    const venueId = String((link as { venue_id?: string }).venue_id ?? "");
+    const venue = venuesById.get(venueId);
+    if (!coachId || !venue) continue;
     const entry: CoachVenueLinkRow = {
       is_primary: (link as { is_primary?: boolean }).is_primary,
-      venue_id: (link as { venue_id?: string }).venue_id,
-      venues: (link as { venues?: VenueGeoRow | VenueGeoRow[] | null }).venues,
+      venue_id: venueId,
+      venues: venue,
     };
     const list = result.get(coachId) ?? [];
     list.push(entry);

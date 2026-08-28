@@ -1,7 +1,6 @@
 import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import { LISTING_PAGE_SIZE } from "../constants/listings";
 import {
-  COACH_LISTING_SELECT,
   coachesRowsToListingItems,
   playerLevelValueForSkillFilter,
   sortCoachListing,
@@ -13,11 +12,17 @@ import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
 import { PUBLIC_COACH_VENUE_STATUSES } from "../lifecycle/constants";
 import { applyPublishedCoachFilter, applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
 import { clampPage, listingPageCount } from "../listingUrlParams";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  PUBLIC_COACH_SELECT,
+  VENUE_PUBLIC_PROFILES_TABLE,
+  asPublicRows,
+  type PublicCoachRow,
+} from "../publicProfiles";
 import { normalizeSearchKey, searchMatchScore } from "../searchFuzzy";
 import { createClient } from "../supabase/server";
-import type { Coach } from "../coaches";
 import type { Venue } from "../venueFilters";
-import { attachPublicCoachVenueRelationships } from "./publicCoachVenues";
+import { hydratePublicCoachRows } from "./hydratePublicCoaches";
 
 export type CoachListingQueryInput = {
   page: number;
@@ -78,7 +83,7 @@ async function coachIdsMatchingVenueSearch(search: string): Promise<string[]> {
   if (!key) return [];
 
   let venuesQuery = supabase
-    .from("venues")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
     .select("id")
     .ilike("search_key", `%${key}%`);
   venuesQuery = applyPublishedVenueFilter(venuesQuery);
@@ -146,12 +151,55 @@ async function coachIdsMatchingLocationSearch(search: string): Promise<string[]>
   return [...new Set([...venueIds, ...locationIds])];
 }
 
+async function coachIdsMatchingAttributeAudience(
+  input: CoachListingQueryInput
+): Promise<string[] | null> {
+  if (!input.audienceAdults && !input.audienceJuniors) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("coach_attributes")
+    .select("coach_id, audience_adults, audience_juniors");
+  if (error || !data?.length) return [];
+  const ids: string[] = [];
+  for (const row of data) {
+    const adults = Boolean((row as { audience_adults?: boolean }).audience_adults);
+    const juniors = Boolean((row as { audience_juniors?: boolean }).audience_juniors);
+    if (input.audienceAdults && input.audienceJuniors) {
+      if (!adults && !juniors) continue;
+    } else if (input.audienceAdults && !adults) continue;
+    else if (input.audienceJuniors && !juniors) continue;
+    ids.push(String((row as { coach_id: string }).coach_id));
+  }
+  return ids;
+}
+
+async function coachIdsMatchingAttributePlayerLevel(
+  level: CoachSkillLevel
+): Promise<string[]> {
+  const playerLevel = playerLevelValueForSkillFilter(level);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("coach_attributes")
+    .select("coach_id, player_levels");
+  if (error || !data?.length) return [];
+  const ids: string[] = [];
+  for (const row of data) {
+    const levels = (row as { player_levels?: string[] | null }).player_levels ?? [];
+    if (levels.includes(playerLevel)) {
+      ids.push(String((row as { coach_id: string }).coach_id));
+    }
+  }
+  return ids;
+}
+
 function applyCoachFilters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: PostgrestFilterBuilder<any, any, any, any, any>,
   input: CoachListingQueryInput,
   locationCoachIds: string[] | null,
-  goalCoachIds: string[] | null
+  goalCoachIds: string[] | null,
+  audienceCoachIds: string[] | null,
+  levelAttributeIds: string[]
 ) {
   const coachName = (input.coach ?? "").trim();
   const coachKey = coachName ? normalizeSearchKey(coachName) : "";
@@ -174,26 +222,23 @@ function applyCoachFilters(
     query = query.in("id", locationCoachIds);
   }
 
+  if (audienceCoachIds) {
+    if (audienceCoachIds.length === 0) {
+      return { query, empty: true as const };
+    }
+    query = query.in("id", audienceCoachIds);
+  }
+
   if (input.level && input.level !== "all") {
-    const playerLevel = playerLevelValueForSkillFilter(input.level);
-    // Prefer structured player_levels; soft-fallback to legacy coaches.level.
-    query = query.or(
-      `level.eq.${input.level},coach_attributes.player_levels.cs.{"${playerLevel}"}`
-    );
+    if (levelAttributeIds.length > 0) {
+      query = query.or(`level.eq.${input.level},id.in.(${levelAttributeIds.join(",")})`);
+    } else {
+      query = query.eq("level", input.level);
+    }
   }
 
   if (input.travelOnly) {
     query = query.eq("travel_available", true);
-  }
-
-  if (input.audienceAdults && input.audienceJuniors) {
-    query = query.or(
-      "coach_attributes.audience_adults.eq.true,coach_attributes.audience_juniors.eq.true"
-    );
-  } else if (input.audienceAdults) {
-    query = query.eq("coach_attributes.audience_adults", true);
-  } else if (input.audienceJuniors) {
-    query = query.eq("coach_attributes.audience_juniors", true);
   }
 
   return { query, empty: false as const };
@@ -233,10 +278,24 @@ export async function fetchCoachListingPage(
   const coachGoal = (input.coach ?? "").trim();
   const locationCoachIds = location ? await coachIdsMatchingLocationSearch(location) : null;
   const goalCoachIds = coachGoal ? await coachIdsMatchingOutcomeSearch(coachGoal) : null;
+  const audienceCoachIds = await coachIdsMatchingAttributeAudience(input);
+  const levelAttributeIds =
+    input.level && input.level !== "all"
+      ? await coachIdsMatchingAttributePlayerLevel(input.level)
+      : [];
 
-  let countQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  let countQuery = supabase
+    .from(COACH_PUBLIC_PROFILES_TABLE)
+    .select("id", { count: "exact", head: true });
   countQuery = applyPublishedCoachFilter(countQuery);
-  const countFiltered = applyCoachFilters(countQuery, input, locationCoachIds, goalCoachIds);
+  const countFiltered = applyCoachFilters(
+    countQuery,
+    input,
+    locationCoachIds,
+    goalCoachIds,
+    audienceCoachIds,
+    levelAttributeIds
+  );
   if (countFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
@@ -260,9 +319,16 @@ export async function fetchCoachListingPage(
     Number.isFinite(input.nearLat) &&
     Number.isFinite(input.nearLng);
 
-  let dataQuery = supabase.from("coaches").select(COACH_LISTING_SELECT);
+  let dataQuery = supabase.from(COACH_PUBLIC_PROFILES_TABLE).select(PUBLIC_COACH_SELECT);
   dataQuery = applyPublishedCoachFilter(dataQuery);
-  const dataFiltered = applyCoachFilters(dataQuery, input, locationCoachIds, goalCoachIds);
+  const dataFiltered = applyCoachFilters(
+    dataQuery,
+    input,
+    locationCoachIds,
+    goalCoachIds,
+    audienceCoachIds,
+    levelAttributeIds
+  );
   if (dataFiltered.empty) {
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
@@ -282,13 +348,28 @@ export async function fetchCoachListingPage(
     return { coaches: [], totalCount: 0, page: 1, pageSize, totalPages: 1 };
   }
 
-  const rows = (data ?? []) as Coach[];
-  const withPublicVenues = await attachPublicCoachVenueRelationships(rows, supabase);
-  let venuesQuery = supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  const cores = asPublicRows<PublicCoachRow>(data);
+  const rows = await hydratePublicCoachRows(supabase, cores);
+  let venuesQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id, city, country, lat, lng")
+    .limit(500);
   venuesQuery = applyPublishedVenueFilter(venuesQuery);
   const venuesRes = await venuesQuery;
-  const venues = (venuesRes.data ?? []) as Venue[];
-  const hydrated = hydrateCoachVenueEmbeds(withPublicVenues, venues);
+  const venues = asPublicRows<{
+    id?: string;
+    city?: string | null;
+    country?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  }>(venuesRes.data).map((row) => ({
+    id: String(row.id),
+    city: row.city,
+    country: row.country,
+    lat: row.lat,
+    lng: row.lng,
+  })) as Venue[];
+  const hydrated = hydrateCoachVenueEmbeds(rows, venues);
   let coaches = coachesRowsToListingItems(hydrated);
 
   if (useDistanceSort) {

@@ -1,5 +1,5 @@
-import type { Coach } from "../lib/coaches";
-import type { Venue } from "../lib/venueFilters";
+import type { PublicCoachCard } from "../lib/coaches";
+import type { PublicVenue } from "../lib/venueFilters";
 import type { PublicCoachAvailabilityCard } from "../lib/coachAvailability/types";
 import EnquiryButton from "./enquiry/EnquiryButton";
 import { getVenueDescriptionForPdp } from "../lib/venueDetailHelpers";
@@ -10,7 +10,7 @@ import CourtDetailsSection from "./venue-detail/CourtDetailsSection";
 import ExpandableDescription from "./venue-detail/ExpandableDescription";
 import FacilitiesGrid from "./venue-detail/FacilitiesGrid";
 import QuickFacts from "./venue-detail/QuickFacts";
-import VenueContactSection from "./venue-detail/VenueContactSection";
+import VenueInfoSection from "./venue-detail/VenueInfoSection";
 import ReviewsSection from "./venue-detail/ReviewsSection";
 import VenueGallery from "./venue-detail/VenueGallery";
 import VenueHeader from "./venue-detail/VenueHeader";
@@ -18,9 +18,9 @@ import VenueMapSection from "./venue-detail/VenueMapSection";
 import VenuePublicCoachAvailabilitySection from "./VenuePublicCoachAvailabilitySection";
 
 type VenueDetailPageProps = {
-  venue: Venue;
-  similarVenues: Venue[];
-  coaches?: Coach[];
+  venue: PublicVenue;
+  similarVenues: PublicVenue[];
+  coaches?: PublicCoachCard[];
   availabilityCards?: PublicCoachAvailabilityCard[];
 };
 
@@ -58,7 +58,7 @@ export default function VenueDetailPage({
               cards={availabilityCards}
               hasCoaches={hasCoaches}
             />
-            <VenueContactSection venue={venue} />
+            <VenueInfoSection venue={venue} />
             <ReviewsSection venue={venue} />
             <VenueMapSection venue={venue} />
           </div>

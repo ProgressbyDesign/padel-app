@@ -4,11 +4,18 @@ import {
 } from "../coachListing";
 import { hydrateCoachVenueEmbeds } from "../hydrateCoachVenues";
 import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
+import {
+  PUBLIC_VENUE_SELECT,
+  VENUE_PUBLIC_PROFILES_TABLE,
+  asPublicRows,
+  type PublicVenueRow,
+} from "../publicProfiles";
 import { createClient } from "../supabase/server";
-import type { Venue } from "../venueFilters";
+import type { PublicVenue, Venue } from "../venueFilters";
 import { TOP_RATED_MIN_SCORE, TOP_RATED_SECTION_LIMIT } from "../constants/listings";
 import { fetchCoachRowsFromSupabase } from "./coachRows";
 import { hydrateVenueImages } from "./venueImages";
+import { mapPublicVenueRow } from "./mapPublicVenue";
 
 function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): number {
   if (b.rating !== a.rating) return b.rating - a.rating;
@@ -21,14 +28,17 @@ function sortByRatingThenReviews(a: CoachListingItem, b: CoachListingItem): numb
  */
 export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]> {
   const supabase = await createClient();
-  let venuesQuery = supabase.from("venues").select("id, city, country, lat, lng").limit(500);
+  let venuesQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id, city, country, lat, lng")
+    .limit(500);
   venuesQuery = applyPublishedVenueFilter(venuesQuery);
   const [venuesRes, coachResult] = await Promise.all([
     venuesQuery,
     fetchCoachRowsFromSupabase(200),
   ]);
 
-  const venues = (venuesRes.data ?? []) as Venue[];
+  const venues = asPublicRows<Venue>(venuesRes.data);
   const hydrated = hydrateCoachVenueEmbeds(coachResult.rows, venues);
   const sorted = coachesRowsToListingItems(hydrated).sort(sortByRatingThenReviews);
 
@@ -40,11 +50,11 @@ export async function fetchTopRatedCoachesForHome(): Promise<CoachListingItem[]>
 /**
  * Top-rated venues for homepage: rating DESC, capped.
  */
-export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
+export async function fetchTopRatedVenuesForHome(): Promise<PublicVenue[]> {
   const supabase = await createClient();
   let strictQuery = supabase
-    .from("venues")
-    .select("*")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select(PUBLIC_VENUE_SELECT)
     .gte("rating", TOP_RATED_MIN_SCORE)
     .order("rating", { ascending: false })
     .limit(TOP_RATED_SECTION_LIMIT);
@@ -52,7 +62,9 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
   const strict = await strictQuery;
 
   const strictRows =
-    !strict.error && strict.data?.length ? (strict.data as Venue[]) : [];
+    !strict.error && strict.data?.length
+      ? asPublicRows<PublicVenueRow>(strict.data).map(mapPublicVenueRow)
+      : [];
 
   if (strictRows.length > 0) {
     return hydrateVenueImages(
@@ -62,8 +74,8 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
   }
 
   let relaxedQuery = supabase
-    .from("venues")
-    .select("*")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select(PUBLIC_VENUE_SELECT)
     .order("rating", { ascending: false })
     .limit(TOP_RATED_SECTION_LIMIT);
   relaxedQuery = applyPublishedVenueFilter(relaxedQuery);
@@ -73,6 +85,6 @@ export async function fetchTopRatedVenuesForHome(): Promise<Venue[]> {
 
   return hydrateVenueImages(
     supabase,
-    (relaxed.data as Venue[]).slice(0, TOP_RATED_SECTION_LIMIT)
+    asPublicRows<PublicVenueRow>(relaxed.data).map(mapPublicVenueRow).slice(0, TOP_RATED_SECTION_LIMIT)
   );
 }

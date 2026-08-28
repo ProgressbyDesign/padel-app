@@ -6,6 +6,7 @@ import {
   type PadelCountry,
 } from "../padelCountries";
 import { applyPublishedVenueFilter } from "../lifecycle/publicationFilters";
+import { VENUE_PUBLIC_PROFILES_TABLE } from "../publicProfiles";
 import { createClient } from "../supabase/server";
 
 type VenueGeoRow = {
@@ -23,7 +24,7 @@ function parseCoord(v: number | string | null | undefined): number | null {
 export async function fetchPadelCountries(): Promise<PadelCountry[]> {
   const supabase = await createClient();
   let venueQuery = supabase
-    .from("venues")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
     .select("country, lat, lng")
     .not("country", "is", null)
     .limit(3000);

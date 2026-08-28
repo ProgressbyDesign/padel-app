@@ -23,6 +23,10 @@ import {
   loadAvailabilitySettings,
 } from "@/lib/queries/coachAvailability";
 import { requireAdminPermission } from "@/lib/auth/adminSession";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "@/lib/publicProfiles";
 import { createClient } from "@/lib/supabase/server";
 
 export {
@@ -37,7 +41,7 @@ const PRICING_SOURCES = new Set<PricingSource>([
   "exception_override",
 ]);
 
-const BOOKING_SELECT = `
+const BOOKING_CORE_SELECT = `
   id,
   coach_venue_id,
   coach_id,
@@ -59,7 +63,12 @@ const BOOKING_SELECT = `
   cancelled_at,
   completed_at,
   created_at,
-  updated_at,
+  updated_at
+`;
+
+/** Manager/admin embed. Players must not use this after base-table lockdown. */
+const BOOKING_MANAGER_SELECT = `
+  ${BOOKING_CORE_SELECT},
   coaches (
     id,
     name,
@@ -156,16 +165,7 @@ export async function validateBookableSlot(input: {
   const supabase = await createClient();
   const { data: link, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      venue_id,
-      status,
-      coaches ( id, name, role, image_url, price_from ),
-      venues ( id, name, city, country )
-    `
-    )
+    .select("id, coach_id, venue_id, status")
     .eq("id", input.relationshipId)
     .eq("coach_id", input.coachId)
     .maybeSingle();
@@ -175,19 +175,26 @@ export async function validateBookableSlot(input: {
   const settings = await loadAvailabilitySettings(input.relationshipId);
   if (!settings?.is_public) return null;
 
-  const [rules, exceptions] = await Promise.all([
+  const [rules, exceptions, coachRes, venueRes] = await Promise.all([
     loadAvailabilityRules(input.relationshipId),
     loadAvailabilityExceptions(input.relationshipId),
+    supabase
+      .from(COACH_PUBLIC_PROFILES_TABLE)
+      .select("id, name, role, image_url, price_from")
+      .eq("id", input.coachId)
+      .maybeSingle(),
+    supabase
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
+      .select("id, name, city, country")
+      .eq("id", String(link.venue_id))
+      .maybeSingle(),
   ]);
 
-  const coach = one(
-    link.coaches as Record<string, unknown> | Record<string, unknown>[] | null
-  );
-  const venue = one(
-    link.venues as Record<string, unknown> | Record<string, unknown>[] | null
-  );
+  const coach = coachRes.data;
+  const venue = venueRes.data;
+  if (!coach || !venue) return null;
   const venueId = String(link.venue_id);
-  const venueName = String(venue?.name ?? "Venue");
+  const venueName = String(venue.name ?? "Venue");
 
   const rangeStart = new Date(input.startsAt);
   if (Number.isNaN(rangeStart.getTime())) return null;
@@ -236,17 +243,102 @@ export async function validateBookableSlot(input: {
   };
 }
 
+async function attachPublicBookingParties(
+  bookings: CoachBookingRequest[]
+): Promise<CoachBookingRequest[]> {
+  if (bookings.length === 0) return bookings;
+  const supabase = await createClient();
+  const coachIds = [...new Set(bookings.map((row) => row.coach_id))];
+  const venueIds = [...new Set(bookings.map((row) => row.venue_id))];
+
+  const [{ data: coaches }, { data: venues }] = await Promise.all([
+    supabase
+      .from(COACH_PUBLIC_PROFILES_TABLE)
+      .select("id, name, role, image_url, price_from")
+      .in("id", coachIds),
+    supabase
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
+      .select("id, name, city, country")
+      .in("id", venueIds),
+  ]);
+
+  const coachById = new Map(
+    (coaches ?? []).map((row) => [
+      String((row as { id: string }).id),
+      row as Record<string, unknown>,
+    ])
+  );
+  const venueById = new Map(
+    (venues ?? []).map((row) => [
+      String((row as { id: string }).id),
+      row as Record<string, unknown>,
+    ])
+  );
+
+  return bookings.map((booking) => {
+    const coach = coachById.get(booking.coach_id);
+    const venue = venueById.get(booking.venue_id);
+    return {
+      ...booking,
+      coach: coach
+        ? {
+            id: String(coach.id),
+            name: (coach.name as string | null) ?? null,
+            role: (coach.role as string | null) ?? null,
+            image_url: (coach.image_url as string | null) ?? null,
+            price_from:
+              coach.price_from == null ? null : Number(coach.price_from),
+            email: null,
+            phone: null,
+          }
+        : booking.coach,
+      venue: venue
+        ? {
+            id: String(venue.id),
+            name: (venue.name as string | null) ?? null,
+            city: (venue.city as string | null) ?? null,
+            country: (venue.country as string | null) ?? null,
+          }
+        : booking.venue,
+    };
+  });
+}
+
+async function overlayManagedCoachContact(
+  booking: CoachBookingRequest
+): Promise<CoachBookingRequest> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("coaches")
+    .select("email, phone")
+    .eq("id", booking.coach_id)
+    .maybeSingle();
+  if (!data || !booking.coach) return booking;
+  return {
+    ...booking,
+    coach: {
+      ...booking.coach,
+      email: (data.email as string | null) ?? null,
+      phone: (data.phone as string | null) ?? null,
+    },
+  };
+}
+
 export async function loadBookingById(
   bookingId: string
 ): Promise<CoachBookingRequest | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_booking_requests")
-    .select(BOOKING_SELECT)
+    .select(BOOKING_CORE_SELECT)
     .eq("id", bookingId)
     .maybeSingle();
   if (error || !data) return null;
-  return asCoachBookingRequest(data as Record<string, unknown>);
+  const [hydrated] = await attachPublicBookingParties([
+    asCoachBookingRequest(data as Record<string, unknown>),
+  ]);
+  if (!hydrated) return null;
+  return overlayManagedCoachContact(hydrated);
 }
 
 export async function loadPlayerBookings(
@@ -255,7 +347,7 @@ export async function loadPlayerBookings(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_booking_requests")
-    .select(BOOKING_SELECT)
+    .select(BOOKING_CORE_SELECT)
     .eq("requester_user_id", userId)
     .order("starts_at", { ascending: true });
   if (error) {
@@ -264,7 +356,9 @@ export async function loadPlayerBookings(
     }
     throw new Error("Unable to load bookings.");
   }
-  return ((data ?? []) as Record<string, unknown>[]).map(asCoachBookingRequest);
+  return attachPublicBookingParties(
+    ((data ?? []) as Record<string, unknown>[]).map(asCoachBookingRequest)
+  );
 }
 
 export async function loadCoachBookings(
@@ -273,7 +367,7 @@ export async function loadCoachBookings(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_booking_requests")
-    .select(BOOKING_SELECT)
+    .select(BOOKING_MANAGER_SELECT)
     .eq("coach_id", coachId)
     .order("starts_at", { ascending: true });
   if (error) {
@@ -298,7 +392,7 @@ export async function listAdminBookings(
   const supabase = await createClient();
   let query = supabase
     .from("coach_booking_requests")
-    .select(BOOKING_SELECT)
+    .select(BOOKING_MANAGER_SELECT)
     .order("created_at", { ascending: false })
     .limit(200);
 

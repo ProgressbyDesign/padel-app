@@ -16,6 +16,12 @@ import type {
   CoachVenueSearchVenue,
   CoachVenueVenueSummary,
 } from "@/lib/coachVenues/types";
+import { normalizeEmbeddedVenue } from "@/lib/coachVenueGeo";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "@/lib/publicProfiles";
+import { loadPublicCoachVenueRelationships } from "@/lib/queries/publicCoachVenues";
 import { createClient } from "@/lib/supabase/server";
 
 const RELATIONSHIP_SELECT = `
@@ -273,7 +279,7 @@ export async function searchVenuesForCoachRelationship(
     await Promise.all([
       supabase.auth.getClaims(),
       supabase
-        .from("venues")
+        .from(VENUE_PUBLIC_PROFILES_TABLE)
         .select("id, name, city, country, image_url")
         .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
         .order("name", { ascending: true })
@@ -290,7 +296,7 @@ export async function searchVenuesForCoachRelationship(
 
   if (error) {
     const fallback = await supabase
-      .from("venues")
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
       .select("id, name, city, country, image_url")
       .ilike("name", pattern)
       .order("name", { ascending: true })
@@ -354,20 +360,8 @@ export async function searchCoachesForVenueRelationship(
     await Promise.all([
       supabase.auth.getClaims(),
       supabase
-        .from("coaches")
-        .select(
-          `
-        id,
-        name,
-        role,
-        image_url,
-        coach_venues (
-          is_primary,
-          status,
-          venues ( city, country )
-        )
-      `
-        )
+        .from(COACH_PUBLIC_PROFILES_TABLE)
+        .select("id, name, role, image_url")
         .ilike("name", pattern)
         .order("name", { ascending: true })
         .limit(12),
@@ -382,10 +376,9 @@ export async function searchCoachesForVenueRelationship(
 
   const userId =
     typeof authData?.claims?.sub === "string" ? authData.claims.sub : null;
-  const managedIds = await managedCoachIdsForUser(
-    userId,
-    (coaches ?? []).map((row) => String(row.id))
-  );
+  const coachIds = (coaches ?? []).map((row) => String(row.id));
+  const managedIds = await managedCoachIdsForUser(userId, coachIds);
+  const venuesByCoach = await loadPublicCoachVenueRelationships(coachIds, supabase);
 
   const byCoach = new Map(
     (links ?? []).map((link) => [
@@ -399,27 +392,15 @@ export async function searchCoachesForVenueRelationship(
   return (coaches ?? [])
     .filter((coach) => coach.name?.trim())
     .map((coach) => {
-      const venueLinks = (coach.coach_venues ?? []) as {
-        is_primary?: boolean | null;
-        status?: string | null;
-        venues?:
-          | { city: string | null; country: string | null }
-          | { city: string | null; country: string | null }[]
-          | null;
-      }[];
-      const publicLinks = venueLinks.filter((link) =>
-        (PUBLIC_COACH_VENUE_STATUSES as readonly string[]).includes(
-          String(link.status ?? "")
-        )
-      );
+      const coachId = String(coach.id);
+      const venueLinks = venuesByCoach.get(coachId) ?? [];
       const primary =
-        publicLinks.find((link) => link.is_primary) ?? publicLinks[0] ?? null;
-      const venue = one(primary?.venues ?? null);
+        venueLinks.find((link) => link.is_primary) ?? venueLinks[0] ?? null;
+      const venue = normalizeEmbeddedVenue(primary?.venues);
       const location = [venue?.city, venue?.country]
         .map((part) => part?.trim())
         .filter(Boolean)
         .join(", ");
-      const coachId = String(coach.id);
 
       return {
         id: coachId,

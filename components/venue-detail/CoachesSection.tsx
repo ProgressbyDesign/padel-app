@@ -1,10 +1,10 @@
 import Link from "next/link";
 import CoachImage from "../CoachImage";
-import type { Coach } from "../../lib/coaches";
+import type { PublicCoachCard } from "../../lib/coaches";
 import { coachListingProfileHref } from "../../lib/coachListing";
 
 type CoachesSectionProps = {
-  coaches: Coach[];
+  coaches: PublicCoachCard[];
 };
 
 export default function CoachesSection({ coaches }: CoachesSectionProps) {
