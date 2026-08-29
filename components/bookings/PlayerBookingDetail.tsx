@@ -27,9 +27,6 @@ export default function PlayerBookingDetail({
   const canCancel =
     booking.status === "requested" || booking.status === "accepted";
   const level = playerLevelLabel(booking.player_level);
-  const showCoachContact =
-    booking.status === "accepted" &&
-    Boolean(booking.coach?.email?.trim() || booking.coach?.phone?.trim());
 
   return (
     <div className="space-y-6">
@@ -143,39 +140,6 @@ export default function PlayerBookingDetail({
         ) : null}
         <p className="mt-5 text-sm text-primary/60">{PAYMENT_COPY}</p>
       </section>
-
-      {showCoachContact ? (
-        <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-          <h2 className="text-lg font-bold text-primary">Coach contact</h2>
-          <p className="mt-1 text-sm text-primary/60">
-            Public contact details from the coach profile.
-          </p>
-          <ul className="mt-4 space-y-2 text-sm text-primary">
-            {booking.coach?.email ? (
-              <li>
-                Email:{" "}
-                <a
-                  href={`mailto:${booking.coach.email}`}
-                  className="font-semibold underline-offset-2 hover:underline"
-                >
-                  {booking.coach.email}
-                </a>
-              </li>
-            ) : null}
-            {booking.coach?.phone ? (
-              <li>
-                Phone:{" "}
-                <a
-                  href={`tel:${booking.coach.phone}`}
-                  className="font-semibold underline-offset-2 hover:underline"
-                >
-                  {booking.coach.phone}
-                </a>
-              </li>
-            ) : null}
-          </ul>
-        </section>
-      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <Link

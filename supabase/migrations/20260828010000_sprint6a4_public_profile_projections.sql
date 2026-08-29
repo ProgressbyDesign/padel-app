@@ -73,8 +73,8 @@ where venues.publication_status = 'published';
 comment on view public.venue_public_profiles is
   'Public API for published venues. Owner-privileged read of public.venues; exposes location and profile fields, not phone/website/crawler/audit metadata.';
 
-revoke all on table public.coach_public_profiles from public;
-revoke all on table public.venue_public_profiles from public;
+revoke all on table public.coach_public_profiles from public, anon, authenticated;
+revoke all on table public.venue_public_profiles from public, anon, authenticated;
 
 grant select on table public.coach_public_profiles to anon, authenticated;
 grant select on table public.venue_public_profiles to anon, authenticated;
@@ -144,8 +144,8 @@ where exists (
 comment on view public.venue_relationship_identities is
   'Authenticated identity for venues currently linked to the caller''s coaches (unverified/pending/active). Name/city/country/image only. Not a public API and not a base-row grant.';
 
-revoke all on table public.coach_relationship_identities from public;
-revoke all on table public.venue_relationship_identities from public;
+revoke all on table public.coach_relationship_identities from public, anon, authenticated;
+revoke all on table public.venue_relationship_identities from public, anon, authenticated;
 
 grant select on table public.coach_relationship_identities to authenticated;
 grant select on table public.venue_relationship_identities to authenticated;

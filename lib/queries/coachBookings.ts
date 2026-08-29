@@ -22,7 +22,8 @@ import {
   loadAvailabilityRules,
   loadAvailabilitySettings,
 } from "@/lib/queries/coachAvailability";
-import { requireAdminPermission } from "@/lib/auth/adminSession";
+import { getAdminAccount, requireAdminPermission } from "@/lib/auth/adminSession";
+import { hasAdminPermission } from "@/lib/admin/permissions";
 import {
   COACH_PUBLIC_PROFILES_TABLE,
   VENUE_PUBLIC_PROFILES_TABLE,
@@ -361,6 +362,25 @@ async function overlayManagedCoachContact(
   };
 }
 
+async function callerManagesCoach(coachId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (error || typeof userId !== "string" || !userId) return false;
+
+  const { data: membership } = await supabase
+    .from("coach_memberships")
+    .select("coach_id")
+    .eq("coach_id", coachId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (membership) return true;
+
+  const admin = await getAdminAccount();
+  return hasAdminPermission(admin, "bookings.read");
+}
+
+/** Player/generic booking read. Never loads coaches.email/phone. */
 export async function loadBookingById(
   bookingId: string
 ): Promise<CoachBookingRequest | null> {
@@ -374,8 +394,20 @@ export async function loadBookingById(
   const [hydrated] = await attachPublicBookingParties([
     asCoachBookingRequest(data as Record<string, unknown>),
   ]);
-  if (!hydrated) return null;
-  const [withVenue] = await attachWorkspaceVenueParties([hydrated]);
+  return hydrated ?? null;
+}
+
+/**
+ * Coach-manager/admin booking read. Verifies membership or bookings.read
+ * before overlaying private coach contact. Do not use for player routes.
+ */
+export async function loadManagedCoachBookingById(
+  bookingId: string
+): Promise<CoachBookingRequest | null> {
+  const booking = await loadBookingById(bookingId);
+  if (!booking) return null;
+  if (!(await callerManagesCoach(booking.coach_id))) return null;
+  const [withVenue] = await attachWorkspaceVenueParties([booking]);
   if (!withVenue) return null;
   return overlayManagedCoachContact(withVenue);
 }

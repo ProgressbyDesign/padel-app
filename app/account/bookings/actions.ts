@@ -185,9 +185,7 @@ export async function createCoachBookingRequest(input: {
       subject: "Your coaching session request was sent",
       html: buildBookingRequestPlayerEmailHtml(booking),
     });
-    const coachEmail =
-      booking.coach?.email?.trim() ||
-      (await resolveCoachNotificationEmail(booking.coach_id));
+    const coachEmail = await resolveCoachNotificationEmail(booking.coach_id);
     if (coachEmail) {
       void sendBookingEmail({
         to: coachEmail,
@@ -313,10 +311,9 @@ async function mutateBookingStatus(input: {
         html: buildBookingCancelledEmailHtml(updated, "player"),
       });
       const coachEmail =
-        updated.coach?.email?.trim() ||
-        (input.as === "player"
+        input.as === "player"
           ? await resolveCoachNotificationEmail(updated.coach_id)
-          : null);
+          : null;
       if (coachEmail && input.as === "player") {
         void sendBookingEmail({
           to: coachEmail,

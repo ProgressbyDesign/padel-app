@@ -35,12 +35,17 @@ describe("public profile projections", () => {
 
   it("grants SELECT only on the public views", () => {
     expect(migrationA).toContain(
+      "revoke all on table public.coach_public_profiles from public, anon, authenticated"
+    );
+    expect(migrationA).toContain(
+      "revoke all on table public.venue_public_profiles from public, anon, authenticated"
+    );
+    expect(migrationA).toContain(
       "grant select on table public.coach_public_profiles to anon, authenticated"
     );
     expect(migrationA).toContain(
       "grant select on table public.venue_public_profiles to anon, authenticated"
     );
-    expect(migrationA).toContain("revoke all on table public.coach_public_profiles from public");
     expect(migrationA).not.toMatch(/grant insert/i);
     expect(migrationA).not.toMatch(/grant update/i);
   });
@@ -53,6 +58,12 @@ describe("public profile projections", () => {
     );
     expect(migrationA).toContain(
       "grant select on table public.venue_relationship_identities to authenticated"
+    );
+    expect(migrationA).toContain(
+      "revoke all on table public.coach_relationship_identities from public, anon, authenticated"
+    );
+    expect(migrationA).toContain(
+      "revoke all on table public.venue_relationship_identities from public, anon, authenticated"
     );
     expect(migrationA).not.toMatch(
       /grant select on table public\.coach_relationship_identities to anon/i
@@ -346,6 +357,42 @@ describe("player booking payloads stay on the public projection", () => {
     expect(source).toContain("BOOKING_COACH_MANAGER_SELECT");
     expect(source).toContain("attachWorkspaceVenueParties");
     expect(source).toContain("loadVenueRelationshipIdentities");
+  });
+
+  it("player booking detail never overlays coach contact even if base RLS would allow it", () => {
+    const source = read("lib/queries/coachBookings.ts");
+    const playerLoader = source.slice(
+      source.indexOf("export async function loadBookingById"),
+      source.indexOf("export async function loadManagedCoachBookingById")
+    );
+    expect(playerLoader).toContain("attachPublicBookingParties");
+    expect(playerLoader).not.toContain("overlayManagedCoachContact");
+    expect(playerLoader).not.toMatch(/\.from\(\s*["']coaches["']\s*\)/);
+    expect(playerLoader).not.toContain("email, phone");
+
+    const managedLoader = source.slice(
+      source.indexOf("export async function loadManagedCoachBookingById"),
+      source.indexOf("export async function loadPlayerBookings")
+    );
+    expect(managedLoader).toContain("callerManagesCoach");
+    expect(managedLoader).toContain("overlayManagedCoachContact");
+    expect(source).toContain('.from("coach_memberships")');
+
+    const page = read("app/account/bookings/[bookingId]/page.tsx");
+    expect(page).toContain("loadBookingById");
+    expect(page).not.toContain("loadManagedCoachBookingById");
+
+    const actions = read("app/account/bookings/actions.ts");
+    expect(actions).toContain("loadBookingById");
+    expect(actions).toContain("resolveCoachNotificationEmail");
+    expect(actions).not.toContain("loadManagedCoachBookingById");
+    expect(actions).not.toMatch(/booking\.coach\?\.email/);
+    expect(actions).not.toMatch(/updated\.coach\?\.email/);
+
+    const detail = read("components/bookings/PlayerBookingDetail.tsx");
+    expect(detail).not.toContain("mailto:");
+    expect(detail).not.toContain("tel:");
+    expect(detail).not.toContain("Coach contact");
   });
 });
 
