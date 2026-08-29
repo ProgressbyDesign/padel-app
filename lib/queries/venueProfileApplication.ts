@@ -11,6 +11,7 @@ import type {
   VenueProfileApplicationRow,
 } from "@/lib/venueProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
+import { VENUE_PUBLIC_PROFILES_TABLE } from "@/lib/publicProfiles";
 
 const APPLICATION_SELECT = `
   id,
@@ -84,12 +85,19 @@ async function loadTargetVenue(
   if (!venueId) return null;
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("venues")
-    .select("id, name, city, country, image_url, website")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id, name, city, country, image_url")
     .eq("id", venueId)
     .maybeSingle();
   if (error || !data) return null;
-  return data as VenueApplicationTargetVenue;
+  return {
+    id: String(data.id),
+    name: (data.name as string | null) ?? null,
+    city: (data.city as string | null) ?? null,
+    country: (data.country as string | null) ?? null,
+    image_url: (data.image_url as string | null) ?? null,
+    website: null,
+  };
 }
 
 export async function loadCurrentVenueApplication(): Promise<VenueApplicationWithVenue | null> {

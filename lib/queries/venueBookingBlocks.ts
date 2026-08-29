@@ -7,6 +7,7 @@ import type {
 } from "@/lib/venueOperations/types";
 import { createClient } from "@/lib/supabase/server";
 import { loadManagedVenueShell } from "@/lib/queries/managedVenueShell";
+import { loadCoachRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 
 const BLOCK_SELECT = `
   booking_request_id,
@@ -82,19 +83,15 @@ export async function loadVenueBookingBlocksWithCoaches(
   if (blocks.length === 0) return [];
 
   const coachIds = [...new Set(blocks.map((b) => b.coach_id))];
-  const supabase = await createClient();
-  const { data: coaches } = await supabase
-    .from("coaches")
-    .select("id, name, role, image_url")
-    .in("id", coachIds);
+  const identities = await loadCoachRelationshipIdentities(coachIds);
 
   const coachMap = new Map(
-    (coaches ?? []).map((c) => [
-      String(c.id),
+    [...identities.entries()].map(([id, coach]) => [
+      id,
       {
-        name: (c.name as string | null) ?? null,
-        role: (c.role as string | null) ?? null,
-        image_url: (c.image_url as string | null) ?? null,
+        name: coach.name,
+        role: coach.role,
+        image_url: coach.image_url,
       },
     ])
   );
@@ -123,11 +120,8 @@ export async function loadVenueBookingBlockDetail(
   const block = mapVenueBookingBlock(data as Record<string, unknown>);
   if (!block) return null;
 
-  const { data: coach } = await supabase
-    .from("coaches")
-    .select("id, name, role, image_url")
-    .eq("id", block.coach_id)
-    .maybeSingle();
+  const identities = await loadCoachRelationshipIdentities([block.coach_id]);
+  const coach = identities.get(block.coach_id) ?? null;
 
-  return attachCoachToBlock(block, coach ?? null);
+  return attachCoachToBlock(block, coach);
 }

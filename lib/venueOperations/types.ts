@@ -38,7 +38,6 @@ export type CoachAvailabilityHealth = {
   coachName: string;
   coachRole: string | null;
   coachImageUrl: string | null;
-  coachEmail: string | null;
   state: CoachAvailabilityHealthState;
   settingsConfigured: boolean;
   isPublic: boolean;

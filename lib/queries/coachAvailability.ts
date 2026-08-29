@@ -34,6 +34,10 @@ import {
   loadPublicAcceptedBlockedRangesForCoach,
   loadRequestedCountsForRelationship,
 } from "@/lib/queries/coachBookingBlocks";
+import {
+  loadCoachRelationshipIdentities,
+  loadVenueRelationshipIdentities,
+} from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
 const SETTINGS_SELECT = `
@@ -187,14 +191,7 @@ export async function loadActiveCoachVenuesForCoach(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      venue_id,
-      venues ( id, name, city, country )
-    `
-    )
+    .select("id, coach_id, venue_id")
     .eq("coach_id", coachId)
     .eq("status", "active")
     .order("is_primary", { ascending: false });
@@ -203,19 +200,21 @@ export async function loadActiveCoachVenuesForCoach(
     throw new Error(`Unable to load active venues: ${error.message}`);
   }
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => {
-    const venues = row.venues as
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | null;
-    const venue = Array.isArray(venues) ? venues[0] : venues;
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const identities = await loadVenueRelationshipIdentities(
+    rows.map((row) => String(row.venue_id)),
+    supabase
+  );
+
+  return rows.map((row) => {
+    const venue = identities.get(String(row.venue_id));
     return {
       relationshipId: String(row.id),
       coachId: String(row.coach_id),
       venueId: String(row.venue_id),
-      venueName: String(venue?.name ?? "Venue"),
-      city: (venue?.city as string | null) ?? null,
-      country: (venue?.country as string | null) ?? null,
+      venueName: venue?.name?.trim() || "Venue",
+      city: venue?.city ?? null,
+      country: venue?.country ?? null,
     };
   });
 }
@@ -227,32 +226,24 @@ export async function loadActiveCoachVenueForPair(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      venue_id,
-      status,
-      venues ( id, name, city, country )
-    `
-    )
+    .select("id, coach_id, venue_id, status")
     .eq("id", relationshipId)
     .eq("coach_id", coachId)
     .maybeSingle();
 
   if (error || !data || data.status !== "active") return null;
-  const venues = data.venues as
-    | Record<string, unknown>
-    | Record<string, unknown>[]
-    | null;
-  const venue = Array.isArray(venues) ? venues[0] : venues;
+  const identities = await loadVenueRelationshipIdentities(
+    [String(data.venue_id)],
+    supabase
+  );
+  const venue = identities.get(String(data.venue_id));
   return {
     relationshipId: String(data.id),
     coachId: String(data.coach_id),
     venueId: String(data.venue_id),
-    venueName: String(venue?.name ?? "Venue"),
-    city: (venue?.city as string | null) ?? null,
-    country: (venue?.country as string | null) ?? null,
+    venueName: venue?.name?.trim() || "Venue",
+    city: venue?.city ?? null,
+    country: venue?.country ?? null,
   };
 }
 
@@ -721,19 +712,18 @@ export async function loadVenueCombinedAvailabilityPreview(
   const supabase = await createClient();
   const { data: links, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      coaches ( id, name, role, image_url )
-    `
-    )
+    .select("id, coach_id")
     .eq("venue_id", venueId)
     .eq("status", "active");
 
   if (error || !links?.length) {
     return { slots: [], hasActiveCoaches: false };
   }
+
+  const identities = await loadCoachRelationshipIdentities(
+    links.map((link) => String(link.coach_id)),
+    supabase
+  );
 
   const rangeFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const rangeTo = new Date(
@@ -769,11 +759,7 @@ export async function loadVenueCombinedAvailabilityPreview(
   for (const link of links as Record<string, unknown>[]) {
     const relationshipId = String(link.id);
     const coachId = String(link.coach_id);
-    const coaches = link.coaches as
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | null;
-    const coach = Array.isArray(coaches) ? coaches[0] : coaches;
+    const coach = identities.get(coachId);
     const settings = await loadAvailabilitySettings(relationshipId);
     if (!settings) continue;
 

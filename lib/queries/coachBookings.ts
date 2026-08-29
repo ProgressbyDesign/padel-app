@@ -27,6 +27,7 @@ import {
   COACH_PUBLIC_PROFILES_TABLE,
   VENUE_PUBLIC_PROFILES_TABLE,
 } from "@/lib/publicProfiles";
+import { loadVenueRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
 export {
@@ -66,8 +67,22 @@ const BOOKING_CORE_SELECT = `
   updated_at
 `;
 
-/** Manager/admin embed. Players must not use this after base-table lockdown. */
-const BOOKING_MANAGER_SELECT = `
+/** Coach-manager embed of the managed coach. Linked venues are hydrated separately. */
+const BOOKING_COACH_MANAGER_SELECT = `
+  ${BOOKING_CORE_SELECT},
+  coaches (
+    id,
+    name,
+    role,
+    image_url,
+    price_from,
+    email,
+    phone
+  )
+`;
+
+/** Admin embed. profiles.read may still join both base tables. */
+const BOOKING_ADMIN_SELECT = `
   ${BOOKING_CORE_SELECT},
   coaches (
     id,
@@ -304,6 +319,28 @@ async function attachPublicBookingParties(
   });
 }
 
+async function attachWorkspaceVenueParties(
+  bookings: CoachBookingRequest[]
+): Promise<CoachBookingRequest[]> {
+  if (bookings.length === 0) return bookings;
+  const identities = await loadVenueRelationshipIdentities(
+    bookings.map((row) => row.venue_id)
+  );
+  return bookings.map((booking) => {
+    const venue = identities.get(booking.venue_id);
+    if (!venue) return booking;
+    return {
+      ...booking,
+      venue: {
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+        country: venue.country,
+      },
+    };
+  });
+}
+
 async function overlayManagedCoachContact(
   booking: CoachBookingRequest
 ): Promise<CoachBookingRequest> {
@@ -338,7 +375,9 @@ export async function loadBookingById(
     asCoachBookingRequest(data as Record<string, unknown>),
   ]);
   if (!hydrated) return null;
-  return overlayManagedCoachContact(hydrated);
+  const [withVenue] = await attachWorkspaceVenueParties([hydrated]);
+  if (!withVenue) return null;
+  return overlayManagedCoachContact(withVenue);
 }
 
 export async function loadPlayerBookings(
@@ -367,7 +406,7 @@ export async function loadCoachBookings(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_booking_requests")
-    .select(BOOKING_MANAGER_SELECT)
+    .select(BOOKING_COACH_MANAGER_SELECT)
     .eq("coach_id", coachId)
     .order("starts_at", { ascending: true });
   if (error) {
@@ -376,7 +415,10 @@ export async function loadCoachBookings(
     }
     throw new Error("Unable to load coach bookings.");
   }
-  return ((data ?? []) as Record<string, unknown>[]).map(asCoachBookingRequest);
+  const rows = ((data ?? []) as Record<string, unknown>[]).map(
+    asCoachBookingRequest
+  );
+  return attachWorkspaceVenueParties(rows);
 }
 
 export type AdminBookingFilters = {
@@ -392,7 +434,7 @@ export async function listAdminBookings(
   const supabase = await createClient();
   let query = supabase
     .from("coach_booking_requests")
-    .select(BOOKING_MANAGER_SELECT)
+    .select(BOOKING_ADMIN_SELECT)
     .order("created_at", { ascending: false })
     .limit(200);
 

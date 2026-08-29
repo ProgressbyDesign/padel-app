@@ -78,3 +78,74 @@ revoke all on table public.venue_public_profiles from public;
 
 grant select on table public.coach_public_profiles to anon, authenticated;
 grant select on table public.venue_public_profiles to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Authenticated relationship-safe identities (Draft-capable, not public)
+-- ---------------------------------------------------------------------------
+-- Linked partners may need a name/photo for relationship boards even when
+-- the other profile is not published. Do not weaken the public views.
+-- These views expose only non-sensitive identity fields. They do not grant
+-- base-table access and omit contact, socials, and admin/lifecycle metadata.
+--
+-- Owner-privileged: they bypass coaches/venues RLS. Authorization is the
+-- view WHERE clause, which requires a current coach_venues row plus the
+-- caller's membership (auth.uid()).
+-- Current workspace statuses (same set as CURRENT_COACH_VENUE_STATUSES):
+--   unverified — imported, shown so a manager can review/verify
+--   pending    — request/invite awaiting accept or decline
+--   active     — confirmed working relationship
+-- Terminal declined/cancelled/ended rows do not grant identity.
+-- Logged-in players with no matching membership see zero rows.
+-- Admin profiles.read is not granted here; admins keep base-table access
+-- from Migration B.
+
+create view public.coach_relationship_identities
+with (security_barrier = true)
+as
+select
+  coaches.id,
+  coaches.name,
+  coaches.role,
+  coaches.image_url
+from public.coaches as coaches
+where exists (
+  select 1
+  from public.coach_venues link
+  join public.venue_memberships membership
+    on membership.venue_id = link.venue_id
+  where link.coach_id = coaches.id
+    and link.status in ('unverified', 'pending', 'active')
+    and membership.user_id = (select auth.uid())
+);
+
+comment on view public.coach_relationship_identities is
+  'Authenticated identity for coaches currently linked to the caller''s venues (unverified/pending/active). Name/role/image only. Not a public API and not a base-row grant.';
+
+create view public.venue_relationship_identities
+with (security_barrier = true)
+as
+select
+  venues.id,
+  venues.name,
+  venues.city,
+  venues.country,
+  venues.image_url
+from public.venues as venues
+where exists (
+  select 1
+  from public.coach_venues link
+  join public.coach_memberships membership
+    on membership.coach_id = link.coach_id
+  where link.venue_id = venues.id
+    and link.status in ('unverified', 'pending', 'active')
+    and membership.user_id = (select auth.uid())
+);
+
+comment on view public.venue_relationship_identities is
+  'Authenticated identity for venues currently linked to the caller''s coaches (unverified/pending/active). Name/city/country/image only. Not a public API and not a base-row grant.';
+
+revoke all on table public.coach_relationship_identities from public;
+revoke all on table public.venue_relationship_identities from public;
+
+grant select on table public.coach_relationship_identities to authenticated;
+grant select on table public.venue_relationship_identities to authenticated;

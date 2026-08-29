@@ -14,6 +14,10 @@ import type {
   CoachClaimTargetSummary,
   CoachProfileApplicationRow,
 } from "@/lib/coachProfileApplication/types";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+} from "@/lib/publicProfiles";
+import { loadVenueRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
 const APPLICATION_SELECT = `
@@ -118,8 +122,8 @@ export async function loadTargetCoachSummary(
   if (!isValidCoachApplicationUuid(coachId)) return null;
   const supabase = await createClient();
   const { data: coach, error } = await supabase
-    .from("coaches")
-    .select("id, name, role, image_url, is_claimed")
+    .from(COACH_PUBLIC_PROFILES_TABLE)
+    .select("id, name, role, image_url")
     .eq("id", coachId)
     .maybeSingle();
   if (error || !coach) return null;
@@ -132,7 +136,7 @@ export async function loadTargetCoachSummary(
       .order("is_primary", { ascending: false }),
     supabase
       .from("coach_venues")
-      .select("is_primary, status, venues ( name, city, country )")
+      .select("venue_id, is_primary, status")
       .eq("coach_id", coachId)
       .in("status", ["active", "unverified"])
       .order("is_primary", { ascending: false })
@@ -148,13 +152,14 @@ export async function loadTargetCoachSummary(
       .join(", ");
   }
 
+  const identities = await loadVenueRelationshipIdentities(
+    (venueLinks ?? []).map((link) => String(link.venue_id)),
+    supabase
+  );
+
   let venueName: string | null = null;
   for (const link of venueLinks ?? []) {
-    const venue = link.venues as {
-      name?: string | null;
-      city?: string | null;
-      country?: string | null;
-    } | null;
+    const venue = identities.get(String(link.venue_id));
     if (venue?.name?.trim()) {
       venueName = venue.name.trim();
       if (!primaryLocation) {
@@ -173,7 +178,7 @@ export async function loadTargetCoachSummary(
     image_url: (coach.image_url as string | null) ?? null,
     primaryLocation,
     venueName,
-    is_claimed: Boolean(coach.is_claimed),
+    is_claimed: false,
   };
 }
 

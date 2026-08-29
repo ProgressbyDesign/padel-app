@@ -45,6 +45,54 @@ describe("public profile projections", () => {
     expect(migrationA).not.toMatch(/grant update/i);
   });
 
+  it("adds authenticated relationship identities without contact columns", () => {
+    expect(migrationA).toContain("create view public.coach_relationship_identities");
+    expect(migrationA).toContain("create view public.venue_relationship_identities");
+    expect(migrationA).toContain(
+      "grant select on table public.coach_relationship_identities to authenticated"
+    );
+    expect(migrationA).toContain(
+      "grant select on table public.venue_relationship_identities to authenticated"
+    );
+    expect(migrationA).not.toMatch(
+      /grant select on table public\.coach_relationship_identities to anon/i
+    );
+    expect(migrationA).not.toContain("coaches.email");
+    expect(migrationA).not.toContain("coaches.phone");
+    expect(migrationA).not.toContain("venues.phone");
+    expect(migrationA).not.toContain("venues.website");
+  });
+
+  it("scopes relationship identities to the caller membership via auth.uid()", () => {
+    const stripped = migrationA.replace(/--.*$/gm, "");
+    expect(stripped).toMatch(
+      /create view public\.coach_relationship_identities[\s\S]*join public\.venue_memberships membership[\s\S]*membership\.user_id = \(select auth\.uid\(\)\)/
+    );
+    expect(stripped).toMatch(
+      /create view public\.venue_relationship_identities[\s\S]*join public\.coach_memberships membership[\s\S]*membership\.user_id = \(select auth\.uid\(\)\)/
+    );
+    expect(stripped).not.toMatch(
+      /create view public\.coach_relationship_identities[\s\S]*security_invoker\s*=\s*true/
+    );
+    const uidMatches = stripped.match(/membership\.user_id = \(select auth\.uid\(\)\)/g) ?? [];
+    expect(uidMatches.length).toBe(2);
+  });
+
+  it("limits relationship identities to workspace-current coach_venues statuses", () => {
+    const stripped = migrationA.replace(/--.*$/gm, "");
+    expect(stripped).toContain(
+      "link.status in ('unverified', 'pending', 'active')"
+    );
+    const statusMatches =
+      stripped.match(/link\.status in \('unverified', 'pending', 'active'\)/g) ??
+      [];
+    expect(statusMatches.length).toBe(2);
+    const harness = read("supabase/tests/sprint6a4_disposable_harness.sql");
+    expect(harness).toContain(
+      "link.status in ('unverified', 'pending', 'active')"
+    );
+  });
+
   it("omits partner contact and audit columns from the views", () => {
     for (const column of PUBLIC_COACH_PRIVATE_COLUMNS) {
       expect(migrationA).not.toContain(`coaches.${column}`);
@@ -80,6 +128,36 @@ describe("migration B lockdown", () => {
     expect(migrationB).not.toMatch(
       /publication_status = 'published'\s*\n\s*or exists/i
     );
+  });
+
+  it("does not grant linked partners the opposite full base row", () => {
+    expect(migrationB).not.toContain("from public.coach_venues link");
+    expect(migrationB).not.toContain("Partner workspace exception");
+    expect(migrationB).toContain("There is no linked-partner full-base-row access");
+    const coachesPolicy = migrationB.slice(
+      migrationB.indexOf('create policy "Authenticated can read permitted coaches"'),
+      migrationB.indexOf('create policy "Authenticated can read permitted venues"')
+    );
+    const venuesPolicy = migrationB.slice(
+      migrationB.indexOf('create policy "Authenticated can read permitted venues"'),
+      migrationB.indexOf("-- ---------------------------------------------------------------------------\n-- 3.")
+    );
+    expect(coachesPolicy).toContain("coach_memberships");
+    expect(coachesPolicy).toContain("profiles.read");
+    expect(coachesPolicy).not.toContain("venue_memberships");
+    expect(coachesPolicy).not.toContain("coach_venues");
+    expect(venuesPolicy).toContain("venue_memberships");
+    expect(venuesPolicy).toContain("profiles.read");
+    expect(venuesPolicy).not.toContain("coach_memberships");
+    expect(venuesPolicy).not.toContain("coach_venues");
+  });
+
+  it("disposable harness matches the locked membership-only policies", () => {
+    const harness = read("supabase/tests/sprint6a4_disposable_harness.sql");
+    expect(harness).toContain("create view public.coach_relationship_identities");
+    const migrationB = harness.slice(harness.indexOf("-- Migration B"));
+    expect(migrationB).not.toContain("from public.coach_venues link");
+    expect(migrationB).toContain("or private.has_admin_permission('profiles.read')");
   });
 });
 
@@ -265,6 +343,9 @@ describe("player booking payloads stay on the public projection", () => {
     expect(source).toContain("email: null");
     expect(source).toContain("phone: null");
     expect(source).toContain("loadPlayerBookings");
+    expect(source).toContain("BOOKING_COACH_MANAGER_SELECT");
+    expect(source).toContain("attachWorkspaceVenueParties");
+    expect(source).toContain("loadVenueRelationshipIdentities");
   });
 });
 
@@ -290,5 +371,54 @@ describe("public UI source", () => {
     expect(info).not.toContain("tel:");
     expect(info).not.toContain("website");
     expect(info).not.toContain("Social links");
+  });
+});
+
+describe("relationship workspaces do not read the opposite base row", () => {
+  const relationshipModules = [
+    "lib/queries/coachVenueRelationships.ts",
+    "lib/queries/venueOperations.ts",
+    "lib/queries/coachAvailability.ts",
+    "lib/queries/venueBookingBlocks.ts",
+    "lib/queries/managedCoachShell.ts",
+    "lib/queries/relationshipIdentities.ts",
+    "app/account/coaches/[coachId]/venue-actions.ts",
+    "app/account/venues/[venueId]/coach-actions.ts",
+  ];
+
+  it("hydrates linked-partner identity from public or relationship views", () => {
+    const identities = read("lib/queries/relationshipIdentities.ts");
+    expect(identities).toContain("COACH_PUBLIC_PROFILES_TABLE");
+    expect(identities).toContain("VENUE_PUBLIC_PROFILES_TABLE");
+    expect(identities).toContain("coach_relationship_identities");
+    expect(identities).toContain("venue_relationship_identities");
+    expect(identities).not.toMatch(/\.from\(\s*["']coaches["']\s*\)/);
+    expect(identities).not.toMatch(/\.from\(\s*["']venues["']\s*\)/);
+  });
+
+  it("does not embed opposite-party email, phone, or website", () => {
+    for (const relativePath of relationshipModules) {
+      const source = read(relativePath);
+      expect(source, relativePath).not.toMatch(
+        /coaches\s*\(\s*[^)]*email/i
+      );
+      expect(source, relativePath).not.toMatch(
+        /venues\s*\(\s*[^)]*website/i
+      );
+    }
+    const relationships = read("lib/queries/coachVenueRelationships.ts");
+    expect(relationships).toContain("RELATIONSHIP_CORE_SELECT");
+    expect(relationships).toContain("loadVenueRelationshipIdentities");
+    expect(relationships).toContain("loadCoachRelationshipIdentities");
+    expect(relationships).not.toMatch(/venues\s*\(/);
+    expect(relationships).not.toMatch(/coaches\s*\(/);
+
+    const venueOps = read("lib/queries/venueOperations.ts");
+    expect(venueOps).not.toContain("coachEmail");
+    expect(venueOps).toContain("loadCoachRelationshipIdentities");
+
+    const manager = read("components/account/VenueCoachesManager.tsx");
+    expect(manager).not.toContain("mailto:");
+    expect(manager).toContain("configure availability in their workspace");
   });
 });

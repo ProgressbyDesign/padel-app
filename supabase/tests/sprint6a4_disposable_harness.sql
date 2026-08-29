@@ -4,11 +4,13 @@
 -- Applies Migration A then Migration B on a database that already has Sprint 6A.
 -- Does not rewrite Sprint 6A history. Safe only inside a rolled-back transaction.
 
+drop view if exists public.coach_relationship_identities;
+drop view if exists public.venue_relationship_identities;
 drop view if exists public.coach_public_profiles;
 drop view if exists public.venue_public_profiles;
 
 -- ---------------------------------------------------------------------------
--- Migration A — public-safe projections
+-- Migration A — public-safe projections + relationship identities
 -- ---------------------------------------------------------------------------
 create view public.coach_public_profiles
 with (security_barrier = true)
@@ -66,6 +68,50 @@ revoke all on table public.venue_public_profiles from public;
 grant select on table public.coach_public_profiles to anon, authenticated;
 grant select on table public.venue_public_profiles to anon, authenticated;
 
+create view public.coach_relationship_identities
+with (security_barrier = true)
+as
+select
+  coaches.id,
+  coaches.name,
+  coaches.role,
+  coaches.image_url
+from public.coaches as coaches
+where exists (
+  select 1
+  from public.coach_venues link
+  join public.venue_memberships membership
+    on membership.venue_id = link.venue_id
+  where link.coach_id = coaches.id
+    and link.status in ('unverified', 'pending', 'active')
+    and membership.user_id = (select auth.uid())
+);
+
+create view public.venue_relationship_identities
+with (security_barrier = true)
+as
+select
+  venues.id,
+  venues.name,
+  venues.city,
+  venues.country,
+  venues.image_url
+from public.venues as venues
+where exists (
+  select 1
+  from public.coach_venues link
+  join public.coach_memberships membership
+    on membership.coach_id = link.coach_id
+  where link.venue_id = venues.id
+    and link.status in ('unverified', 'pending', 'active')
+    and membership.user_id = (select auth.uid())
+);
+
+revoke all on table public.coach_relationship_identities from public;
+revoke all on table public.venue_relationship_identities from public;
+grant select on table public.coach_relationship_identities to authenticated;
+grant select on table public.venue_relationship_identities to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Migration B — lock public base-table access
 -- ---------------------------------------------------------------------------
@@ -87,14 +133,6 @@ create policy "Authenticated can read permitted coaches"
       where membership.coach_id = coaches.id
         and membership.user_id = (select auth.uid())
     )
-    or exists (
-      select 1
-      from public.coach_venues link
-      join public.venue_memberships membership
-        on membership.venue_id = link.venue_id
-      where link.coach_id = coaches.id
-        and membership.user_id = (select auth.uid())
-    )
     or private.has_admin_permission('profiles.read')
   );
 
@@ -108,14 +146,6 @@ create policy "Authenticated can read permitted venues"
       select 1
       from public.venue_memberships membership
       where membership.venue_id = venues.id
-        and membership.user_id = (select auth.uid())
-    )
-    or exists (
-      select 1
-      from public.coach_venues link
-      join public.coach_memberships membership
-        on membership.coach_id = link.coach_id
-      where link.venue_id = venues.id
         and membership.user_id = (select auth.uid())
     )
     or private.has_admin_permission('profiles.read')

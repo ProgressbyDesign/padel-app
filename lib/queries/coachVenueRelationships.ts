@@ -22,9 +22,13 @@ import {
   VENUE_PUBLIC_PROFILES_TABLE,
 } from "@/lib/publicProfiles";
 import { loadPublicCoachVenueRelationships } from "@/lib/queries/publicCoachVenues";
+import {
+  loadCoachRelationshipIdentities,
+  loadVenueRelationshipIdentities,
+} from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
-const RELATIONSHIP_SELECT = `
+const RELATIONSHIP_CORE_SELECT = `
   id,
   coach_id,
   venue_id,
@@ -35,21 +39,7 @@ const RELATIONSHIP_SELECT = `
   responded_by_user_id,
   requested_at,
   responded_at,
-  ended_at,
-  venues (
-    id,
-    name,
-    city,
-    country,
-    image_url,
-    website
-  ),
-  coaches (
-    id,
-    name,
-    role,
-    image_url
-  )
+  ended_at
 `;
 
 function one<T>(value: T | T[] | null | undefined): T | null {
@@ -151,13 +141,29 @@ function partitionBoard(rows: CoachVenueRelationship[]): CoachVenueBoard {
   return { current, incoming, outgoing, past };
 }
 
+async function hydrateRelationshipRows(
+  rows: Record<string, unknown>[]
+): Promise<CoachVenueRelationship[]> {
+  const [coaches, venues] = await Promise.all([
+    loadCoachRelationshipIdentities(rows.map((row) => String(row.coach_id))),
+    loadVenueRelationshipIdentities(rows.map((row) => String(row.venue_id))),
+  ]);
+  return rows.map((row) =>
+    asCoachVenueRelationship({
+      ...row,
+      coaches: coaches.get(String(row.coach_id)) ?? null,
+      venues: venues.get(String(row.venue_id)) ?? null,
+    })
+  );
+}
+
 export async function loadCoachRelationshipBoard(
   coachId: string
 ): Promise<CoachVenueBoard> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(RELATIONSHIP_SELECT)
+    .select(RELATIONSHIP_CORE_SELECT)
     .eq("coach_id", coachId)
     .order("requested_at", { ascending: false });
 
@@ -165,8 +171,8 @@ export async function loadCoachRelationshipBoard(
     throw new Error(`Unable to load coach venues: ${error.message}`);
   }
 
-  const rows = ((data ?? []) as Record<string, unknown>[]).map(
-    asCoachVenueRelationship
+  const rows = await hydrateRelationshipRows(
+    (data ?? []) as Record<string, unknown>[]
   );
   const board = partitionBoard(rows);
   const incoming = rows.filter(
@@ -189,7 +195,7 @@ export async function loadVenueRelationshipBoard(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(RELATIONSHIP_SELECT)
+    .select(RELATIONSHIP_CORE_SELECT)
     .eq("venue_id", venueId)
     .order("requested_at", { ascending: false });
 
@@ -197,8 +203,8 @@ export async function loadVenueRelationshipBoard(
     throw new Error(`Unable to load venue coaches: ${error.message}`);
   }
 
-  const rows = ((data ?? []) as Record<string, unknown>[]).map(
-    asCoachVenueRelationship
+  const rows = await hydrateRelationshipRows(
+    (data ?? []) as Record<string, unknown>[]
   );
   const board = partitionBoard(rows);
   const incoming = rows.filter(
@@ -221,11 +227,14 @@ export async function loadCoachVenueById(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("coach_venues")
-    .select(RELATIONSHIP_SELECT)
+    .select(RELATIONSHIP_CORE_SELECT)
     .eq("id", relationshipId)
     .maybeSingle();
   if (error || !data) return null;
-  return asCoachVenueRelationship(data as Record<string, unknown>);
+  const [row] = await hydrateRelationshipRows([
+    data as Record<string, unknown>,
+  ]);
+  return row ?? null;
 }
 
 function sanitizeSearchTerm(term: string): string {
