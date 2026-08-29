@@ -12,6 +12,11 @@ import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "@/lib/lifecycle/publicationFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "@/lib/publicProfiles";
+import { attachPublicCoachVenueRelationships } from "@/lib/queries/publicCoachVenues";
 
 export type SubmitEnquiryResult = { ok: true } | { ok: false; message: string };
 
@@ -45,23 +50,11 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
 
   if (coachId) {
     let coachQuery = supabase
-      .from("coaches")
-      .select(
-        `
-        name,
-        slug,
-        coach_venues (
-          is_primary,
-          venues (
-            city,
-            country
-          )
-        )
-      `
-      )
+      .from(COACH_PUBLIC_PROFILES_TABLE)
+      .select("id, name, slug")
       .eq("id", coachId);
     coachQuery = applyPublishedCoachFilter(coachQuery);
-    const { data: coach, error: coachFetchError } = await coachQuery.maybeSingle();
+    const { data: coachCore, error: coachFetchError } = await coachQuery.maybeSingle();
 
     if (coachFetchError) {
       console.warn("[enquiry] coach lookup failed:", coachFetchError.message);
@@ -70,12 +63,24 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
         message: "This coach is not available for enquiries.",
       };
     }
-    if (!coach) {
+    if (!coachCore) {
       return {
         ok: false,
         message: "This coach is not available for enquiries.",
       };
     }
+
+    const [coach] = await attachPublicCoachVenueRelationships(
+      [
+        {
+          id: coachCore.id,
+          name: coachCore.name,
+          slug: coachCore.slug,
+          coach_venues: [],
+        },
+      ],
+      supabase
+    );
 
     subjectType = "coach";
     subjectName = coach.name?.trim() ?? null;
@@ -85,7 +90,7 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
     subjectLocation = loc.full || null;
   } else if (venueId) {
     let venueQuery = supabase
-      .from("venues")
+      .from(VENUE_PUBLIC_PROFILES_TABLE)
       .select("name, city, country")
       .eq("id", venueId);
     venueQuery = applyPublishedVenueFilter(venueQuery);

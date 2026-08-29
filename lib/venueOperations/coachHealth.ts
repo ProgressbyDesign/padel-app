@@ -9,7 +9,6 @@ export type CoachHealthInput = {
   coachName: string;
   coachRole: string | null;
   coachImageUrl: string | null;
-  coachEmail: string | null;
   settingsConfigured: boolean;
   isPublic: boolean;
   activeRuleCount: number;

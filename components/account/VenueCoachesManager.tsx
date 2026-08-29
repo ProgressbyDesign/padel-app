@@ -144,7 +144,7 @@ export default function VenueCoachesManager({
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
         <h2 className="text-xl font-bold text-primary">Invite coach</h2>
         <p className="mt-1 text-sm text-primary/60">
-          Search existing coaches and invite them to coach at this venue.
+          Search existing coaches and invite them to coach at {venueName}.
         </p>
 
         <label className="mt-5 block text-sm font-semibold text-primary">
@@ -265,7 +265,7 @@ export default function VenueCoachesManager({
               meta={`Via ${COACH_VENUE_INITIATOR_LABELS[row.initiated_by]}`}
               availabilityNote={
                 row.status === "active" && rowHealth
-                  ? renderActiveHealthNote(rowHealth, venueId, venueName)
+                  ? renderActiveHealthNote(rowHealth, venueId)
                   : undefined
               }
               actions={
@@ -385,8 +385,7 @@ export default function VenueCoachesManager({
 
 function renderActiveHealthNote(
   rowHealth: CoachAvailabilityHealth,
-  venueId: string,
-  venueName: string
+  venueId: string
 ): ReactNode {
   const tz = rowHealth.timezone ?? "UTC";
   const nextSlot =
@@ -427,20 +426,9 @@ function renderActiveHealthNote(
         </p>
       ) : null}
       {rowHealth.state === "not_configured" ? (
-        rowHealth.coachEmail ? (
-          <p>
-            <a
-              href={`mailto:${rowHealth.coachEmail}?subject=${encodeURIComponent(
-                `Please configure availability for ${venueName}`
-              )}`}
-              className="font-semibold text-primary underline"
-            >
-              Remind coach by email
-            </a>
-          </p>
-        ) : (
-          <p>Contact details unavailable</p>
-        )
+        <p>
+          The coach needs to configure availability in their workspace.
+        </p>
       ) : null}
       {nextSlot ? <p>Next slot: {nextSlot}</p> : null}
       <p>

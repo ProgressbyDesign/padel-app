@@ -1,7 +1,11 @@
 import "server-only";
 
 import { sendRelationshipEmail } from "@/lib/notifications/relationshipEmails";
-import { resolveCoachContactEmail } from "@/lib/notifications/resolveRecipientEmail";
+import { resolveCoachNotificationEmail } from "@/lib/notifications/resolveRecipientEmail";
+import {
+  loadCoachRelationshipIdentities,
+  loadVenueRelationshipIdentities,
+} from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
 export async function notifyCoachVenueRelationship(input: {
@@ -18,28 +22,43 @@ export async function notifyCoachVenueRelationship(input: {
   recipient: "coach" | "venue";
 }): Promise<void> {
   const supabase = await createClient();
-  const [{ data: coach }, { data: venue }] = await Promise.all([
-    supabase.from("coaches").select("name, email").eq("id", input.coachId).maybeSingle(),
-    supabase.from("venues").select("name").eq("id", input.venueId).maybeSingle(),
+  const [coaches, venues] = await Promise.all([
+    loadCoachRelationshipIdentities([input.coachId], supabase),
+    loadVenueRelationshipIdentities([input.venueId], supabase),
   ]);
 
-  const coachName = coach?.name?.trim() || "Coach";
-  const venueName = venue?.name?.trim() || "Venue";
+  let coachName = coaches.get(input.coachId)?.name?.trim() || "";
+  let venueName = venues.get(input.venueId)?.name?.trim() || "";
+
+  // Own-membership RLS only: fills the caller's unpublished profile name.
+  // Linked partners cannot read the opposite base row.
+  if (!coachName) {
+    const { data } = await supabase
+      .from("coaches")
+      .select("name")
+      .eq("id", input.coachId)
+      .maybeSingle();
+    coachName = data?.name?.trim() || "";
+  }
+  if (!venueName) {
+    const { data } = await supabase
+      .from("venues")
+      .select("name")
+      .eq("id", input.venueId)
+      .maybeSingle();
+    venueName = data?.name?.trim() || "";
+  }
 
   let to: string | null = null;
   if (input.recipient === "coach") {
-    const fromRow =
-      typeof coach?.email === "string" && coach.email.includes("@")
-        ? coach.email.trim()
-        : null;
-    to = fromRow || (await resolveCoachContactEmail(input.coachId));
+    to = await resolveCoachNotificationEmail(input.coachId);
   }
   // Venue public contact email is not available without migrations / service-role.
 
   void sendRelationshipEmail({
     to,
     kind: input.kind,
-    coachName,
-    venueName,
+    coachName: coachName || "Coach",
+    venueName: venueName || "Venue",
   });
 }

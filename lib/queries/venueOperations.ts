@@ -32,6 +32,7 @@ import {
 } from "@/lib/queries/coachAvailability";
 import { loadVenueRelationshipBoard } from "@/lib/queries/coachVenueRelationships";
 import { loadManagedVenueShell } from "@/lib/queries/managedVenueShell";
+import { loadCoachRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 import {
   loadVenueBookingBlocks,
   loadVenueBookingBlocksWithCoaches,
@@ -44,41 +45,31 @@ type ActiveCoachLink = {
   coachName: string;
   coachRole: string | null;
   coachImageUrl: string | null;
-  coachEmail: string | null;
 };
 
 async function loadActiveCoachLinks(venueId: string): Promise<ActiveCoachLink[]> {
   const supabase = await createClient();
   const { data: links, error } = await supabase
     .from("coach_venues")
-    .select(
-      `
-      id,
-      coach_id,
-      coaches ( id, name, role, image_url, email )
-    `
-    )
+    .select("id, coach_id")
     .eq("venue_id", venueId)
     .eq("status", "active");
 
   if (error || !links?.length) return [];
 
-  return (links as Record<string, unknown>[]).map((link) => {
-    const coaches = link.coaches as
-      | Record<string, unknown>
-      | Record<string, unknown>[]
-      | null;
-    const coach = Array.isArray(coaches) ? coaches[0] : coaches;
+  const identities = await loadCoachRelationshipIdentities(
+    links.map((link) => String(link.coach_id)),
+    supabase
+  );
+
+  return links.map((link) => {
+    const coach = identities.get(String(link.coach_id));
     return {
       relationshipId: String(link.id),
       coachId: String(link.coach_id),
-      coachName: String(coach?.name ?? "Coach"),
-      coachRole: (coach?.role as string | null) ?? null,
-      coachImageUrl: (coach?.image_url as string | null) ?? null,
-      coachEmail:
-        typeof coach?.email === "string" && coach.email.trim()
-          ? coach.email.trim()
-          : null,
+      coachName: coach?.name?.trim() || "Coach",
+      coachRole: coach?.role ?? null,
+      coachImageUrl: coach?.image_url ?? null,
     };
   });
 }
@@ -353,7 +344,6 @@ export async function loadVenueCoachHealth(
         coachName: link.coachName,
         coachRole: link.coachRole,
         coachImageUrl: link.coachImageUrl,
-        coachEmail: link.coachEmail,
         settingsConfigured: current.configured,
         isPublic,
         activeRuleCount: current.ruleCount,

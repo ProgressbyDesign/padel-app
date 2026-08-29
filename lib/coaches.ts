@@ -62,6 +62,12 @@ export type Coach = {
   price_from?: string | null;
 };
 
+/** Public venue PDP / listing coach card — no email or phone. */
+export type PublicCoachCard = Pick<
+  Coach,
+  "id" | "name" | "role" | "description" | "image_url" | "level" | "specialty"
+>;
+
 /** Minimal coach row for search dropdowns */
 export type CoachSearchRow = {
   id: string;

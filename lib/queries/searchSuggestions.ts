@@ -12,6 +12,10 @@ import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "../lifecycle/publicationFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "../publicProfiles";
 import { createClient } from "../supabase/server";
 import type { SearchMode } from "../marketplaceSearch";
 
@@ -110,12 +114,12 @@ export async function fetchWhereSuggestions(query: string): Promise<WhereSuggest
   const key = q ? normalizeSearchKey(q) : "";
 
   let countriesPromise = supabase
-    .from("venues")
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
     .select("country")
     .not("country", "is", null);
   countriesPromise = applyPublishedVenueFilter(countriesPromise);
 
-  let venueQuery = supabase.from("venues").select("city, country, search_key").limit(SUGGESTION_FETCH_CAP);
+  let venueQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("city, country, search_key").limit(SUGGESTION_FETCH_CAP);
   venueQuery = applyPublishedVenueFilter(venueQuery);
   if (key) {
     venueQuery = venueQuery.ilike("search_key", `%${key}%`);
@@ -125,7 +129,7 @@ export async function fetchWhereSuggestions(query: string): Promise<WhereSuggest
 
   let venueRows: { city?: string | null; country?: string | null }[] = [];
   if (venuesResInitial.error && isMissingColumnError(venuesResInitial.error.message, "search_key")) {
-    let fallbackQuery = supabase.from("venues").select("city, country").limit(SUGGESTION_FETCH_CAP);
+    let fallbackQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("city, country").limit(SUGGESTION_FETCH_CAP);
     fallbackQuery = applyPublishedVenueFilter(fallbackQuery);
     if (key) {
       fallbackQuery = applyVenueKeywordFilterFallback(fallbackQuery, q);
@@ -181,7 +185,7 @@ export async function fetchVenueNameSuggestions(
   const loc = locationHint?.trim() ?? "";
 
   const buildQuery = (select: string, useSearchKey: boolean) => {
-    let dbQuery = supabase.from("venues").select(select).limit(SUGGESTION_FETCH_CAP);
+    let dbQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select(select).limit(SUGGESTION_FETCH_CAP);
     dbQuery = applyPublishedVenueFilter(dbQuery);
 
     if (q) {
@@ -226,7 +230,7 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
   if (!loc) return null;
 
   const supabase = await createClient();
-  let venueQuery = supabase.from("venues").select("id").limit(100);
+  let venueQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("id").limit(100);
   venueQuery = applyPublishedVenueFilter(venueQuery);
   venueQuery = applyVenueLocationFilter(venueQuery, loc);
 
@@ -236,14 +240,14 @@ async function coachIdsInLocationHint(locationHint: string): Promise<string[] | 
     const parsed = parseLocationHint(loc);
     if (parsed?.city) {
       venueQuery = supabase
-        .from("venues")
+        .from(VENUE_PUBLIC_PROFILES_TABLE)
         .select("id")
         .ilike("city", `%${parsed.city}%`)
         .ilike("country", `%${parsed.country}%`)
         .limit(100);
       venueQuery = applyPublishedVenueFilter(venueQuery);
     } else if (parsed) {
-      venueQuery = supabase.from("venues").select("id").ilike("country", `%${parsed.country}%`).limit(100);
+      venueQuery = supabase.from(VENUE_PUBLIC_PROFILES_TABLE).select("id").ilike("country", `%${parsed.country}%`).limit(100);
       venueQuery = applyPublishedVenueFilter(venueQuery);
     }
     ({ data: venues, error } = await venueQuery);
@@ -334,17 +338,8 @@ export async function fetchCoachEntitySuggestions(
   }
 
   let dbQuery = supabase
-    .from("coaches")
-    .select(
-      `
-      id,
-      name,
-      role,
-      search_key,
-      image_url,
-      coach_images ( image_url, is_primary )
-    `
-    )
+    .from(COACH_PUBLIC_PROFILES_TABLE)
+    .select("id, name, role, search_key, image_url")
     .limit(SUGGESTION_FETCH_CAP);
   dbQuery = applyPublishedCoachFilter(dbQuery);
 
@@ -366,13 +361,36 @@ export async function fetchCoachEntitySuggestions(
   const withVenues = await attachPublicCoachVenueRelationships(
     data as Array<{ id?: string | null; coach_venues?: CoachWithVenueLinks["coach_venues"] }>
   );
+  const suggestionIds = withVenues
+    .map((row) => String(row.id ?? ""))
+    .filter(Boolean);
+  const { data: suggestionImages } = suggestionIds.length
+    ? await supabase
+        .from("coach_images")
+        .select("coach_id, image_url, is_primary")
+        .in("coach_id", suggestionIds)
+    : { data: [] as { coach_id?: string; image_url?: string | null; is_primary?: boolean | null }[] };
+  const imagesByCoach = new Map<
+    string,
+    { image_url?: string | null; is_primary?: boolean | null }[]
+  >();
+  for (const row of suggestionImages ?? []) {
+    const coachId = String((row as { coach_id?: string }).coach_id ?? "");
+    if (!coachId) continue;
+    const list = imagesByCoach.get(coachId) ?? [];
+    list.push({
+      image_url: (row as { image_url?: string | null }).image_url,
+      is_primary: (row as { is_primary?: boolean | null }).is_primary,
+    });
+    imagesByCoach.set(coachId, list);
+  }
 
   const rows: EntityCoachSuggestion[] = withVenues.map((c) => ({
     id: String(c.id),
     name: (c as { name?: string | null }).name?.trim() || "Coach",
     role: (c as { role?: string | null }).role?.trim() ?? null,
     imageUrl: resolveCoachImageUrl(
-      (c as { coach_images?: { image_url?: string | null; is_primary?: boolean | null }[] }).coach_images,
+      imagesByCoach.get(String(c.id)),
       (c as { image_url?: string | null }).image_url
     ),
     locationSummary: conciseCoachLocationSummary(c as CoachWithVenueLinks),

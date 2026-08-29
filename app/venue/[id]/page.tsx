@@ -2,17 +2,25 @@ import { notFound } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import VenueDetailPage from "../../../components/VenueDetailPage";
 import { pickSimilarVenues } from "../../../lib/venueDetailHelpers";
-import type { Coach } from "../../../lib/coaches";
+import type { PublicCoachCard } from "../../../lib/coaches";
 import { resolveCoachImageUrl } from "../../../lib/coachImageResolve";
 import { PUBLIC_COACH_VENUE_STATUSES, PUBLISHED_STATUS } from "../../../lib/lifecycle/constants";
 import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "../../../lib/lifecycle/publicationFilters";
-import type { Venue } from "../../../lib/venueFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  PUBLIC_VENUE_SELECT,
+  VENUE_PUBLIC_PROFILES_TABLE,
+  asPublicRow,
+  asPublicRows,
+  type PublicVenueRow,
+} from "../../../lib/publicProfiles";
+import type { PublicVenue } from "../../../lib/venueFilters";
 import { hydrateVenueImages } from "../../../lib/queries/venueImages";
-import { loadVenueSocials } from "../../../lib/queries/venueSocials";
 import { loadPublicVenueCoachAvailability } from "../../../lib/queries/coachAvailability";
+import { mapPublicVenueRow } from "../../../lib/queries/mapPublicVenue";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -21,7 +29,10 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  let metaQuery = supabase.from("venues").select("name, city, country").eq("id", id);
+  let metaQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("name, city, country")
+    .eq("id", id);
   metaQuery = applyPublishedVenueFilter(metaQuery);
   const { data } = await metaQuery.maybeSingle();
 
@@ -40,17 +51,28 @@ export default async function VenuePdpPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
-  let venueQuery = supabase.from("venues").select("*").eq("id", id);
+  let venueQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select(PUBLIC_VENUE_SELECT)
+    .eq("id", id);
   venueQuery = applyPublishedVenueFilter(venueQuery);
   const { data: venue, error } = await venueQuery.maybeSingle();
 
-  if (error || !venue || (venue as { publication_status?: string }).publication_status !== PUBLISHED_STATUS) {
+  if (error || !venue) {
+    notFound();
+  }
+  const typedCore = asPublicRow<PublicVenueRow>(venue);
+  if (!typedCore || typedCore.publication_status !== PUBLISHED_STATUS) {
     notFound();
   }
 
-  const venueRow = venue as Venue;
+  const venueRow = mapPublicVenueRow(typedCore);
 
-  let similarPoolQuery = supabase.from("venues").select("*").neq("id", id).limit(48);
+  let similarPoolQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select(PUBLIC_VENUE_SELECT)
+    .neq("id", id)
+    .limit(48);
   similarPoolQuery = applyPublishedVenueFilter(similarPoolQuery);
 
   const [{ data: pool }, { data: coachLinks }] = await Promise.all([
@@ -63,18 +85,12 @@ export default async function VenuePdpPage({ params }: PageProps) {
       .order("is_primary", { ascending: false }),
   ]);
 
-  const [hydratedVenues, venueSocials] = await Promise.all([
-    hydrateVenueImages(supabase, [
-      venueRow,
-      ...((pool ?? []) as Venue[]),
-    ]),
-    loadVenueSocials(supabase, id),
+  const hydratedVenues = await hydrateVenueImages(supabase, [
+    venueRow,
+    ...asPublicRows<PublicVenueRow>(pool).map(mapPublicVenueRow),
   ]);
   const [hydratedVenue, ...hydratedPool] = hydratedVenues;
-  const typedVenue: Venue = {
-    ...hydratedVenue,
-    venue_socials: venueSocials ?? [],
-  };
+  const typedVenue: PublicVenue = hydratedVenue;
   const similarVenues = pickSimilarVenues(typedVenue, hydratedPool, 4);
 
   const coachIds = Array.from(
@@ -85,33 +101,42 @@ export default async function VenuePdpPage({ params }: PageProps) {
     )
   );
 
-  let coaches: Coach[] = [];
+  let coaches: PublicCoachCard[] = [];
   if (coachIds.length > 0) {
     let coachQuery = supabase
-      .from("coaches")
-      .select(
-        `
-        id,
-        name,
-        role,
-        description,
-        image_url,
-        coach_images ( image_url, is_primary )
-      `
-      )
+      .from(COACH_PUBLIC_PROFILES_TABLE)
+      .select("id, name, role, description, image_url")
       .in("id", coachIds);
     coachQuery = applyPublishedCoachFilter(coachQuery);
     const { data: coachRows } = await coachQuery;
+    const { data: coachImages } = await supabase
+      .from("coach_images")
+      .select("coach_id, image_url, is_primary")
+      .in("coach_id", coachIds);
+    const imagesByCoach = new Map<
+      string,
+      { image_url?: string | null; is_primary?: boolean | null }[]
+    >();
+    for (const row of coachImages ?? []) {
+      const coachId = String((row as { coach_id?: string }).coach_id ?? "");
+      if (!coachId) continue;
+      const list = imagesByCoach.get(coachId) ?? [];
+      list.push({
+        image_url: (row as { image_url?: string | null }).image_url,
+        is_primary: (row as { is_primary?: boolean | null }).is_primary,
+      });
+      imagesByCoach.set(coachId, list);
+    }
     const byId = new Map(
-      (coachRows as Coach[] | null)?.map((c) => {
-        const resolved = resolveCoachImageUrl(c.coach_images, c.image_url);
+      asPublicRows<PublicCoachCard>(coachRows).map((c) => {
+        const resolved = resolveCoachImageUrl(imagesByCoach.get(String(c.id)), c.image_url);
         return [
           String(c.id),
           { ...c, image_url: resolved ?? c.image_url },
         ] as const;
-      }) ?? []
+      })
     );
-    coaches = coachIds.map((cid) => byId.get(cid)).filter((c): c is Coach => Boolean(c));
+    coaches = coachIds.map((cid) => byId.get(cid)).filter((c): c is PublicCoachCard => Boolean(c));
   }
 
   const availabilityCards = await loadPublicVenueCoachAvailability(id, 14);

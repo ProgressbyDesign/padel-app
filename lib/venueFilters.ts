@@ -48,6 +48,12 @@ export type Venue = {
   is_approved?: boolean | null;
 };
 
+/** Public listing/PDP venue: no partner phone, website, socials, or Places ID. */
+export type PublicVenue = Omit<
+  Venue,
+  "phone" | "website" | "google_place_id" | "venue_socials"
+>;
+
 export type VenueTypeFilter = "premium_training" | "casual" | "resort";
 export type CourtEnvironmentFilter = "all" | "indoor" | "outdoor";
 export type MinCourtsFilter = 0 | 4 | 6 | 8;

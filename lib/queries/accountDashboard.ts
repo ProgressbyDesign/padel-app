@@ -13,6 +13,7 @@ import {
 import { getStructuredOpeningHours } from "@/lib/openingHours";
 import { coachHasLivePublicAvailability } from "@/lib/queries/coachAvailability";
 import { loadBookingAttention } from "@/lib/queries/coachBookings";
+import { loadVenueRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 import {
   isAccountJourney,
@@ -228,7 +229,7 @@ async function enrichManagedCoaches(
     supabase.from("coach_socials").select("coach_id").in("coach_id", coachIds),
     supabase
       .from("coach_venues")
-      .select("id, coach_id, is_primary, venues ( city, country )")
+      .select("id, coach_id, venue_id, is_primary")
       .in("coach_id", coachIds)
       .eq("status", "active"),
     supabase
@@ -284,12 +285,13 @@ async function enrichManagedCoaches(
   const venueRows = (venuesResult.data ?? []) as Array<{
     id: string;
     coach_id: string;
+    venue_id: string;
     is_primary: boolean | null;
-    venues:
-      | { city: string | null; country: string | null }
-      | { city: string | null; country: string | null }[]
-      | null;
   }>;
+  const venueIdentities = await loadVenueRelationshipIdentities(
+    venueRows.map((row) => row.venue_id),
+    supabase
+  );
 
   for (const coachId of coachIds) {
     if (locationByCoach.has(coachId)) continue;
@@ -299,7 +301,7 @@ async function enrichManagedCoaches(
         (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
       );
     for (const link of links) {
-      const venue = one(link.venues);
+      const venue = venueIdentities.get(String(link.venue_id));
       const label = locationLabel(venue?.city, venue?.country);
       if (label) {
         locationByCoach.set(coachId, label);

@@ -1,13 +1,17 @@
-import LandingPage from "../components/LandingPage";
+import { createClient } from "../lib/supabase/server";
 import type { HomeStats } from "../components/LandingPage";
 import type { BentoVenuePreview } from "../components/home/HomeBentoGrid";
-import { createClient } from "../lib/supabase/server";
+import LandingPage from "../components/LandingPage";
 import { fetchPadelCountries } from "../lib/queries/padelCountries";
 import { fetchTopRatedCoachesForHome, fetchTopRatedVenuesForHome } from "../lib/queries/topRatedHome";
 import {
   applyPublishedCoachFilter,
   applyPublishedVenueFilter,
 } from "../lib/lifecycle/publicationFilters";
+import {
+  COACH_PUBLIC_PROFILES_TABLE,
+  VENUE_PUBLIC_PROFILES_TABLE,
+} from "../lib/publicProfiles";
 import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
 
 export const metadata = {
@@ -31,11 +35,19 @@ function buildHomeStats(
 
 export default async function Home() {
   const supabase = await createClient();
-  let coachCountQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+  let coachCountQuery = supabase
+    .from(COACH_PUBLIC_PROFILES_TABLE)
+    .select("id", { count: "exact", head: true });
   coachCountQuery = applyPublishedCoachFilter(coachCountQuery);
-  let venueCountQuery = supabase.from("venues").select("*", { count: "exact", head: true });
+  let venueCountQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("id", { count: "exact", head: true });
   venueCountQuery = applyPublishedVenueFilter(venueCountQuery);
-  let countriesQuery = supabase.from("venues").select("country").not("country", "is", null).limit(2000);
+  let countriesQuery = supabase
+    .from(VENUE_PUBLIC_PROFILES_TABLE)
+    .select("country")
+    .not("country", "is", null)
+    .limit(2000);
   countriesQuery = applyPublishedVenueFilter(countriesQuery);
 
   const [

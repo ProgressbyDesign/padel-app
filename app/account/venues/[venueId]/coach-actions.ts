@@ -18,6 +18,7 @@ import {
 } from "@/lib/queries/coachVenueRelationships";
 import { isValidCoachId } from "@/lib/queries/managedCoachShell";
 import { isValidVenueId } from "@/lib/queries/managedVenueShell";
+import { COACH_PUBLIC_PROFILES_TABLE } from "@/lib/publicProfiles";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireVenueMember(venueId: string): Promise<string | null> {
@@ -119,7 +120,7 @@ export async function inviteCoachToVenue(
 
   const supabase = await createClient();
   const { data: coach, error: coachError } = await supabase
-    .from("coaches")
+    .from(COACH_PUBLIC_PROFILES_TABLE)
     .select("id")
     .eq("id", coachId)
     .maybeSingle();

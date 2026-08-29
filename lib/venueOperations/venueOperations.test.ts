@@ -175,7 +175,6 @@ describe("coach health", () => {
     coachName: "Ada",
     coachRole: null,
     coachImageUrl: null,
-    coachEmail: null,
     activeRuleCount: 1,
     futureExtraCount: 0,
     acceptedNext30Days: 0,

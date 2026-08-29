@@ -25,6 +25,7 @@ import {
   loadBookingById,
   validateBookableSlot,
 } from "@/lib/queries/coachBookings";
+import { resolveCoachNotificationEmail } from "@/lib/notifications/resolveRecipientEmail";
 import { isValidCoachId } from "@/lib/queries/managedCoachShell";
 import { createClient } from "@/lib/supabase/server";
 
@@ -184,7 +185,7 @@ export async function createCoachBookingRequest(input: {
       subject: "Your coaching session request was sent",
       html: buildBookingRequestPlayerEmailHtml(booking),
     });
-    const coachEmail = booking.coach?.email?.trim();
+    const coachEmail = await resolveCoachNotificationEmail(booking.coach_id);
     if (coachEmail) {
       void sendBookingEmail({
         to: coachEmail,
@@ -309,7 +310,10 @@ async function mutateBookingStatus(input: {
         subject: "Coaching session cancelled",
         html: buildBookingCancelledEmailHtml(updated, "player"),
       });
-      const coachEmail = updated.coach?.email?.trim();
+      const coachEmail =
+        input.as === "player"
+          ? await resolveCoachNotificationEmail(updated.coach_id)
+          : null;
       if (coachEmail && input.as === "player") {
         void sendBookingEmail({
           to: coachEmail,

@@ -14,11 +14,6 @@ import {
   venueLocationLabels,
   type CoachVenueLinkRow,
 } from "./coachVenueGeo";
-import {
-  coachSocialPlatformLabel,
-  validPublicCoachSocials,
-  type CoachSocialRow,
-} from "./coachSocials";
 
 type CoachAttributesEmbed = {
   audience_adults?: boolean | null;
@@ -44,26 +39,15 @@ type CoachLocationEmbed = {
   is_primary?: boolean | null;
 };
 
-type CoachSocialEmbed = {
-  id?: string | null;
-  coach_id?: string | null;
-  platform?: string | null;
-  url?: string | null;
-  is_primary?: boolean | null;
-  created_at?: string | null;
-};
-
 /**
- * Raw `coaches` row from PDP nested `select` or `select("*")` fallback.
- * Extra columns from `*` are allowed for mapping.
+ * Public coach PDP row after loading coach_public_profiles + child hydration.
+ * Must not include email, phone, or socials.
  */
 export type CoachPdpQueryRow = {
   id: string;
   name?: string | null;
   slug?: string | null;
   description?: string | null;
-  email?: string | null;
-  phone?: string | null;
   level?: string | null;
   experience_years?: number | string | null;
   rating?: number | string | null;
@@ -76,19 +60,12 @@ export type CoachPdpQueryRow = {
   image_url?: string | null;
   specialty?: string | null;
   is_approved?: boolean | null;
-  is_claimed?: boolean | null;
   coach_venues?: CoachVenueLinkRow[] | null;
   coach_attributes?: CoachAttributesEmbed | CoachAttributesEmbed[];
   coach_achievements?: CoachAchievementEmbed[] | null;
   coach_images?: CoachImageEmbed[] | null;
   coach_outcomes?: CoachOutcomeEmbed[] | null;
   coach_locations?: CoachLocationEmbed[] | null;
-  coach_socials?: CoachSocialEmbed[] | null;
-};
-
-export type CoachProfileContact = {
-  email: string | null;
-  phone: string | null;
 };
 
 export type CoachProfileLocation = {
@@ -120,7 +97,6 @@ export type CoachProfileView = {
   slug: string | null;
   role: string | null;
   description: string | null;
-  contact: CoachProfileContact;
   location: CoachProfileLocation;
   /** Structured coaching locations (primary first); empty when unavailable */
   locations: CoachProfileLocation[];
@@ -246,27 +222,6 @@ function resolveStructuredLocations(
   return out;
 }
 
-function resolveSocials(
-  coachId: string,
-  rows: CoachSocialEmbed[] | null | undefined
-): CoachProfileSocial[] {
-  const mapped: CoachSocialRow[] = (rows ?? [])
-    .filter((row) => row.platform && row.url)
-    .map((row) => ({
-      id: String(row.id ?? `${row.platform}-${row.url}`),
-      coach_id: String(row.coach_id ?? coachId),
-      platform: String(row.platform),
-      url: String(row.url),
-      is_primary: Boolean(row.is_primary),
-      created_at: row.created_at ? String(row.created_at) : null,
-    }));
-  return validPublicCoachSocials(mapped).map((social) => ({
-    platform: social.platform,
-    label: coachSocialPlatformLabel(social.platform),
-    url: social.url,
-  }));
-}
-
 function buildPublicBadges(input: {
   isApproved: boolean;
   hasPrimaryLocation: boolean;
@@ -367,9 +322,8 @@ export function rawCoachRowToProfileView(
   const legacyLevel = toTrimmedString(coachRow.level);
   const playerLevels = resolvePlayerLevelLabels(attrs?.player_levels, legacyLevel);
   const coachId = String(coachRow.id ?? "").trim();
-  const socials = resolveSocials(coachId, coachRow.coach_socials);
   const isApproved = Boolean(coachRow.is_approved);
-  const isClaimed = Boolean(coachRow.is_claimed);
+  const isClaimed = false;
   const activeVenueCount = (coachRow.coach_venues ?? []).length;
   const hasDescription =
     Boolean(coachRow.description?.trim()) &&
@@ -393,10 +347,6 @@ export function rawCoachRowToProfileView(
     slug: toTrimmedString(coachRow.slug),
     role: toTrimmedString(coachRow.role),
     description: coachRow.description ?? null,
-    contact: {
-      email: toTrimmedString(coachRow.email),
-      phone: toTrimmedString(coachRow.phone),
-    },
     location,
     locations: structuredLocations,
     experience,
@@ -416,7 +366,7 @@ export function rawCoachRowToProfileView(
     primaryOutcome,
     achievements,
     achievementsHero,
-    socials,
+    socials: [],
     isApproved,
     isClaimed,
     badges,

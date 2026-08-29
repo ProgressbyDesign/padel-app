@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { requireAuthenticatedAccount } from "@/lib/auth/session";
 import type { MembershipRole } from "@/lib/auth/types";
+import { loadVenueRelationshipIdentities } from "@/lib/queries/relationshipIdentities";
 import { createClient } from "@/lib/supabase/server";
 
 export function isValidCoachId(value: string): boolean {
@@ -69,18 +70,22 @@ export const loadManagedCoachShell = cache(
     if (!primaryLocation) {
       const { data: venueLinks } = await supabase
         .from("coach_venues")
-        .select("is_primary, venues ( city, country )")
+        .select("venue_id, is_primary")
         .eq("coach_id", coachId)
         .in("status", ["active", "unverified"])
         .order("is_primary", { ascending: false })
         .limit(5);
 
-      for (const link of venueLinks ?? []) {
-        const venues = link.venues as
-          | { city: string | null; country: string | null }
-          | { city: string | null; country: string | null }[]
-          | null;
-        const venue = Array.isArray(venues) ? venues[0] : venues;
+      const identities = await loadVenueRelationshipIdentities(
+        (venueLinks ?? []).map((link) => String(link.venue_id)),
+        supabase
+      );
+
+      const ordered = [...(venueLinks ?? [])].sort(
+        (a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))
+      );
+      for (const link of ordered) {
+        const venue = identities.get(String(link.venue_id));
         const location = [venue?.city, venue?.country]
           .map((part) => part?.trim())
           .filter(Boolean)

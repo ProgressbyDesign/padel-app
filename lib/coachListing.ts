@@ -611,35 +611,8 @@ export function coachRowToListingItem(row: Coach): CoachListingItem | null {
   };
 }
 
-const COACH_IMAGES_EMBED = `
-  coach_images (
-    image_url,
-    is_primary
-  )
-`;
-
-/** Shared nested select for coach listing / explorer queries.
- * Venue relationships are attached separately via the public relationship loader
- * so unpublished venues never leak into public surfaces.
- */
-export const COACH_LISTING_SELECT = `
-  *,
-  coach_outcomes (
-    outcome,
-    outcome_key
-  ),
-  coach_attributes (
-    audience_adults,
-    audience_juniors,
-    player_levels
-  ),
-  coach_locations (
-    country,
-    city,
-    is_primary
-  ),
-  ${COACH_IMAGES_EMBED}
-`;
+/** Listing cores are selected from coach_public_profiles via PUBLIC_COACH_SELECT. */
+export { PUBLIC_COACH_SELECT as COACH_LISTING_SELECT } from "./publicProfiles";
 
 export function coachesRowsToListingItems(rows: Coach[]): CoachListingItem[] {
   return rows.map(coachRowToListingItem).filter((x): x is CoachListingItem => x != null);
