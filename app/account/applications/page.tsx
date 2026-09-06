@@ -64,7 +64,7 @@ export default async function AccountApplicationsPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Applications
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Partner applications
         </h1>
         <p className="mt-3 text-base leading-6 text-primary/65">
@@ -76,7 +76,7 @@ export default async function AccountApplicationsPage() {
       <section className="mt-10" aria-labelledby="active-applications-heading">
         <h2
           id="active-applications-heading"
-          className="text-2xl font-bold text-primary"
+          className="text-2xl text-primary"
         >
           Active applications
         </h2>
@@ -112,7 +112,7 @@ export default async function AccountApplicationsPage() {
         <section className="mt-12" aria-labelledby="history-applications-heading">
           <h2
             id="history-applications-heading"
-            className="text-2xl font-bold text-primary"
+            className="text-2xl text-primary"
           >
             Application history
           </h2>
@@ -214,7 +214,7 @@ function ApplicationCard({
 }) {
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
-      <h3 className="text-xl font-bold text-primary">{title}</h3>
+      <h3 className="text-xl text-primary">{title}</h3>
       {history ? (
         <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
           History

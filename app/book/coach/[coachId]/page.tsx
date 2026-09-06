@@ -95,7 +95,7 @@ function UnavailableSlot({
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
       <section className="rounded-[24px] border border-primary/10 bg-white p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-primary">{title}</h1>
+        <h1 className="text-2xl text-primary">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-primary/65">{body}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link

@@ -81,7 +81,7 @@ export default async function ManagedVenueDetailsPage({ params }: PageProps) {
 
       <aside className="xl:sticky xl:top-24 xl:self-start">
         <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
-          <h2 className="text-xl font-bold text-primary">Location</h2>
+          <h2 className="text-xl text-primary">Location</h2>
           <p className="mt-2 text-sm leading-6 text-primary/60">
             Precise map coordinates are managed separately and cannot be edited
             from this form.

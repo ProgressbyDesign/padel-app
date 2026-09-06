@@ -44,7 +44,7 @@ export default async function VenueApplicationPage() {
   ) {
     content = (
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h2 className="text-xl font-bold text-primary">
+        <h2 className="text-xl text-primary">
           Start your application
         </h2>
         <p className="mt-2 text-sm text-primary/65">
@@ -86,7 +86,7 @@ export default async function VenueApplicationPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Academy or venue
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Venue application
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-6 text-primary/65">

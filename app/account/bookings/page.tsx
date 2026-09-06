@@ -41,7 +41,7 @@ export default async function PlayerBookingsPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Account
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Bookings
         </h1>
         <p className="mt-3 text-base leading-6 text-primary/65">
@@ -50,7 +50,7 @@ export default async function PlayerBookingsPage() {
       </div>
 
       <section className="mt-10" aria-labelledby="upcoming-bookings">
-        <h2 id="upcoming-bookings" className="text-2xl font-bold text-primary">
+        <h2 id="upcoming-bookings" className="text-2xl text-primary">
           Upcoming
         </h2>
         {upcoming.length === 0 ? (
@@ -71,7 +71,7 @@ export default async function PlayerBookingsPage() {
       </section>
 
       <section className="mt-12" aria-labelledby="past-bookings">
-        <h2 id="past-bookings" className="text-2xl font-bold text-primary">
+        <h2 id="past-bookings" className="text-2xl text-primary">
           Past
         </h2>
         <p className="mt-1 text-sm text-primary/55">

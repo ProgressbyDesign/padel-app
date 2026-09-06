@@ -23,7 +23,7 @@ export default async function ManagedCoachAvailabilityPage({ params }: PageProps
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Availability</h2>
+        <h2 className="text-2xl text-primary">Availability</h2>
         <p className="mt-1 text-sm text-primary/60">
           Set weekly hours and exceptions for each active coaching venue.
         </p>

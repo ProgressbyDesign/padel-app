@@ -8,7 +8,7 @@ export const metadata = {
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <h1 className="text-3xl font-semibold tracking-tight text-primary">Contact</h1>
+      <h1>Contact</h1>
       <p className="mt-3 text-primary/70">
         We&apos;re building the best way to discover padel venues abroad. Questions, feedback, or partnership
         ideas? We&apos;d love to hear from you.

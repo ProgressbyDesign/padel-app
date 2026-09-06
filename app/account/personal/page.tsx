@@ -40,7 +40,7 @@ export default async function PersonalAccountPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           {view.isPurePlayer ? "Player workspace" : "Personal workspace"}
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Welcome{data.account.fullName ? `, ${data.account.fullName}` : ""}
         </h1>
         <p className="mt-3 text-base leading-6 text-primary/65">
@@ -59,7 +59,7 @@ export default async function PersonalAccountPage() {
           <div>
             <h2
               id="managed-coaches-heading"
-              className="text-2xl font-bold text-primary"
+              className="text-2xl text-primary"
             >
               My coach workspaces
             </h2>
@@ -81,7 +81,7 @@ export default async function PersonalAccountPage() {
           <div>
             <h2
               id="managed-venues-heading"
-              className="text-2xl font-bold text-primary"
+              className="text-2xl text-primary"
             >
               My venue workspaces
             </h2>
@@ -105,7 +105,7 @@ export default async function PersonalAccountPage() {
 
       {view.showPlayerCtas ? (
         <section className="mt-10" aria-labelledby="player-actions-heading">
-          <h2 id="player-actions-heading" className="text-2xl font-bold text-primary">
+          <h2 id="player-actions-heading" className="text-2xl text-primary">
             Your player tools
           </h2>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -115,7 +115,7 @@ export default async function PersonalAccountPage() {
                 href={cta.href}
                 className="rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] transition hover:border-primary/20"
               >
-                <h3 className="text-lg font-bold text-primary">{cta.title}</h3>
+                <h3 className="text-lg text-primary">{cta.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-primary/65">
                   {cta.description}
                 </p>
@@ -131,7 +131,7 @@ export default async function PersonalAccountPage() {
       {hasAttention ? (
         <section className="mt-10" aria-labelledby="attention-heading">
           <div>
-            <h2 id="attention-heading" className="text-2xl font-bold text-primary">
+            <h2 id="attention-heading" className="text-2xl text-primary">
               Needs attention
             </h2>
             <p className="mt-1 text-sm text-primary/60">
@@ -230,7 +230,7 @@ export default async function PersonalAccountPage() {
             <div>
               <h2
                 id="applications-heading"
-                className="text-2xl font-bold text-primary"
+                className="text-2xl text-primary"
               >
                 Applications
               </h2>
@@ -250,7 +250,7 @@ export default async function PersonalAccountPage() {
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
             {coachApplication ? (
               <div className="rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
-                <h3 className="text-lg font-bold text-primary">
+                <h3 className="text-lg text-primary">
                   {isEditableApplicationStatus(coachApplication.status)
                     ? "Continue coach application"
                     : coachApplication.status === "submitted" ||
@@ -281,7 +281,7 @@ export default async function PersonalAccountPage() {
 
             {venueApplication ? (
               <div className="rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)]">
-                <h3 className="text-lg font-bold text-primary">
+                <h3 className="text-lg text-primary">
                   {isEditableVenueApplicationStatus(venueApplication.status)
                     ? "Continue venue application"
                     : venueApplication.status === "submitted" ||
@@ -320,7 +320,7 @@ export default async function PersonalAccountPage() {
             <div>
               <h2
                 id="personal-bookings-heading"
-                className="text-xl font-bold text-primary"
+                className="text-xl text-primary"
               >
                 Personal bookings
               </h2>
@@ -341,7 +341,7 @@ export default async function PersonalAccountPage() {
       {view.showPartnerConversion ? (
         <section className="mt-10" aria-labelledby="partner-heading">
           <div className="rounded-[20px] border border-dashed border-primary/20 bg-surface/60 px-5 py-6 sm:px-6">
-            <h2 id="partner-heading" className="text-lg font-bold text-primary">
+            <h2 id="partner-heading" className="text-lg text-primary">
               Are you a coach, academy or venue?
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-primary/65">

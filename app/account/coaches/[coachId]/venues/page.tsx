@@ -23,7 +23,7 @@ export default async function ManagedCoachVenuesPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Venues</h2>
+        <h2 className="text-2xl text-primary">Venues</h2>
         <p className="mt-1 text-sm text-primary/60">
           Request venues, respond to invitations, and manage your coaching locations.
         </p>
