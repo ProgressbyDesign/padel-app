@@ -234,7 +234,7 @@ export default function VenueApplicationWizard({
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           {isApproved ? "Application approved" : "Application submitted"}
         </p>
-        <h2 className="mt-3 text-2xl font-bold text-primary">
+        <h2 className="mt-3 text-2xl text-primary">
           {isApproved
             ? "Your venue is ready to manage"
             : "Submitted — we will review shortly"}
@@ -285,7 +285,7 @@ export default function VenueApplicationWizard({
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Step {step} of {VENUE_APPLICATION_TOTAL_STEPS}
         </p>
-        <h2 className="mt-2 text-2xl font-bold text-primary">
+        <h2 className="mt-2 text-2xl text-primary">
           {stepMeta.label}
         </h2>
         <div
@@ -688,7 +688,7 @@ function ReviewBlock({
   return (
     <div className="rounded-2xl border border-primary/10 p-4">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-base font-bold text-primary">{title}</h3>
+        <h3 className="text-base text-primary">{title}</h3>
         {onEdit ? (
           <button
             type="button"

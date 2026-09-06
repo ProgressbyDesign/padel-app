@@ -17,7 +17,7 @@ export default function AuthFormShell({
       <section className="w-full max-w-md rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_18px_50px_rgba(3,19,34,0.08)] sm:p-8">
         <div className="mb-7">
           <PadelPathwaysLogo className="h-9" />
-          <h1 className="mt-8 text-3xl font-bold tracking-tight text-primary">{title}</h1>
+          <h1 className="mt-8 text-3xl text-primary">{title}</h1>
           <p className="mt-2 text-base leading-6 text-primary/65">{description}</p>
         </div>
         {children}

@@ -24,7 +24,7 @@ export default async function ManagedCoachDetailsPage({ params }: PageProps) {
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Basic details</h2>
+        <h2 className="text-2xl text-primary">Basic details</h2>
         <p className="mt-1 text-sm text-primary/60">
           Update the fields players see on your public coach profile.
         </p>

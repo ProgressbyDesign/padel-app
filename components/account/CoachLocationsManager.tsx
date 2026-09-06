@@ -62,7 +62,7 @@ export default function CoachLocationsManager({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Locations</h2>
+        <h2 className="text-2xl text-primary">Locations</h2>
         <p className="mt-2 text-sm text-primary/65">
           Add up to {MAX_COACH_LOCATIONS} cities where you coach. One location is
           primary and shown first on your public profile.
@@ -191,7 +191,7 @@ export default function CoachLocationsManager({
       )}
 
       <section className="rounded-2xl border border-primary/10 bg-white p-4 sm:p-5">
-        <h3 className="text-lg font-bold text-primary">Add location</h3>
+        <h3 className="text-lg text-primary">Add location</h3>
         {atLimit ? (
           <p className="mt-2 text-sm text-primary/55">
             You have reached the maximum of {MAX_COACH_LOCATIONS} locations.

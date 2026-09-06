@@ -545,7 +545,7 @@ export default function EnquiryModal({ open, onClose, coachId, venueId }: Enquir
             {!success ? (
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/50">About 2 minutes</p>
             ) : null}
-            <h2 id={titleId} className="mt-1 text-lg font-semibold tracking-tight text-primary sm:text-xl">
+            <h2 id={titleId} className="mt-1 text-lg font-semibold text-primary sm:text-xl">
               {success ? "Enquiry sent" : STEP_LABELS[step]}
             </h2>
             {!success ? (

@@ -61,7 +61,7 @@ export default function WithdrawVenueApplicationButton({
         <div className="p-6">
           <h2
             id="withdraw-venue-app-title"
-            className="text-xl font-bold text-primary"
+            className="text-xl text-primary"
           >
             Withdraw this application?
           </h2>

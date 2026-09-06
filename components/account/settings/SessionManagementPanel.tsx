@@ -133,7 +133,7 @@ export default function SessionManagementPanel() {
         <div className="p-6">
           <h2
             id="session-confirm-title"
-            className="text-xl font-bold text-primary"
+            className="text-xl text-primary"
           >
             {dialogTitle}
           </h2>

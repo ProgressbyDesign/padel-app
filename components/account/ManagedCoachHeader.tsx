@@ -43,7 +43,7 @@ export default function ManagedCoachHeader({
             Coach management
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+            <h1 className="text-3xl text-primary sm:text-4xl">
               {coachName}
             </h1>
             <span className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-primary">

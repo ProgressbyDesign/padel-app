@@ -8,7 +8,7 @@ export default function ManagedCoachNotFound() {
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/8 text-primary">
           <CircleAlert className="h-7 w-7" aria-hidden />
         </span>
-        <h1 className="mt-5 text-3xl font-bold text-primary">Coach unavailable</h1>
+        <h1 className="mt-5 text-3xl text-primary">Coach unavailable</h1>
         <p className="mt-3 text-base leading-6 text-primary/60">
           This coach profile could not be opened from your account. Return to your
           dashboard to view the profiles you can manage.

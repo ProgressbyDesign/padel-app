@@ -15,19 +15,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import HomeMilestones from "@/components/home/HomeMilestones";
+import { fetchHomeStats } from "@/lib/queries/homeStats";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
     "Discover how Padel Pathways helps players find trusted coaches and develop with confidence.",
 };
-
-const ABOUT_STATS = {
-  coachesListed: 56,
-  locationsAvailable: 580,
-  countriesCovered: 9,
-  enquiriesCompleted: null,
-} as const;
 
 const WHY_CARDS = [
   {
@@ -141,11 +135,7 @@ function SectionHeading({
       >
         {eyebrow}
       </p>
-      <h2
-        className={`mt-3 text-3xl leading-tight sm:text-4xl lg:text-5xl ${
-          light ? "text-white" : "text-primary"
-        }`}
-      >
+      <h2 className={`mt-3 ${light ? "text-white" : "text-primary"}`}>
         {title}
       </h2>
       {intro ? (
@@ -161,7 +151,9 @@ function SectionHeading({
   );
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const stats = await fetchHomeStats();
+
   return (
     <div className="overflow-hidden bg-surface">
       <section className="px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-8">
@@ -183,7 +175,7 @@ export default function AboutPage() {
               <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-accent backdrop-blur-sm">
                 About Padel Pathways
               </span>
-              <h1 className="mt-6 max-w-5xl text-5xl leading-[0.98] tracking-[-0.04em] text-white sm:text-6xl md:text-7xl lg:text-[76px]">
+              <h1 className="mt-6 max-w-5xl text-white">
                 Building the future of player development
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-white/80 sm:text-xl">
@@ -202,7 +194,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <HomeMilestones stats={ABOUT_STATS} />
+      <HomeMilestones stats={stats} />
 
       <section className="bg-white py-16 sm:py-20 lg:py-24">
         <div className="mx-auto grid max-w-[1680px] gap-10 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16 lg:px-[120px]">
@@ -227,7 +219,7 @@ export default function AboutPage() {
                 academies and hoping they have made the right choice. Finding
                 great coaching should not be based on guesswork.
               </p>
-              <p className="font-heading text-2xl font-bold text-primary">
+              <p className="font-heading text-[2rem] leading-[1.2] text-primary">
                 So we built a better way.
               </p>
             </div>
@@ -247,7 +239,7 @@ export default function AboutPage() {
             />
             <div className="absolute inset-x-5 bottom-5 rounded-[20px] border border-white/15 bg-primary/90 p-6 backdrop-blur-md sm:inset-x-8 sm:bottom-8 sm:p-8">
               <Sparkles className="h-7 w-7 text-accent" aria-hidden />
-              <p className="mt-5 font-heading text-2xl font-bold leading-tight text-white sm:text-3xl">
+              <p className="mt-5 font-heading text-[2rem] leading-[1.2] text-white">
                 A clearer route to coaching that fits you.
               </p>
               <p className="mt-3 text-base leading-7 text-white/65">
@@ -289,11 +281,7 @@ export default function AboutPage() {
                     {card.eyebrow}
                   </span>
                   <div className="mt-12">
-                    <h3
-                      className={`text-2xl font-bold ${
-                        card.tone === "dark" ? "text-white" : "text-primary"
-                      }`}
-                    >
+                    <h3 className={card.tone === "dark" ? "text-white" : "text-primary"}>
                       {card.title}
                     </h3>
                     <p className={`mt-3 text-lg leading-7 ${mutedStyles}`}>
@@ -362,7 +350,7 @@ export default function AboutPage() {
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-primary">
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
-                  <h3 className="mt-8 text-xl font-bold text-primary">
+                  <h3 className="mt-8">
                     {card.title}
                   </h3>
                   <p className="mt-3 text-base leading-7 text-primary/60">
@@ -382,7 +370,7 @@ export default function AboutPage() {
               <span className="inline-flex rounded-full bg-accent px-4 py-2 text-sm font-bold uppercase tracking-[0.12em] text-primary">
                 5★ Experience Guarantee
               </span>
-              <h2 className="mt-5 text-3xl leading-tight text-primary sm:text-4xl lg:text-5xl">
+              <h2 className="mt-5">
                 Book with confidence
               </h2>
               <p className="mt-5 text-lg leading-8 text-primary/65">
@@ -402,14 +390,14 @@ export default function AboutPage() {
                       <Icon className="h-5 w-5" aria-hidden />
                     </span>
                     <div>
-                      <h3 className="text-lg font-bold text-primary">
+                      <h3>
                         {card.title}
                       </h3>
                       <p className="mt-1 text-base leading-6 text-primary/60">
                         {card.copy}
                       </p>
                     </div>
-                    <span className="hidden font-heading text-2xl font-bold text-primary/20 sm:block">
+                    <span className="hidden font-heading text-2xl text-primary/20 sm:block">
                       0{index + 1}
                     </span>
                   </article>
@@ -426,7 +414,7 @@ export default function AboutPage() {
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-primary">
               <Target className="h-6 w-6" aria-hidden />
             </span>
-            <h2 className="mt-8 max-w-3xl text-4xl leading-[1.05] text-white sm:text-5xl lg:text-6xl">
+            <h2 className="mt-8 max-w-3xl text-white">
               More than a lesson. A pathway.
             </h2>
           </div>
@@ -452,7 +440,7 @@ export default function AboutPage() {
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-accent">
               <Users className="h-5 w-5" aria-hidden />
             </span>
-            <h2 className="mt-7 text-4xl leading-none text-primary sm:text-5xl lg:text-6xl">
+            <h2 className="mt-7">
               Own your path.
             </h2>
             <p className="mt-5 text-lg leading-8 text-primary/70">

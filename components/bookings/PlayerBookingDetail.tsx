@@ -34,7 +34,7 @@ export default function PlayerBookingDetail({
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Booking request
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-primary">
+        <h1 className="mt-2 text-3xl text-primary">
           {booking.status === "requested" && !competitorAccepted
             ? "Request sent"
             : "Session details"}

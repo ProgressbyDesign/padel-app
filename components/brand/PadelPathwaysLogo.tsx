@@ -1,30 +1,49 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const LOGO_SRC = {
+  white: "/brand/padelpathways-logo-white.svg",
+  color: "/brand/padelpathways-logo-color.svg",
+  dark: "/brand/padelpathways-logo-dark.svg",
+} as const;
+
+export type PadelPathwaysLogoVariant = keyof typeof LOGO_SRC;
+
 type PadelPathwaysLogoProps = {
-  variant?: "white" | "black";
+  variant?: PadelPathwaysLogoVariant | "black";
   className?: string;
   href?: string;
+  priority?: boolean;
 };
 
+function resolveVariant(
+  variant: PadelPathwaysLogoProps["variant"]
+): PadelPathwaysLogoVariant {
+  if (variant === "black") return "color";
+  return variant ?? "color";
+}
+
 export default function PadelPathwaysLogo({
-  variant = "black",
+  variant = "color",
   className = "",
   href = "/",
+  priority = true,
 }: PadelPathwaysLogoProps) {
-  const tone = variant === "white" ? "brightness-0 invert" : "";
+  const tone = resolveVariant(variant);
 
   const logo = (
-    <span className={`inline-flex h-[42px] w-[254px] max-w-full items-center ${className}`}>
+    <span
+      className={`inline-flex h-8 max-w-[168px] items-center sm:h-10 sm:max-w-[220px] lg:h-[42px] lg:max-w-[254px] ${className}`}
+    >
       <Image
-        src="/brand/padelpathways-logo-color.svg"
-        alt=""
-        width={250}
-        height={48}
-        className={`h-full w-auto shrink-0 object-contain ${tone}`}
-        priority
+        src={LOGO_SRC[tone]}
+        alt="Padel Pathways"
+        width={254}
+        height={59}
+        className="h-full w-auto shrink-0 object-contain"
+        sizes="(max-width: 640px) 168px, (max-width: 1024px) 220px, 254px"
+        priority={priority}
       />
-      <span className="sr-only">Padel Pathways</span>
     </span>
   );
 

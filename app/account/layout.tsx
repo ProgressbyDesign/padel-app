@@ -12,5 +12,5 @@ export default async function AccountLayout({
   children: React.ReactNode;
 }) {
   await requireAuthenticatedAccount("/account");
-  return children;
+  return <div data-ui-headings>{children}</div>;
 }

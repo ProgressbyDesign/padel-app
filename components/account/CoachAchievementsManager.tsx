@@ -55,7 +55,7 @@ export default function CoachAchievementsManager({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Achievements</h2>
+        <h2 className="text-2xl text-primary">Achievements</h2>
         <p className="mt-2 text-sm text-primary/65">
           Add career highlights and coaching milestones. These are profile
           content and are not verified by Padel Pathways.
@@ -209,7 +209,7 @@ export default function CoachAchievementsManager({
       )}
 
       <section className="rounded-2xl border border-primary/10 bg-white p-4 sm:p-5 space-y-3">
-        <h3 className="text-lg font-bold text-primary">Add achievement</h3>
+        <h3 className="text-lg text-primary">Add achievement</h3>
         <label className="block text-sm font-semibold text-primary">
           Title
           <input

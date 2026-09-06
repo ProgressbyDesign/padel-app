@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Sora } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import SiteChrome from "../components/SiteChrome";
 import { loadOptionalAccountNavContext } from "../lib/workspace/resolve";
 import "./globals.css";
 
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const authein = localFont({
+  src: "../public/fonts/Authein-Adjusted-50pct.woff2",
+  variable: "--font-authein",
+  display: "swap",
+  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
 });
 
 const geistMono = Geist_Mono({
@@ -31,7 +33,7 @@ export default async function RootLayout({
   const accountNav = await loadOptionalAccountNavContext();
 
   return (
-    <html lang="en" className={`${sora.variable} ${geistMono.variable} h-full`}>
+    <html lang="en" className={`${authein.variable} ${geistMono.variable} h-full`}>
       <body className="flex min-h-full flex-col bg-surface text-primary">
         <SiteChrome accountNav={accountNav}>{children}</SiteChrome>
       </body>

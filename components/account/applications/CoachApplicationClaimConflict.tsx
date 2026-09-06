@@ -19,7 +19,7 @@ export default function CoachApplicationClaimConflict({
 
   return (
     <section className="rounded-[24px] border border-amber-200 bg-amber-50/80 p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-amber-950">
+      <h2 className="text-2xl text-amber-950">
         You already have a coach application in progress
       </h2>
       <p className="mt-3 text-sm leading-6 text-amber-950/80">
@@ -91,7 +91,7 @@ export function CoachApplicationApprovedNotice({
 }) {
   return (
     <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/80 p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-emerald-950">
+      <h2 className="text-2xl text-emerald-950">
         You already manage a coach profile
       </h2>
       <p className="mt-3 text-sm leading-6 text-emerald-900/80">

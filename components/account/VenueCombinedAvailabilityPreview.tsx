@@ -34,7 +34,7 @@ export default function VenueCombinedAvailabilityPreview({
   return (
     <section className="space-y-3 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
       <div>
-        <h2 className="text-lg font-bold text-primary">
+        <h2 className="text-lg text-primary">
           Available sessions at this venue
         </h2>
         <p className="mt-1 text-sm text-primary/60">

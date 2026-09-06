@@ -159,7 +159,7 @@ function ListingCoachCard({
         <div className="flex flex-1 flex-col gap-4 px-4 pb-5 pt-4">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-bold leading-tight text-primary">{name}</h3>
+              <h3 className="text-lg leading-tight text-primary">{name}</h3>
               {levelLabel ? (
                 <span className="rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold uppercase text-primary">
                   {levelLabel}

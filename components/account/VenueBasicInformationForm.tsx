@@ -136,7 +136,7 @@ export default function VenueBasicInformationForm({
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Basic information</h2>
+        <h2 className="text-2xl text-primary">Basic information</h2>
         <p className="mt-1 text-sm leading-6 text-primary/60">
           Keep the public venue details accurate and useful for players.
         </p>

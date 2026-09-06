@@ -21,7 +21,7 @@
   --color-muted: #c5c5c5;
   --color-icon: #60636e;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-sora), "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-authein), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
 }
@@ -47,20 +47,49 @@
     @apply font-body antialiased;
   }
 
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-primary;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.2;
+  }
+
   h1 {
-    @apply font-heading text-3xl font-bold tracking-tight leading-tight text-primary sm:text-4xl;
+    font-size: 3.5rem; /* 56px */
   }
 
   h2 {
-    @apply font-heading font-bold tracking-tight text-primary;
+    font-size: 2.25rem; /* 36px */
   }
 
   h3 {
-    @apply font-heading text-lg font-semibold tracking-normal text-primary sm:text-xl;
+    font-size: 2rem; /* 32px */
   }
 
-  h4, h5, h6 {
-    @apply font-body font-semibold text-primary;
+  h4 {
+    font-size: 1.5rem; /* 24px */
+  }
+
+  h5 {
+    font-size: 1.25rem; /* 20px */
+  }
+
+  h6 {
+    font-size: 1.125rem; /* 18px */
+  }
+
+  /* Keep account/admin chrome compact; utilities still override these. */
+  [data-ui-headings] :where(h1) {
+    font-size: 1.875rem;
+  }
+
+  [data-ui-headings] :where(h2) {
+    font-size: 1.25rem;
+  }
+
+  [data-ui-headings] :where(h3) {
+    font-size: 1.125rem;
   }
 }
 

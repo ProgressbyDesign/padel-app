@@ -39,7 +39,7 @@ export default function AdminWelcomeClient({
       <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
         Admin workspace
       </p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary">
+      <h1 className="mt-3 text-3xl text-primary">
         Welcome to Padel Pathways
       </h1>
       <p className="mt-3 text-base leading-7 text-primary/65">

@@ -42,7 +42,7 @@ export default async function ManagedVenueSchedulePage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Schedule</h2>
+        <h2 className="text-2xl text-primary">Schedule</h2>
         <p className="mt-1 text-sm text-primary/60">
           Combined operational calendar for active coaches at this venue.
           Reserved sessions hide player contact details.

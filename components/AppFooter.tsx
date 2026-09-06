@@ -23,14 +23,14 @@ export default function AppFooter() {
       <div className="relative mx-auto max-w-[1680px] px-4 pb-10 pt-12 sm:px-6 lg:px-[120px] lg:pb-12 lg:pt-16">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.6fr] lg:gap-16">
           <div className="max-w-md space-y-4">
-            <PadelPathwaysLogo variant="black" />
+            <PadelPathwaysLogo variant="dark" priority={false} />
             <p className="max-w-sm text-base leading-6 text-primary">
               Own your path.
             </p>
           </div>
 
           <div>
-            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Links</h2>
+            <h2>Links</h2>
             <nav className="mt-7 flex flex-col gap-4 text-base" aria-label="Footer">
               {links.map((item) => (
                 <Link key={item.label} href={item.href} className="transition hover:opacity-70">
@@ -41,7 +41,7 @@ export default function AppFooter() {
           </div>
 
           <div>
-            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Social</h2>
+            <h2>Social</h2>
             <div className="mt-7 flex items-center gap-3">
               <a href="#" aria-label="Facebook" className="transition hover:opacity-70">
                 <SocialIcon label="f" />

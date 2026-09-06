@@ -33,7 +33,7 @@ export default async function ManagedVenueCoachesPage({ params }: PageProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Coaches</h2>
+          <h2 className="text-2xl text-primary">Coaches</h2>
           <p className="mt-1 text-sm text-primary/60">
             Invite coaches, review requests, and manage coaching relationships.
           </p>

@@ -82,7 +82,7 @@ export default async function CoachApplicationPage({ searchParams }: PageProps) 
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Individual coach
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Coach application
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-6 text-primary/65">

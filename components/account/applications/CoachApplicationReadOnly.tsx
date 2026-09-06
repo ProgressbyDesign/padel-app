@@ -69,7 +69,7 @@ export default function CoachApplicationReadOnly({
           Application status
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-bold text-primary">{statusLabel}</h2>
+          <h2 className="text-2xl text-primary">{statusLabel}</h2>
           <span className="rounded-full border border-primary/10 bg-surface px-3 py-1 text-xs font-semibold text-primary/70">
             Step {application.current_step} of 4
           </span>
@@ -119,7 +119,7 @@ export default function CoachApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">About you</h3>
+        <h3 className="text-lg text-primary">About you</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
@@ -167,7 +167,7 @@ export default function CoachApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Locations</h3>
+        <h3 className="text-lg text-primary">Locations</h3>
         <ul className="mt-4 space-y-2 text-sm text-primary/80">
           {locations.length === 0 ? (
             <li>No locations</li>
@@ -183,7 +183,7 @@ export default function CoachApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Coaching</h3>
+        <h3 className="text-lg text-primary">Coaching</h3>
         <div className="mt-4 space-y-4 text-sm text-primary/80">
           <p>
             <span className="font-semibold text-primary">Levels: </span>

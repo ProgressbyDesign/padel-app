@@ -78,7 +78,7 @@ export default function CoachProfilePage({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl lg:text-[2.5rem]">
+          <h1>
             {displayName}
           </h1>
 
@@ -164,7 +164,7 @@ export default function CoachProfilePage({
         <section className="mt-10 border-t border-primary/10 pt-10" aria-labelledby="coach-intro-heading">
           <h2
             id="coach-intro-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
+            className="text-lg font-semibold text-primary sm:text-xl"
           >
             About
           </h2>
@@ -189,7 +189,7 @@ export default function CoachProfilePage({
         >
           <h2
             id="coach-audience-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
+            className="text-lg font-semibold text-primary sm:text-xl"
           >
             Who I coach
           </h2>
@@ -227,7 +227,7 @@ export default function CoachProfilePage({
         >
           <h2
             id="coach-outcomes-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
+            className="text-lg font-semibold text-primary sm:text-xl"
           >
             Coaching focus
           </h2>
@@ -251,7 +251,7 @@ export default function CoachProfilePage({
         >
           <h2
             id="coach-locations-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
+            className="text-lg font-semibold text-primary sm:text-xl"
           >
             Locations and venues
           </h2>
@@ -292,7 +292,7 @@ export default function CoachProfilePage({
         >
           <h2
             id="coach-achievements-heading"
-            className="text-lg font-semibold tracking-tight text-primary sm:text-xl"
+            className="text-lg font-semibold text-primary sm:text-xl"
           >
             Achievements
           </h2>

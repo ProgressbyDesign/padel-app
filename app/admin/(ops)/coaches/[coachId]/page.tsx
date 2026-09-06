@@ -57,7 +57,7 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
       ) : null}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Publication</h2>
+        <h2 className="text-lg">Publication</h2>
         <p className="mt-1 text-sm text-primary/60">
           Draft profiles remain hidden until an administrator publishes them. A
           claim or coach account is not required.
@@ -81,7 +81,7 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Key fields</h2>
+        <h2 className="text-lg">Key fields</h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Role" value={coach.role} />
           <Field label="Primary location" value={data.primaryLocation} />
@@ -145,7 +145,7 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Completion</h2>
+        <h2 className="text-lg">Completion</h2>
         <p className="mt-1 text-sm text-primary/60">
           {completion.completedWeighted} of {completion.weightedTotal} core items
           complete
@@ -168,7 +168,7 @@ export default async function OpsCoachOverviewPage({ params }: PageProps) {
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
-        <h2 className="text-lg font-bold">Links</h2>
+        <h2 className="text-lg">Links</h2>
         <ul className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
           <LinkChip href={`/coach/${coach.id}`} label="Public profile" external />
           {data.applicationId ? (

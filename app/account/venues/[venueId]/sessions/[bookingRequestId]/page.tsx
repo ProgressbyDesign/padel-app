@@ -43,7 +43,7 @@ export default async function ManagedVenueSessionDetailPage({
           <span aria-hidden> / </span>
           Details
         </p>
-        <h2 className="mt-2 text-2xl font-bold text-primary">
+        <h2 className="mt-2 text-2xl text-primary">
           {formatInTimeZone(block.starts_at, block.timezone, {
             weekday: "long",
             day: "numeric",

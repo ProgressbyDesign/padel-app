@@ -47,7 +47,7 @@ export default async function CoachBookingsPage({ params }: PageProps) {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Booking requests</h2>
+        <h2 className="text-2xl text-primary">Booking requests</h2>
         <p className="mt-1 text-sm text-primary/60">
           Review new requests, manage upcoming sessions, and mark completed
           sessions. {PAYMENT_COPY}
@@ -55,7 +55,7 @@ export default async function CoachBookingsPage({ params }: PageProps) {
       </div>
 
       <section aria-labelledby="new-requests">
-        <h3 id="new-requests" className="text-lg font-bold text-primary">
+        <h3 id="new-requests" className="text-lg text-primary">
           New requests
         </h3>
         {newRequests.length === 0 ? (
@@ -75,7 +75,7 @@ export default async function CoachBookingsPage({ params }: PageProps) {
       </section>
 
       <section aria-labelledby="upcoming-sessions">
-        <h3 id="upcoming-sessions" className="text-lg font-bold text-primary">
+        <h3 id="upcoming-sessions" className="text-lg text-primary">
           Upcoming
         </h3>
         {upcoming.length === 0 ? (
@@ -97,7 +97,7 @@ export default async function CoachBookingsPage({ params }: PageProps) {
       </section>
 
       <section aria-labelledby="past-sessions">
-        <h3 id="past-sessions" className="text-lg font-bold text-primary">
+        <h3 id="past-sessions" className="text-lg text-primary">
           Past
         </h3>
         <p className="mt-1 text-sm text-primary/55">

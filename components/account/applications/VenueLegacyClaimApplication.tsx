@@ -26,7 +26,7 @@ export default function VenueLegacyClaimApplication({
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-amber-900/70">
           Legacy venue claim
         </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight">
+        <h2 className="mt-2 text-2xl">
           This claim is read-only
         </h2>
         <p className="mt-3 text-sm leading-6 text-amber-950/80">
@@ -46,7 +46,7 @@ export default function VenueLegacyClaimApplication({
           Application status
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h3 className="text-2xl font-bold text-primary">
+          <h3 className="text-2xl text-primary">
             {VENUE_APPLICATION_STATUS_LABELS[application.status]}
           </h3>
           <span className="rounded-full border border-primary/10 bg-surface px-3 py-1 text-xs font-semibold text-primary/70">
@@ -79,7 +79,7 @@ export default function VenueLegacyClaimApplication({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Claim details</h3>
+        <h3 className="text-lg text-primary">Claim details</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Detail
             label="Relationship"

@@ -1,22 +1,22 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { CoachListingItem } from "../lib/coachListing";
 import { coachListingProfileHref } from "../lib/coachListing";
 import CoachCard from "./CoachCard";
 import type { Venue } from "../lib/venueFilters";
 import { getVenueMainImageUrl } from "../lib/venueDetailHelpers";
-import HomeStickySearch from "./search/HomeStickySearch";
 import HomeEnquiryCta from "./home/HomeEnquiryCta";
 import HomeBentoGrid, { type BentoVenuePreview } from "./home/HomeBentoGrid";
+import HomeHero from "./home/HomeHero";
 import HomeMilestones from "./home/HomeMilestones";
 import HomeValuePromo from "./home/HomeValuePromo";
 import HomeTestimonials, { type HomeTestimonial } from "./home/HomeTestimonials";
 import InteractiveGlobeDestinations from "./sections/InteractiveGlobeDestinations";
 import type { PadelCountry } from "../lib/padelCountries";
+import type { HomeStats } from "../lib/queries/homeStats";
 import VenueCard from "./VenueCard";
 import Carousel from "./ui/Carousel";
 
-const HERO_IMAGE = "/images/hero-padel-overlay.jpg";
+export type { HomeStats };
 
 const TESTIMONIALS: HomeTestimonial[] = [
   {
@@ -42,13 +42,6 @@ const TESTIMONIALS: HomeTestimonial[] = [
   },
 ];
 
-export type HomeStats = {
-  coachesListed: number;
-  countriesCovered: number;
-  locationsAvailable: number;
-  enquiriesCompleted: number | null;
-};
-
 type LandingPageProps = {
   featuredCoaches: CoachListingItem[];
   featuredVenues: Venue[];
@@ -57,6 +50,8 @@ type LandingPageProps = {
   enquiryVenueId: string | null;
   stats: HomeStats;
   destinationCountries: PadelCountry[];
+  coachRegisterHref: string;
+  venueRegisterHref: string;
 };
 
 export default function LandingPage({
@@ -67,45 +62,16 @@ export default function LandingPage({
   enquiryVenueId,
   stats,
   destinationCountries,
+  coachRegisterHref,
+  venueRegisterHref,
 }: LandingPageProps) {
   return (
     <div className="min-h-full bg-surface">
-      <section className="relative -mt-16 min-h-[min(88vh,815px)]">
-        <Image
-          src={HERO_IMAGE}
-          alt=""
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(119.61deg, rgba(0, 36, 54, 0.8) 39.53%, rgba(0, 36, 54, 0.3) 76.64%)",
-          }}
-          aria-hidden
-        />
-        <div className="relative mx-auto flex min-h-[min(88vh,815px)] max-w-[1680px] flex-col justify-center px-4 pb-20 pt-28 sm:px-6 sm:pb-24">
-          <p className="mb-2 text-center text-2xl font-bold uppercase tracking-tight text-white/90 sm:text-[32px]">
-            Find the Best
-          </p>
-          <h1 className="mx-auto max-w-4xl text-center font-heading text-4xl font-bold uppercase leading-[1.05] tracking-tight text-white drop-shadow-sm sm:text-5xl md:text-6xl lg:text-[64px] lg:leading-[64px]">
-            Train with some of the world&apos;s most trusted padel coaches.
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-white/90 sm:text-xl">
-            Book with confidence through the Padel Pathways 5★ Experience Guarantee.
-          </p>
-          <div className="mt-10 sm:mt-12">
-            <HomeStickySearch />
-          </div>
-        </div>
-      </section>
+      <HomeHero />
 
       <section className="border-b border-primary/10 bg-white py-14 sm:py-24">
         <div className="mx-auto max-w-[1680px] px-4 sm:px-6 ">
-          <h2 className="text-center font-heading text-3xl font-bold uppercase tracking-tight text-primary sm:text-4xl">
+          <h2 className="text-center">
             Choose your path
           </h2>
         </div>
@@ -114,6 +80,8 @@ export default function LandingPage({
             recommendedCoach={recommendedCoach}
             recommendedVenue={recommendedVenue}
             enquiryVenueId={enquiryVenueId}
+            coachRegisterHref={coachRegisterHref}
+            venueRegisterHref={venueRegisterHref}
           />
         </div>
       </section>
@@ -122,7 +90,7 @@ export default function LandingPage({
         <div className="mx-auto max-w-[1680px] px-4 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+              <h2>
                 Top-rated coaches
               </h2>
               <p className="mt-2 text-lg text-primary/70">
@@ -178,7 +146,7 @@ export default function LandingPage({
         <div className="mx-auto max-w-[1680px] px-4 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+              <h2>
                 Player favourite courts
               </h2>
               <p className="mt-2 text-lg text-primary/70">

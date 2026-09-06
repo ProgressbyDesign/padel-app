@@ -41,7 +41,7 @@ export default async function VenueCoachAvailabilityReadOnlyPage({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Coach schedule</h2>
+        <h2 className="text-2xl text-primary">Coach schedule</h2>
         <p className="mt-1 text-sm text-primary/60">
           Venue managers can view this schedule but cannot edit it.
         </p>

@@ -241,7 +241,7 @@ export default function CoachAvailabilityEditor({
               {readOnly ? "← Coaches" : "← All venues"}
             </Link>
           </p>
-          <h2 className="mt-2 text-2xl font-bold text-primary">{venue.venueName}</h2>
+          <h2 className="mt-2 text-2xl text-primary">{venue.venueName}</h2>
           <p className="mt-1 text-sm text-primary/60">
             {[venue.city, venue.country].filter(Boolean).join(", ") ||
               "Schedule for this coaching venue"}
@@ -262,7 +262,7 @@ export default function CoachAvailabilityEditor({
       )}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-        <h3 className="text-lg font-bold text-primary">Availability settings</h3>
+        <h3 className="text-lg text-primary">Availability settings</h3>
         <div className="mt-4 grid gap-5 lg:grid-cols-2">
           <TimezoneCombobox
             value={timezone}
@@ -302,7 +302,7 @@ export default function CoachAvailabilityEditor({
         </div>
 
         <div className="mt-6 border-t border-primary/10 pt-5">
-          <h4 className="text-sm font-bold text-primary">Pricing</h4>
+          <h4 className="text-sm text-primary">Pricing</h4>
           <p className="mt-1 text-sm text-primary/60">
             Default hourly rate is used to calculate session prices from each
             window&apos;s duration. Payment is arranged directly with the coach.
@@ -364,7 +364,7 @@ export default function CoachAvailabilityEditor({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-        <h3 className="text-lg font-bold text-primary">Weekly schedule</h3>
+        <h3 className="text-lg text-primary">Weekly schedule</h3>
         <p className="mt-1 text-sm text-primary/60">
           Times are in {settings?.timezone ?? "the selected timezone"}. Save settings
           before adding hours.
@@ -493,7 +493,7 @@ export default function CoachAvailabilityEditor({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-        <h3 className="text-lg font-bold text-primary">Date exceptions</h3>
+        <h3 className="text-lg text-primary">Date exceptions</h3>
         <p className="mt-1 text-sm text-primary/60">
           Time off removes slots. Extra availability adds slots. Interpreted in{" "}
           {settings?.timezone ?? "the schedule timezone"}.
@@ -577,7 +577,7 @@ export default function CoachAvailabilityEditor({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-        <h3 className="text-lg font-bold text-primary">
+        <h3 className="text-lg text-primary">
           {readOnly ? "Availability calendar" : "Public preview"}
         </h3>
         <p className="mt-1 text-sm text-primary/60">

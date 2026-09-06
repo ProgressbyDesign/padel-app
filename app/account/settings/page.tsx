@@ -43,7 +43,7 @@ export default async function AccountSettingsPage({ searchParams }: PageProps) {
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
           Account
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
           Account settings
         </h1>
         <p className="mt-3 text-base leading-6 text-primary/65">

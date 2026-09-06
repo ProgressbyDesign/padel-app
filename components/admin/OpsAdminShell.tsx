@@ -93,7 +93,7 @@ export default function OpsAdminShell({
   );
 
   return (
-    <div className="min-h-screen bg-surface text-primary">
+    <div className="min-h-screen bg-surface text-primary" data-ui-headings>
       <header className="sticky top-0 z-40 border-b border-primary/10 bg-white/95 backdrop-blur">
         <div className="flex h-16 items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-3">
@@ -109,7 +109,7 @@ export default function OpsAdminShell({
             <div>
               <Link
                 href="/admin"
-                className="font-heading text-lg font-bold tracking-tight"
+                className="font-heading text-lg"
               >
                 Padel Pathways{" "}
                 <span className="text-primary/40">Admin</span>

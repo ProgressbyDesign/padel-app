@@ -44,7 +44,7 @@ export default function CoachCompletionPanel({
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Profile completeness</h2>
+        <h2 className="text-2xl text-primary">Profile completeness</h2>
         <p className="mt-1 text-sm text-primary/60">
           Focus on essential details first, then trust signals and booking
           readiness. This is not a search ranking score.
@@ -105,7 +105,7 @@ export default function CoachCompletionPanel({
         <div id={detailsId} className="mt-6 space-y-6">
           {groups.map((group) => (
             <div key={group.id}>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+              <h3 className="text-sm font-semibold tracking-[0.12em] text-primary/45">
                 {group.title}
               </h3>
               <ul className="mt-3 space-y-2">

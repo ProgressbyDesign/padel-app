@@ -630,7 +630,7 @@ function RelationshipDetailDrawer({
         className="absolute inset-0 flex w-full flex-col bg-white shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-w-md md:max-w-lg"
       >
         <div className="flex items-center justify-between border-b border-primary/10 px-5 py-4">
-          <h2 id={titleId} className="text-lg font-bold text-primary">
+          <h2 id={titleId} className="text-lg text-primary">
             Relationship detail
           </h2>
           <button
@@ -810,7 +810,7 @@ function AdminCreateRelationshipModal({
       >
         <div className="flex items-center justify-between border-b border-primary/10 px-5 py-4">
           <div>
-            <h2 id={titleId} className="text-lg font-bold text-primary">
+            <h2 id={titleId} className="text-lg text-primary">
               Add relationship
             </h2>
             <p className="mt-1 text-sm text-primary/60">

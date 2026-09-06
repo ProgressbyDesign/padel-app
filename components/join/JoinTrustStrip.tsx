@@ -5,7 +5,7 @@ export default function JoinTrustStrip() {
       aria-label="Padel Pathways positioning"
     >
       <div className="mx-auto max-w-[1366px] px-4 text-center sm:px-6">
-        <p className="font-heading text-xl font-semibold tracking-tight text-primary sm:text-2xl">
+        <p className="font-heading text-[2rem] leading-[1.2] text-primary">
           Built with players, coaches and padel professionals
         </p>
       </div>

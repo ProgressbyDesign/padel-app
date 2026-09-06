@@ -48,9 +48,7 @@ export default function HomeValuePromo() {
             >
               <Icon className={`h-8 w-8 ${block.iconClassName}`} aria-hidden />
               <div className="mt-auto space-y-8">
-                <h3 className={` font-heading text-4xl font-bold leading-[52px] sm:text-[48px] ${
-                    block.className.includes("bg-accent") ? "text-primary" : "text-muted"
-                  }`}>
+                <h3 className={block.className.includes("bg-accent") ? "text-primary" : "text-muted"}>
                   {block.titleLine1}
                   <br />
                   {block.titleLine2}

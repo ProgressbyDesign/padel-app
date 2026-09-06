@@ -23,7 +23,7 @@ export default async function AdminSectionDeniedPage({
       <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
         Admin workspace · {ROLE_LABELS[account.role]}
       </p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary">
+      <h1 className="mt-3 text-3xl text-primary">
         You don&apos;t have access to this section
       </h1>
       <p className="mt-4 text-base leading-7 text-primary/65">

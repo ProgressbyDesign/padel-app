@@ -71,7 +71,7 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
     <div className="space-y-8">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Overview</h2>
+          <h2 className="text-2xl text-primary">Overview</h2>
           <p className="mt-1 text-sm text-primary/60">
             Complete your profile to help players understand your coaching and
             request the right sessions.

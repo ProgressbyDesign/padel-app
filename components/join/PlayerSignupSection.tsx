@@ -19,7 +19,7 @@ export default function PlayerSignupSection({
           </p>
           <h2
             id="player-register-heading"
-            className="mt-3 font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+            className="mt-3"
           >
             Create your free player account
           </h2>
@@ -33,7 +33,7 @@ export default function PlayerSignupSection({
         <div className="rounded-[24px] border border-primary/10 bg-white p-6 shadow-[0_18px_50px_rgba(3,19,34,0.06)] sm:p-8">
           {signedIn ? (
             <div className="space-y-4">
-              <h3 className="text-xl font-bold text-primary">You are already signed in</h3>
+              <h3 className="text-xl text-primary">You are already signed in</h3>
               <p className="text-sm leading-6 text-primary/65">
                 Continue to your account to manage bookings and your player
                 journey.

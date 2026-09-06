@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import type { HomeStats } from "../LandingPage";
+import type { HomeStats } from "@/lib/queries/homeStats";
 
 type HomeStatsBentoProps = {
   stats: HomeStats;
@@ -49,7 +49,7 @@ export default function HomeStatsBento({ stats }: HomeStatsBentoProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Platform pulse</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h2 className="mt-2 text-white">
               Padel Pathways by the numbers
             </h2>
           </div>

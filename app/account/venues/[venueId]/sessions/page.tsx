@@ -75,7 +75,7 @@ export default async function ManagedVenueSessionsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-primary">Sessions</h2>
+        <h2 className="text-2xl text-primary">Sessions</h2>
         <p className="mt-1 text-sm text-primary/60">
           Venue-safe booking activity. Player contact details stay with the
           coach managing each booking.

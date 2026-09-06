@@ -118,7 +118,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-primary">Overview</h2>
+            <h2 className="text-2xl text-primary">Overview</h2>
             <p className="mt-1 text-sm text-primary/60">
               Current public and account status for this venue.
             </p>
@@ -219,7 +219,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
       {summaryCards.length > 0 ? (
         <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
           <div>
-            <h2 className="text-2xl font-bold text-primary">Operations</h2>
+            <h2 className="text-2xl text-primary">Operations</h2>
             <p className="mt-1 text-sm text-primary/60">
               Coaching schedule and booking activity for this venue.
             </p>
@@ -243,7 +243,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
 
           {alerts.length > 0 ? (
             <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
-              <h3 className="text-sm font-bold text-amber-950">
+              <h3 className="text-sm text-amber-950">
                 Needs attention
               </h3>
               <ul className="mt-3 space-y-2">
@@ -290,7 +290,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Completeness</h2>
+          <h2 className="text-2xl text-primary">Completeness</h2>
           <p className="mt-1 text-sm text-primary/60">
             Focus on essential details first, then trust signals and coach
             readiness. This is not a search ranking score.
@@ -312,7 +312,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
         <div className="mt-6 space-y-6">
           {completion.groups.map((group) => (
             <div key={group.id}>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+              <h3 className="text-sm font-semibold tracking-[0.12em] text-primary/45">
                 {group.title}
               </h3>
               <ul className="mt-3 space-y-2">
@@ -355,7 +355,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
           className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] transition hover:border-primary/20 hover:bg-surface"
         >
           <PenSquare className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Details</h3>
+          <h3 className="mt-4 text-lg text-primary">Details</h3>
           <p className="mt-1 text-sm text-primary/60">
             Basic info, hours, and location.
           </p>
@@ -365,7 +365,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
           className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] transition hover:border-primary/20 hover:bg-surface"
         >
           <ImageIcon className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Images</h3>
+          <h3 className="mt-4 text-lg text-primary">Images</h3>
           <p className="mt-1 text-sm text-primary/60">
             {imageCount === 0
               ? "No images yet"
@@ -377,7 +377,7 @@ export default async function ManagedVenueOverviewPage({ params }: PageProps) {
           className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] transition hover:border-primary/20 hover:bg-surface"
         >
           <Link2 className="h-5 w-5 text-primary" aria-hidden />
-          <h3 className="mt-4 text-lg font-bold text-primary">Social links</h3>
+          <h3 className="mt-4 text-lg text-primary">Social links</h3>
           <p className="mt-1 text-sm text-primary/60">
             {socialCount === 0
               ? "No links yet"

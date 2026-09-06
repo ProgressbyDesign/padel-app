@@ -374,7 +374,7 @@ function SlotDetailDialog({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id={titleId} className="text-lg font-bold text-primary">
+            <h2 id={titleId} className="text-lg text-primary">
               {slot.coachName}
             </h2>
             <p className="mt-1 text-sm text-primary/60">

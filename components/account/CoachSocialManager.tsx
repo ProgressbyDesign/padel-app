@@ -187,7 +187,7 @@ export default function CoachSocialManager({
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-primary">Social links</h2>
+          <h2 className="text-2xl text-primary">Social links</h2>
           <p className="mt-1 text-sm leading-6 text-primary/60">
             Help players find you on your official social channels.
           </p>

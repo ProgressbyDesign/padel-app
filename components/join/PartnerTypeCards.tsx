@@ -30,7 +30,7 @@ export default function PartnerTypeCards({
         </p>
         <h2
           id="partner-types-heading"
-          className="mt-3 font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+          className="mt-3"
         >
           Individual coaches, academies and venues.
         </h2>
@@ -73,7 +73,7 @@ export default function PartnerTypeCards({
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
                 Coming soon
               </p>
-              <h3 className="mt-3 text-xl font-bold text-primary">Travel Partner</h3>
+              <h3 className="mt-3 text-xl text-primary">Travel Partner</h3>
               <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">
                 Travel and holiday packages will get a dedicated partner journey.
                 This is not the individual coach application.
@@ -125,7 +125,7 @@ function PartnerTypeCard({
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
           {status}
         </p>
-        <h3 className="mt-3 text-xl font-bold text-primary">{title}</h3>
+        <h3 className="mt-3 text-xl text-primary">{title}</h3>
         <p className="mt-2 flex-1 text-sm leading-6 text-primary/65">{description}</p>
         <Link
           href={href}

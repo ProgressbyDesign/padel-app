@@ -327,7 +327,7 @@ export default function CoachImageManager({
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-primary">coach images</h2>
+          <h2 className="text-2xl text-primary">coach images</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-primary/60">
             Upload a clear headshot or coaching photo. JPEG, PNG or WebP up to
             8 MB.
@@ -433,7 +433,7 @@ export default function CoachImageManager({
         <div className="mt-7 space-y-7">
           {primary ? (
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+              <h3 className="text-sm font-semibold tracking-[0.12em] text-primary/45">
                 Current primary image
               </h3>
               <div className="mt-3 max-w-2xl">
@@ -448,7 +448,7 @@ export default function CoachImageManager({
 
           {remaining.length > 0 ? (
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-primary/45">
+              <h3 className="text-sm font-semibold tracking-[0.12em] text-primary/45">
                 Gallery images
               </h3>
               <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -32,7 +32,7 @@ export default function HomeTestimonials({ items }: HomeTestimonialsProps) {
     <section className="border-b border-primary/10 bg-surface py-14 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+          <h2>
             What players say
           </h2>
           <p className="mt-3 text-base text-primary/65 sm:text-lg">

@@ -43,7 +43,7 @@ function SettingsSection({
       aria-labelledby={`${id}-heading`}
       className="scroll-mt-24 rounded-[20px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6"
     >
-      <h2 id={`${id}-heading`} className="text-lg font-bold text-primary">
+      <h2 id={`${id}-heading`} className="text-lg text-primary">
         {title}
       </h2>
       <p className="mt-1 text-sm leading-6 text-primary/60">{description}</p>

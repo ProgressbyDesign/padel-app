@@ -14,7 +14,7 @@ export default function PlayerBenefitsBento() {
         </p>
         <h2
           id="player-benefits-heading"
-          className="mt-3 max-w-2xl font-heading text-3xl font-bold tracking-tight text-primary sm:text-4xl"
+          className="mt-3 max-w-2xl"
         >
           A player account that keeps your padel journey together.
         </h2>
@@ -40,7 +40,7 @@ export default function PlayerBenefitsBento() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/55">
                 Find the right coach
               </p>
-              <h3 className="mt-2 font-heading text-3xl font-bold uppercase leading-none text-primary sm:text-4xl">
+              <h3 className="mt-2 text-primary">
                 Coaching that fits your goals
               </h3>
               <p className="mt-3 text-base leading-6 text-primary/80">
@@ -53,7 +53,7 @@ export default function PlayerBenefitsBento() {
           <article className="flex min-h-[200px] flex-col justify-between rounded-[24px] bg-secondary p-7 lg:col-span-2">
             <Compass className="h-8 w-8 text-primary" aria-hidden />
             <div>
-              <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-primary">
+              <h3 className="text-primary">
                 Train wherever you play
               </h3>
               <p className="mt-2 text-sm leading-6 text-primary/75">
@@ -65,7 +65,7 @@ export default function PlayerBenefitsBento() {
           <article className="flex min-h-[200px] flex-col justify-between rounded-[24px] bg-card p-7 text-white lg:col-span-2">
             <CalendarDays className="h-8 w-8 text-accent" aria-hidden />
             <div>
-              <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-accent">
+              <h3 className="text-accent">
                 Your bookings
               </h3>
               <p className="mt-2 text-sm leading-6 text-white/75">
@@ -77,7 +77,7 @@ export default function PlayerBenefitsBento() {
           <article className="flex min-h-[180px] flex-col justify-between rounded-[24px] border border-primary/10 bg-surface p-7 lg:col-span-2">
             <UserRound className="h-8 w-8 text-primary" aria-hidden />
             <div>
-              <h3 className="font-heading text-xl font-bold uppercase leading-tight text-primary">
+              <h3 className="text-primary">
                 Your player account
               </h3>
               <p className="mt-2 text-sm leading-6 text-primary/70">
@@ -99,7 +99,7 @@ export default function PlayerBenefitsBento() {
             />
             <div className="absolute inset-0 bg-primary/55" aria-hidden />
             <div className="relative z-10 flex h-full flex-col justify-end p-7">
-              <h3 className="font-heading text-xl font-bold uppercase leading-tight text-white">
+              <h3 className="text-white">
                 Discover venues
               </h3>
               <p className="mt-2 text-sm leading-6 text-white/80">
@@ -110,7 +110,7 @@ export default function PlayerBenefitsBento() {
 
           <article className="flex min-h-[180px] flex-col justify-center rounded-[24px] bg-accent-soft p-7 lg:col-span-2">
             <Target className="h-8 w-8 text-primary" aria-hidden />
-            <h3 className="mt-4 font-heading text-xl font-bold uppercase leading-tight text-primary">
+            <h3 className="mt-4 text-primary">
               Built around your goals
             </h3>
             <p className="mt-2 text-sm leading-6 text-primary/75">
