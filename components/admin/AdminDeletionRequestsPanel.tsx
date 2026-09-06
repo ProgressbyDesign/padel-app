@@ -209,7 +209,7 @@ export function AdminDeletionRequestDetailPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-primary/10 bg-white p-5">
-          <h2 className="text-lg font-bold text-primary">Request</h2>
+          <h2 className="text-lg text-primary">Request</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div>
               <dt className="text-primary/50">Status</dt>
@@ -269,7 +269,7 @@ export function AdminDeletionRequestDetailPanel({
         </div>
 
         <div className="rounded-2xl border border-primary/10 bg-white p-5">
-          <h2 className="text-lg font-bold text-primary">Admin actions</h2>
+          <h2 className="text-lg text-primary">Admin actions</h2>
           <p className="mt-2 text-sm text-primary/60">
             These actions update request status and notify the user. They do not
             delete Auth users or run data cleanup.
@@ -309,7 +309,7 @@ export function AdminDeletionRequestDetailPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-primary/10 bg-white p-5">
-          <h2 className="text-lg font-bold text-primary">Managed coaches</h2>
+          <h2 className="text-lg text-primary">Managed coaches</h2>
           {detail.coaches.length === 0 ? (
             <p className="mt-3 text-sm text-primary/55">None</p>
           ) : (
@@ -334,7 +334,7 @@ export function AdminDeletionRequestDetailPanel({
           )}
         </div>
         <div className="rounded-2xl border border-primary/10 bg-white p-5">
-          <h2 className="text-lg font-bold text-primary">Managed venues</h2>
+          <h2 className="text-lg text-primary">Managed venues</h2>
           {detail.venues.length === 0 ? (
             <p className="mt-3 text-sm text-primary/55">None</p>
           ) : (

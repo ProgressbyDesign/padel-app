@@ -40,7 +40,7 @@ export default function PartnerJoinLanding({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/45">
               For coaches &amp; padel businesses
             </p>
-            <h1 className="mt-4 max-w-xl font-heading text-4xl font-bold tracking-tight text-primary sm:text-5xl">
+            <h1 className="mt-4 max-w-xl">
               Put your coaching in front of players looking to improve.
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-8 text-primary/70">

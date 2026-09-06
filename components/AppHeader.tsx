@@ -60,7 +60,7 @@ export default function AppHeader({
   return (
     <header className={`${headerPosition} z-50 transition-colors duration-300 ${headerSurface}`}>
       <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-[120px]">
-        <PadelPathwaysLogo variant={overlay ? "white" : "black"} />
+        <PadelPathwaysLogo variant={overlay ? "white" : "color"} />
 
         <nav className="hidden items-center justify-end gap-1 lg:flex lg:gap-2" aria-label="Main">
           {nav.map((item) => {

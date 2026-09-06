@@ -13,7 +13,7 @@ export default function PartnerBenefitsBento() {
         </p>
         <h2
           id="partner-benefits-heading"
-          className="mt-3 max-w-2xl font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl"
+          className="mt-3 max-w-2xl text-white"
         >
           Show your coaching where players are already looking.
         </h2>
@@ -34,7 +34,7 @@ export default function PartnerBenefitsBento() {
             <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
             <div className="relative z-10 flex h-full flex-col justify-end p-8">
               <Search className="h-7 w-7 text-accent" aria-hidden />
-              <h3 className="mt-4 font-heading text-3xl font-bold uppercase text-white">
+              <h3 className="mt-4 text-white">
                 Be discovered
               </h3>
               <p className="mt-2 max-w-lg text-sm leading-6 text-white/70">
@@ -47,7 +47,7 @@ export default function PartnerBenefitsBento() {
           <article className="flex min-h-[260px] flex-col justify-between rounded-[24px] bg-accent p-8">
             <Eye className="h-7 w-7 text-primary" aria-hidden />
             <div>
-              <h3 className="font-heading text-2xl font-bold uppercase text-primary">
+              <h3 className="text-primary">
                 Show your experience
               </h3>
               <p className="mt-2 text-sm leading-6 text-primary/75">
@@ -60,7 +60,7 @@ export default function PartnerBenefitsBento() {
           <article className="flex min-h-[220px] flex-col justify-between rounded-[24px] bg-[#aed4e8] p-8">
             <Users className="h-7 w-7 text-primary" aria-hidden />
             <div>
-              <h3 className="font-heading text-xl font-bold uppercase text-primary">
+              <h3 className="text-primary">
                 Connect with the right players
               </h3>
               <p className="mt-2 text-sm leading-6 text-primary/75">
@@ -73,7 +73,7 @@ export default function PartnerBenefitsBento() {
           <article className="flex min-h-[220px] flex-col justify-between rounded-[24px] bg-white p-8">
             <MapPin className="h-7 w-7 text-primary" aria-hidden />
             <div>
-              <h3 className="font-heading text-xl font-bold uppercase text-primary">
+              <h3 className="text-primary">
                 Coach + venue connections
               </h3>
               <p className="mt-2 text-sm leading-6 text-primary/70">
@@ -86,7 +86,7 @@ export default function PartnerBenefitsBento() {
           <article className="flex min-h-[220px] flex-col justify-between rounded-[24px] border border-white/10 bg-card p-8">
             <Layers3 className="h-7 w-7 text-accent" aria-hidden />
             <div>
-              <h3 className="font-heading text-xl font-bold uppercase text-white">
+              <h3 className="text-white">
                 Manage your presence
               </h3>
               <p className="mt-2 text-sm leading-6 text-white/70">

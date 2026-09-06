@@ -54,7 +54,7 @@ export function ManagedCoachWorkspaceCard({ coach }: { coach: ManagedCoach }) {
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
           Coach workspace
         </p>
-        <h3 className="mt-2 truncate text-xl font-bold text-primary">
+        <h3 className="mt-2 truncate text-xl text-primary">
           {coach.name}
         </h3>
         {coach.role ? (
@@ -135,7 +135,7 @@ export function ManagedVenueWorkspaceCard({ venue }: { venue: ManagedVenue }) {
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
           Venue workspace
         </p>
-        <h3 className="mt-2 truncate text-xl font-bold text-primary">
+        <h3 className="mt-2 truncate text-xl text-primary">
           {venue.name}
         </h3>
         {venue.location ? (

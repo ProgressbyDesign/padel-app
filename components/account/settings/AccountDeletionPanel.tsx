@@ -98,7 +98,7 @@ export default function AccountDeletionPanel({
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-800/70">
         Danger zone
       </p>
-      <h2 id="delete-heading" className="mt-2 text-xl font-bold text-primary">
+      <h2 id="delete-heading" className="mt-2 text-xl text-primary">
         Delete account
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-6 text-primary/70">
@@ -265,7 +265,7 @@ export default function AccountDeletionPanel({
         <div className="p-6">
           <h3
             id="cancel-deletion-title"
-            className="text-xl font-bold text-primary"
+            className="text-xl text-primary"
           >
             Cancel deletion request?
           </h3>

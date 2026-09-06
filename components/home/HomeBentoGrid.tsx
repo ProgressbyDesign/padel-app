@@ -7,6 +7,7 @@ import type { CoachListingItem } from "@/lib/coachListing";
 import { coachListingProfileHref } from "@/lib/coachListing";
 import EnquiryModal from "@/components/enquiry/EnquiryModal";
 import CoachCard from "@/components/CoachCard";
+import HomeBentoRegisterCard from "@/components/home/HomeBentoRegisterCard";
 import HomeFeaturedVenueCard from "@/components/home/HomeFeaturedVenueCard";
 import CardArrowButton from "@/components/home/CardArrowButton";
 
@@ -29,6 +30,8 @@ type HomeBentoGridProps = {
   recommendedCoach: CoachListingItem | null;
   recommendedVenue: BentoVenuePreview | null;
   enquiryVenueId: string | null;
+  coachRegisterHref: string;
+  venueRegisterHref: string;
 };
 
 function FindCoachButton() {
@@ -48,6 +51,8 @@ export default function HomeBentoGrid({
   recommendedCoach,
   recommendedVenue,
   enquiryVenueId,
+  coachRegisterHref,
+  venueRegisterHref,
 }: HomeBentoGridProps) {
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const coachHref = recommendedCoach ? coachListingProfileHref(recommendedCoach.id) : "/coaches";
@@ -62,10 +67,10 @@ export default function HomeBentoGrid({
               className="group relative flex min-h-[420px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[440px] lg:min-h-[520px]"
             >
               <div className="relative z-10 flex max-w-md flex-col justify-center p-8 sm:p-[52px]">
-                <p className="text-2xl font-bold uppercase tracking-tight text-primary/50">
+                <p className="text-2xl text-primary/50">
                   Discover your
                 </p>
-                <h3 className="mt-1 max-w-sm font-heading text-3xl font-bold uppercase leading-none text-primary sm:text-4xl lg:text-[48px] lg:leading-[49px]">
+                <h3 className="mt-1 max-w-sm text-primary">
                   Padel Pathways Certified Coach
                 </h3>
                 <p className="mt-3 max-w-sm text-lg text-primary">
@@ -93,7 +98,7 @@ export default function HomeBentoGrid({
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-primary">
+                    <h3 className="text-primary">
                       Explore training camps
                     </h3>
                     <p className="mt-2 text-lg text-primary">
@@ -111,7 +116,7 @@ export default function HomeBentoGrid({
               >
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-heading text-2xl font-bold uppercase leading-tight text-accent">
+                    <h3 className="text-accent">
                       Get matched
                     </h3>
                     <p className="mt-2 text-lg text-[#f0f1f7]">
@@ -124,7 +129,7 @@ export default function HomeBentoGrid({
             </div>
           </div>
 
-          <div className="flex sm:min-w-[376px] flex-col gap-6 !aspect-3/2 lg:shrink-0">
+          <div className="flex w-full flex-col gap-6 lg:w-[400px] lg:shrink-0">
             {recommendedCoach ? (
               <CoachCard
                 variant="featured"
@@ -143,12 +148,14 @@ export default function HomeBentoGrid({
                 className="flex-1"
               />
             ) : (
-              <Link
-                href="/coaches"
-                className="flex min-h-[331px] flex-1 items-end rounded-[20px] bg-primary/10 p-6"
-              >
-                <p className="text-lg font-semibold text-primary">Browse coaches</p>
-              </Link>
+              <HomeBentoRegisterCard
+                tone="coach"
+                href={coachRegisterHref}
+                eyebrow="Join the pathway"
+                title="Register as a coach"
+                copy="Professional coaches are invited to apply and appear here for players planning their next session."
+                cta="Register as a coach"
+              />
             )}
 
             {recommendedVenue ? (
@@ -165,12 +172,14 @@ export default function HomeBentoGrid({
                 className="min-h-[331px] flex-1"
               />
             ) : (
-              <Link
-                href="/venues"
-                className="flex min-h-[331px] flex-1 items-end rounded-[20px] bg-primary/10 p-6"
-              >
-                <p className="text-lg font-semibold text-primary">Explore venues</p>
-              </Link>
+              <HomeBentoRegisterCard
+                tone="venue"
+                href={venueRegisterHref}
+                eyebrow="List your club"
+                title="Register a venue"
+                copy="Academies and venues can join Padel Pathways so players can discover courts worth travelling for."
+                cta="Register a venue"
+              />
             )}
           </div>
         </div>

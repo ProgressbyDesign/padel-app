@@ -63,7 +63,7 @@ export default function CoachAvailabilityOverview({
     return (
       <div className="rounded-[24px] border border-dashed border-primary/20 bg-white p-8 text-center sm:p-12">
         <CalendarClock className="mx-auto h-8 w-8 text-primary/35" aria-hidden />
-        <h2 className="mt-5 text-xl font-bold text-primary">
+        <h2 className="mt-5 text-xl text-primary">
           No active coaching venues yet
         </h2>
         <p className="mt-3 text-sm text-primary/60">
@@ -111,7 +111,7 @@ function VenueAvailabilityCard({
       <li className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-primary">{venue.venueName}</h2>
+            <h2 className="text-xl text-primary">{venue.venueName}</h2>
             {location ? (
               <p className="mt-1 text-sm text-primary/55">{location}</p>
             ) : null}
@@ -137,7 +137,7 @@ function VenueAvailabilityCard({
     <li className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-primary">{venue.venueName}</h2>
+          <h2 className="text-xl text-primary">{venue.venueName}</h2>
           {location ? (
             <p className="mt-1 text-sm text-primary/55">{location}</p>
           ) : null}

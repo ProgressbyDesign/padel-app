@@ -68,7 +68,7 @@ export default function BookingRequestForm({
       }}
     >
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 sm:p-6">
-        <h1 className="text-2xl font-bold text-primary">Request a session</h1>
+        <h1 className="text-2xl text-primary">Request a session</h1>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-primary/45">Coach</dt>

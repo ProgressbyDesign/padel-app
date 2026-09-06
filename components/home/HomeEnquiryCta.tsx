@@ -9,7 +9,7 @@ export default function HomeEnquiryCta({ venueId }: { venueId: string | null }) 
         <div className="mx-auto flex max-w-[824px] flex-col items-center gap-8 rounded-[20px] bg-accent px-8 py-10 text-center text-primary sm:px-9 sm:py-12">
           <div className="space-y-4">
             <p className="text-base font-bold uppercase tracking-[0.8px]">Personal guidance</p>
-            <h2 className="font-heading text-3xl font-bold leading-tight sm:text-[48px] sm:leading-[52px]">
+            <h2>
               Not sure where to start?
             </h2>
             <p className="text-lg leading-7">

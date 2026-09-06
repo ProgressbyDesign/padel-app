@@ -20,7 +20,7 @@ export default function VenueApplicationReadOnly({
           Application status
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-bold text-primary">
+          <h2 className="text-2xl text-primary">
             {VENUE_APPLICATION_STATUS_LABELS[application.status]}
           </h2>
           <span className="rounded-full border border-primary/10 bg-surface px-3 py-1 text-xs font-semibold text-primary/70">
@@ -70,7 +70,7 @@ export default function VenueApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Your role</h3>
+        <h3 className="text-lg text-primary">Your role</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Detail
             label="Relationship"
@@ -81,7 +81,7 @@ export default function VenueApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Venue</h3>
+        <h3 className="text-lg text-primary">Venue</h3>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <Detail
             label="Application type"
@@ -130,7 +130,7 @@ export default function VenueApplicationReadOnly({
       </section>
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-6">
-        <h3 className="text-lg font-bold text-primary">Supporting note</h3>
+        <h3 className="text-lg text-primary">Supporting note</h3>
         <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-primary/75">
           {application.supporting_note || "No supporting note was provided."}
         </p>

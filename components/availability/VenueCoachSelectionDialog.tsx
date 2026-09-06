@@ -93,7 +93,7 @@ export default function VenueCoachSelectionDialog({
       >
         <div className="flex items-start justify-between gap-3 border-b border-primary/10 px-5 py-4">
           <div>
-            <h2 id={titleId} className="text-lg font-bold text-primary">
+            <h2 id={titleId} className="text-lg text-primary">
               Choose a coach for {timeLabel}
             </h2>
             <p className="mt-1 text-sm text-primary/60">

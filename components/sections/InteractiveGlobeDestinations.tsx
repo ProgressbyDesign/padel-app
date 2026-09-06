@@ -168,7 +168,7 @@ export default function InteractiveGlobeDestinations({ countries }: Props) {
               <div className="relative z-40 mx-auto max-w-5xl px-4 pt-12 text-center md:pt-20">
         <h2
           id="destinations-globe-heading"
-          className="text-balance font-heading text-4xl font-bold tracking-tight text-white md:text-6xl"
+          className="text-balance text-white"
         >
           Popular training destinations
         </h2>

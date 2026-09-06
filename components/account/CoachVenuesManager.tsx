@@ -213,7 +213,7 @@ export default function CoachVenuesManager({
       )}
 
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
-        <h2 className="text-xl font-bold text-primary">Add coaching venues</h2>
+        <h2 className="text-xl text-primary">Add coaching venues</h2>
         <p className="mt-1 text-sm text-primary/60">
           Select one or more venues, then send coaching relationship requests.
           You do not need to own the venue.
@@ -516,7 +516,7 @@ function RelationshipSection({
 }) {
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
-      <h2 className="text-xl font-bold text-primary">{title}</h2>
+      <h2 className="text-xl text-primary">{title}</h2>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-primary/55">{empty}</p>
       ) : (

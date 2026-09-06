@@ -33,7 +33,7 @@ export default function ManagedListingCard({
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary/45">
             {kind === "coach" ? "Coach profile" : "Venue"}
           </p>
-          <h3 className="mt-2 truncate text-xl font-bold text-primary">{name}</h3>
+          <h3 className="mt-2 truncate text-xl text-primary">{name}</h3>
         </div>
         <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-primary">
           {roleLabel(membershipRole)}

@@ -28,7 +28,7 @@ export default function CoachApplicationEntry() {
 
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-6 sm:p-7">
-      <h2 className="text-xl font-bold text-primary">Start your application</h2>
+      <h2 className="text-xl text-primary">Start your application</h2>
       <p className="mt-2 text-sm leading-6 text-primary/65">
         Apply as a coach to create your profile on Padel Pathways. Progress saves
         to your account.

@@ -10,7 +10,7 @@ const NAV = [
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface" data-ui-headings>
       <header className="border-b border-primary/10 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>

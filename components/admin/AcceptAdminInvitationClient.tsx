@@ -335,7 +335,7 @@ function Shell({
       <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
         Admin invitation
       </p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight text-primary">
+      <h1 className="mt-3 text-3xl text-primary">
         {title}
       </h1>
       {children}

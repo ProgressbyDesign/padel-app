@@ -66,7 +66,7 @@ export default function WithdrawCoachApplicationButton({
         <div className="p-6">
           <h2
             id="withdraw-coach-app-title"
-            className="text-xl font-bold text-primary"
+            className="text-xl text-primary"
           >
             Withdraw this application?
           </h2>
