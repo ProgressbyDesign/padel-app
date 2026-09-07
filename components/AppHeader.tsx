@@ -62,14 +62,14 @@ export default function AppHeader({
       <div className="mx-auto flex h-16 max-w-[1680px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-[120px]">
         <PadelPathwaysLogo variant={overlay ? "white" : "color"} />
 
-        <nav className="hidden items-center justify-end gap-1 lg:flex lg:gap-2" aria-label="Main">
-          {nav.map((item) => {
+        <nav className="hidden items-center justify-end gap-1 flex-1 lg:flex lg:gap-2" aria-label="Main">
+         <div className="mx-auto"> {nav.map((item) => {
             const active = isNavActive(item.href, pathname);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-full px-3 py-2 text-sm font-medium transition sm:px-4 ${
+                className={`rounded-full px-3 py-2 text-sm font-primary transition sm:px-4 ${
                   active ? linkActive : linkIdle
                 }`}
               >
@@ -77,6 +77,7 @@ export default function AppHeader({
               </Link>
             );
           })}
+          </div>
           {accountNav ? (
             <AccountNavMenu account={accountNav} overlay={overlay} />
           ) : (

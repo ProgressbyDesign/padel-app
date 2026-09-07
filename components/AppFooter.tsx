@@ -54,7 +54,7 @@ export default function AppFooter() {
         </div>
 
         <p
-          className="pointer-events-none mt-16 select-none font-heading text-[clamp(3.5rem,14vw,10rem)] font-bold leading-[0.9] tracking-[-0.03em] text-primary lg:mt-20"
+          className="pointer-events-none mt-16 select-none font-heading text-[clamp(3.5rem,7vw,7.75rem)] font-bold text-primary lg:mt-20"
           aria-hidden
         >
           PADEL PATHWAYS
