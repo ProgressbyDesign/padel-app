@@ -236,7 +236,7 @@ export default function MarketplaceSearch({
     ? `rounded-2xl border border-white/20 p-2 shadow-xl shadow-black/25 backdrop-blur-md transition-colors duration-200 sm:rounded-full sm:p-1.5 ${shellBg}`
     : isCompact
       ? `rounded-xl border border-primary/15 p-1.5 shadow-md transition-colors duration-200 ${shellBg}`
-      : `rounded-xl border border-primary/15 p-2 shadow-sm transition-colors duration-200 sm:rounded-2xl sm:p-1.5 ${shellBg}`;
+      : `rounded-xl border border-primary/15 p-2 shadow-sm transition-colors duration-200 sm:rounded-full sm:p-1.5 ${shellBg}`;
 
   const fieldShell = isHero
     ? "flex flex-col gap-1.5 sm:flex-row sm:items-stretch sm:gap-1"

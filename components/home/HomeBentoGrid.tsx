@@ -70,9 +70,9 @@ export default function HomeBentoGrid({
                 <p className="text-2xl text-primary/50">
                   Discover your
                 </p>
-                <h3 className="mt-1 max-w-sm text-primary">
+                <h2 className="mt-1 max-w-sm text-primary">
                   Padel Pathways Certified Coach
-                </h3>
+                </h2>
                 <p className="mt-3 max-w-sm text-lg text-primary">
                   Browse profiles by location, level, and coaching focus—then book with confidence.
                 </p>
