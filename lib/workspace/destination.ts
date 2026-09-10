@@ -26,6 +26,7 @@ export function resolveWorkspaceDestination(
 ): string {
   const { preference, coaches, venues, isAdmin } = context;
 
+  if (coaches.length === 1 && venues.length === 0 && !isAdmin) return workspaceHref("coach", coaches[0]!.id);
   if (preference.type === "personal") {
     return workspaceHref("personal");
   }

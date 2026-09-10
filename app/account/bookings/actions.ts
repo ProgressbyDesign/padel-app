@@ -370,3 +370,22 @@ export async function cancelPlayerBookingRequest(
 ): Promise<BookingActionResult> {
   return mutateBookingStatus({ bookingId, status: "cancelled", as: "player" });
 }
+
+export async function markCoachBookingPaid(bookingId: string): Promise<BookingActionResult> {
+  if (!isValidCoachId(bookingId)) return { ok: false, message: "Booking not found." };
+  const userId = await requireClaimsUserId();
+  if (!userId) return { ok: false, message: BOOKING_ERROR_COPY.AUTH };
+  const booking = await loadBookingById(bookingId);
+  if (!booking) return { ok: false, message: "Booking not found." };
+  const supabase = await createClient();
+  const { data: membership } = await supabase.from("coach_memberships").select("coach_id").eq("coach_id", booking.coach_id).eq("user_id", userId).maybeSingle();
+  if (!membership) return { ok: false, message: "Only the coach can confirm payment." };
+  if (booking.paid_at) return { ok: true, message: "Payment is already recorded." };
+  if (booking.status !== "accepted" && booking.status !== "completed") return { ok: false, message: "Accept the booking before recording payment." };
+  const { data, error } = await supabase.from("coach_booking_requests")
+    .update({ paid_at: new Date().toISOString() })
+    .eq("id", bookingId).is("paid_at", null).in("status", ["accepted", "completed"]).select("id").maybeSingle();
+  if (error || !data) return { ok: false, message: "Payment could not be recorded. Refresh the booking and try again." };
+  revalidateBookingPaths({ bookingId, coachId: booking.coach_id, venueId: booking.venue_id, relationshipId: booking.coach_venue_id });
+  return { ok: true, message: "Payment marked as received.", bookingId };
+}

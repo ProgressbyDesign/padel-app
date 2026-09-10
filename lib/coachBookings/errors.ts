@@ -62,6 +62,7 @@ export function bookingMutationErrorMessage(
   if (
     blob.includes("relationship") ||
     blob.includes("public") ||
+    blob.includes("published") ||
     blob.includes("active")
   ) {
     return RELATIONSHIP_UNAVAILABLE;

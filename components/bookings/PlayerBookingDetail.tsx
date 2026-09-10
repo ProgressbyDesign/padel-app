@@ -47,8 +47,7 @@ export default function PlayerBookingDetail({
         ) : null}
         {booking.status === "accepted" ? (
           <p className="mt-3 max-w-2xl text-sm leading-6 text-primary/65">
-            Your request has been accepted. Contact the coach to confirm payment
-            and final arrangements.
+            {booking.paid_at ? "Your session is confirmed and payment has been received." : "Your request has been accepted. Contact the coach to confirm payment and final arrangements."}
           </p>
         ) : null}
       </div>
@@ -61,6 +60,7 @@ export default function PlayerBookingDetail({
         >
           {playerStatusLabel(booking, competitorAccepted)}
         </p>
+        <p className="mt-4 text-sm font-semibold">{booking.paid_at ? "Paid · confirmed by coach" : "Payment not recorded"}</p>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-primary/45">Coach</dt>

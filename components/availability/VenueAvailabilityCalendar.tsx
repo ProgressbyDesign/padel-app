@@ -219,7 +219,7 @@ export default function VenueAvailabilityCalendar({
 
   return (
     <div className="space-y-4">
-      {coaches.length > 0 ? (
+      {coaches.length > 1 ? (
         <div className="flex flex-wrap items-center gap-2">
           <label
             htmlFor="venue-availability-coach-filter"
@@ -410,7 +410,7 @@ export default function VenueAvailabilityCalendar({
                       return (
                         <div
                           key={group.startsAt}
-                          className="absolute inset-x-1 z-10"
+                          className="absolute inset-x-1 z-10 hover:z-50 focus-within:z-50"
                           style={{ top, height }}
                         >
                           <TimeSummaryBlock

@@ -33,8 +33,8 @@ export default function JoinNavMenu({
   }, [open]);
 
   const triggerClass = overlay
-    ? "bg-white text-primary shadow-md hover:bg-white/95"
-    : "bg-primary text-accent shadow-sm hover:bg-primary/90";
+    ? "bg-accent text-primary shadow-sm hover:bg-accent-soft"
+    : "bg-accent text-primary shadow-sm hover:bg-accent-soft";
 
   return (
     <div ref={rootRef} className="relative">
@@ -53,7 +53,7 @@ export default function JoinNavMenu({
             queueMicrotask(() => firstItemRef.current?.focus());
           }
         }}
-        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition sm:px-5 ${triggerClass}`}
+        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition sm:px-5 font-heading ${triggerClass}`}
       >
         Join
         <ChevronDown
@@ -66,7 +66,7 @@ export default function JoinNavMenu({
           id={menuId}
           role="menu"
           aria-labelledby={triggerId}
-          className="absolute right-0 top-full z-50 mt-2 w-80 rounded-2xl border border-primary/10 bg-white p-2 shadow-[0_12px_40px_rgba(3,19,34,0.12)]"
+          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-primary/10 bg-white p-2 shadow-[0_12px_40px_rgba(3,19,34,0.12)]"
         >
           {JOIN_NAV_ITEMS.map((item, index) => (
             <Link
@@ -78,12 +78,7 @@ export default function JoinNavMenu({
               onClick={() => setOpen(false)}
               className="block rounded-xl px-3 py-3 text-left transition hover:bg-surface focus:bg-surface focus:outline-none"
             >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/45">
-                {item.eyebrow}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-primary">
-                {item.description}
-              </p>
+              <span className="text-sm font-heading text-primary">{item.eyebrow}</span>
             </Link>
           ))}
         </div>

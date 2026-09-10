@@ -1,3 +1,4 @@
+import AuthExperience from "@/components/auth/AuthExperience";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -72,29 +73,9 @@ export default async function VenueApplicationPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-4 py-10 sm:px-6 sm:py-14 lg:px-[120px]">
-      <nav aria-label="Breadcrumb">
-        <Link
-          href="/account/applications"
-          className="text-sm font-semibold text-primary/60 transition hover:text-primary"
-        >
-          ← Applications
-        </Link>
-      </nav>
-
-      <div className="mt-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
-          Academy or venue
-        </p>
-        <h1 className="mt-3 text-3xl text-primary sm:text-4xl">
-          Venue application
-        </h1>
-        <p className="mt-3 max-w-2xl text-base leading-6 text-primary/65">
-          Submit your venue details. Your progress is saved to your account.
-        </p>
-      </div>
-
-      <div className="mt-8">{content}</div>
-    </div>
+    <AuthExperience joining wideForm audience="venue" title="Venue application" description="Your progress saves to your account. Complete your details when you are ready.">
+      <Link href="/account/applications" className="mb-5 text-sm font-semibold underline">Back to applications</Link>
+      {content}
+    </AuthExperience>
   );
 }

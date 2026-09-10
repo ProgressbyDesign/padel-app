@@ -39,6 +39,7 @@ export type CoachBookingRequest = {
   responded_at: string | null;
   cancelled_at: string | null;
   completed_at: string | null;
+  paid_at?: string | null;
   created_at: string;
   updated_at: string;
   coach: BookingCoachSummary | null;

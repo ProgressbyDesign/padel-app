@@ -226,14 +226,14 @@ export default function MarketplaceSearch({
 
   const shellBg = isHero
     ? anyActive
-      ? "bg-surface/95"
-      : "bg-white/95"
+      ? "bg-surface/90"
+      : "bg-white/90"
     : anyActive
       ? "bg-surface"
       : "bg-white";
 
   const shellClass = isHero
-    ? `rounded-2xl border border-white/20 p-2 shadow-xl shadow-black/25 backdrop-blur-md transition-colors duration-200 sm:rounded-full sm:p-1.5 ${shellBg}`
+    ? `rounded-2xl border border-white/20 shadow-xl shadow-black/25 backdrop-blur-md transition-colors duration-200 sm:rounded-full ${shellBg}`
     : isCompact
       ? `rounded-xl border border-primary/15 p-1.5 shadow-md transition-colors duration-200 ${shellBg}`
       : `rounded-xl border border-primary/15 p-2 shadow-sm transition-colors duration-200 sm:rounded-full sm:p-1.5 ${shellBg}`;
@@ -249,12 +249,12 @@ export default function MarketplaceSearch({
       : "rounded-xl transition-colors duration-150 hover:bg-black/[0.04] sm:rounded-full";
 
   const inputClass = isHero
-    ? "w-full bg-transparent py-3 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-[15px]"
+    ? "w-full bg-transparent py-1 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-[15px]"
     : isCompact
       ? "w-full bg-transparent py-2 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-sm"
       : "w-full bg-transparent py-2.5 pl-1 text-base text-primary placeholder:text-primary/45 focus:outline-none sm:text-sm";
 
-  const labelClass = "text-[10px] font-semibold uppercase tracking-wide text-primary/50 sm:text-[11px]";
+  const labelClass = "text-[10px] font-semibold uppercase tracking-wide text-primary/50 sm:text-[11px] sm:px-4";
 
   const searchBtnExpanded =
     anyActive || Boolean(location.trim()) || Boolean(entity.trim());
@@ -364,7 +364,7 @@ export default function MarketplaceSearch({
         <div className={fieldShell}>
           {/* Search for */}
           <div
-            className={`relative min-w-0 px-3 py-0.5 ${isHero ? "sm:shrink-0" : "lg:shrink-0"} ${segmentClass(modeOpen)}`}
+            className={`relative min-w-0 px-3 py-2 ${isHero ? "sm:shrink-0" : "lg:shrink-0"} ${segmentClass(modeOpen)}`}
           >
             <span className={`mb-0.5 block ${labelClass}`}>Search for</span>
             <SearchModeSelect
@@ -382,9 +382,9 @@ export default function MarketplaceSearch({
           </div>
 
           {/* Where */}
-          <div className={`relative min-w-0 flex-1 px-3 py-0.5 ${segmentClass(activeField === "where")}`}>
+          <div className={`relative min-w-0 flex-1 px-3 py-2 ${segmentClass(activeField === "where")}`}>
             <span className={`mb-0.5 block ${labelClass}`}>Where</span>
-            <div className="relative flex items-center gap-1">
+            <div className="relative flex items-center gap-1 sm:px-4">
               <MapPin
                 className={`h-4 w-4 shrink-0 ${isHero ? "text-primary/40" : "text-secondary"}`}
                 aria-hidden
@@ -414,9 +414,9 @@ export default function MarketplaceSearch({
           </div>
 
           {/* Coach / Venue */}
-          <div className={`relative min-w-0 flex-1 px-3 py-0.5 ${segmentClass(activeField === "entity")}`}>
+          <div className={`relative min-w-0 flex-1 px-3 py-2 ${segmentClass(activeField === "entity")}`}>
             <span className={`mb-0.5 block ${labelClass}`}>{entityFieldLabel(mode)}</span>
-            <div className="relative flex items-center gap-1">
+            <div className="relative flex items-center gap-1 sm:px-4">
               <input
                 type="text"
                 value={entity}

@@ -5,7 +5,7 @@ import { HERO_POSTER_SRC, HERO_VIDEO_SRC } from "@/lib/home/heroMedia";
 
 export default function HomeHero() {
   return (
-    <section className="relative -mt-16 min-h-[min(88vh,815px)] overflow-hidden">
+    <section className="relative -mt-16 min-h-[min(88vh,1024px)]">
       <Image
         src={HERO_POSTER_SRC}
         alt=""
@@ -25,8 +25,8 @@ export default function HomeHero() {
         }}
         aria-hidden
       />
-      <div className="relative mx-auto flex min-h-[min(88vh,815px)] max-w-[1680px] flex-col justify-center px-4 pb-20 pt-28 sm:px-6 sm:pb-24">
-        <h1 className="mx-auto max-w-4xl text-center text-white drop-shadow-sm">
+      <div className="relative mx-auto flex min-h-[min(88vh,1024px)] max-w-[1680px] flex-col justify-center px-4 pb-28 pt-28 sm:px-6 sm:pb-24">
+        <h1 className="mx-auto max-w-4xl text-center text-white drop-shadow-sm pt-28">
           Train with some of the world&apos;s most trusted padel coaches.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-white/90 sm:text-xl">

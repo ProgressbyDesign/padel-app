@@ -39,9 +39,7 @@ export default function ManagedCoachHeader({
 
       <header className="mt-6 flex flex-col gap-5 border-b border-primary/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
-            Coach management
-          </p>
+
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <h1 className="text-3xl text-primary sm:text-4xl">
               {coachName}

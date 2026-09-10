@@ -1,10 +1,10 @@
 import type { PublicCoachCard } from "../lib/coaches";
 import type { PublicVenue } from "../lib/venueFilters";
 import type { PublicCoachAvailabilityCard } from "../lib/coachAvailability/types";
-import EnquiryButton from "./enquiry/EnquiryButton";
+
 import { getVenueDescriptionForPdp } from "../lib/venueDetailHelpers";
 import VenueCardsWithDistance from "./VenueCardsWithDistance";
-import BookingCard from "./venue-detail/BookingCard";
+
 import CoachesSection from "./venue-detail/CoachesSection";
 import CourtDetailsSection from "./venue-detail/CourtDetailsSection";
 import ExpandableDescription from "./venue-detail/ExpandableDescription";
@@ -40,7 +40,7 @@ export default function VenueDetailPage({
           <VenueHeader venue={venue} />
           <VenueGallery venue={venue} />
         </div>
-        <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:items-start lg:gap-10">
+        <div className="mx-auto max-w-5xl">
           <div className="min-w-0 space-y-8">
             <QuickFacts venue={venue} />
 
@@ -63,10 +63,7 @@ export default function VenueDetailPage({
             <VenueMapSection venue={venue} />
           </div>
 
-          <aside className="sticky top-24 mt-10 space-y-4 lg:mt-0">
-            <EnquiryButton venueId={String(venue.id)} label="Send venue enquiry" />
-            <BookingCard venueName={venue.name} />
-          </aside>
+
         </div>
 
         {similarVenues.length > 0 ? (

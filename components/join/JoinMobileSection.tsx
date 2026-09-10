@@ -8,7 +8,7 @@ export default function JoinMobileSection({
 }) {
   return (
     <div className="mt-2 space-y-2">
-      <p className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-primary/45">
+      <p className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-white/65">
         Join
       </p>
       {JOIN_NAV_ITEMS.map((item) => (
@@ -20,7 +20,7 @@ export default function JoinMobileSection({
           className="block rounded-2xl border border-primary/10 bg-surface/60 px-4 py-3.5 transition hover:bg-surface"
         >
           <p className="text-base font-semibold text-primary">{item.eyebrow}</p>
-          <p className="mt-1 text-sm leading-5 text-primary/60">{item.description}</p>
+
         </Link>
       ))}
     </div>

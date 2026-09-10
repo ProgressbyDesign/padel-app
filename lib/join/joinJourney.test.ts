@@ -24,7 +24,7 @@ describe("join navigation destinations", () => {
         description: "Create your free player account",
       }),
       expect.objectContaining({
-        eyebrow: "For Coaches & Businesses",
+        eyebrow: "For Coaches & Business",
         href: "/join",
         description: "Join as a coach, academy, venue or travel partner",
       }),
@@ -55,11 +55,11 @@ describe("join pages", () => {
     expect(page).toContain("PlayerJoinLanding");
 
     const landing = read("components/join/PlayerJoinLanding.tsx");
-    expect(landing).toContain("Your padel journey, in one place.");
-    expect(landing).toContain("PlayerBenefitsBento");
-    expect(landing).toContain("PlayerSignupSection");
-    expect(landing).toContain('href="/coaches"');
-    expect(landing).toContain("#register");
+    expect(landing).toContain("Your next chapter on court.");
+    expect(landing).toContain("AuthExperience");
+    expect(landing).toContain("SignupForm");
+    expect(landing).toContain("hidePartnerLink");
+    expect(landing).toContain('nextPath="/account"');
 
     const bento = read("components/join/PlayerBenefitsBento.tsx");
     expect(bento).toContain("Find the right coach");
@@ -119,6 +119,6 @@ describe("header join control", () => {
     const mobile = read("components/join/JoinMobileSection.tsx");
     expect(mobile).toContain("JOIN_NAV_ITEMS");
     expect(mobile).toContain("{item.eyebrow}");
-    expect(mobile).toContain("{item.description}");
+    expect(mobile).not.toContain("{item.description}");
   });
 });

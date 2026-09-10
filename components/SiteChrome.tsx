@@ -17,6 +17,7 @@ export default function SiteChrome({
   const isAdmin = pathname?.startsWith("/admin");
   const isAccount = pathname?.startsWith("/account");
 
+  if (pathname === "/login" || pathname === "/signup" || pathname === "/join/player" || pathname === "/account/applications/coach" || pathname === "/account/applications/venue") return <main className="flex-1">{children}</main>;
   if (isAdmin) {
     return <>{children}</>;
   }

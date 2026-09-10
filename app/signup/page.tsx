@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import AuthFormShell from "@/components/auth/AuthFormShell";
+import AuthExperience from "@/components/auth/AuthExperience";
 import SignupForm from "@/components/auth/SignupForm";
 import { safeInternalPath } from "@/lib/auth/redirects";
 import { getAuthenticatedAccount } from "@/lib/auth/session";
@@ -25,8 +25,8 @@ export default async function SignupPage({ searchParams }: PageProps) {
   }
 
   return (
-    <AuthFormShell title={copy.title} description={copy.description}>
+    <AuthExperience joining audience={nextPath.includes("/applications/coach") ? "coach" : nextPath.includes("/applications/venue") ? "venue" : "player"} title={copy.title} description={copy.description}>
       <SignupForm nextPath={nextPath} />
-    </AuthFormShell>
+    </AuthExperience>
   );
 }
