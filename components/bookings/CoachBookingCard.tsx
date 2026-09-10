@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  markCoachBookingPaid,
   acceptCoachBookingRequest,
   cancelCoachBookingRequest,
   completeCoachBookingRequest,
@@ -93,7 +94,19 @@ export default function CoachBookingCard({
         </p>
       ) : null}
 
+      <p className="mt-4 text-sm font-semibold text-primary">
+        {booking.paid_at ? `Paid · confirmed ${new Date(booking.paid_at).toLocaleDateString()}` : "Payment not recorded"}
+      </p>
       <div className="mt-4 flex flex-wrap gap-2">
+        {!booking.paid_at && (booking.status === "accepted" || booking.status === "completed") ? (
+          <ConfirmActionButton label="Mark paid" confirmLabel="Confirm payment received" tone="neutral"
+            onConfirm={async () => {
+              const result = await markCoachBookingPaid(booking.id);
+              setMessage(result.message);
+              if (result.ok) router.refresh();
+              return result;
+            }} />
+        ) : null}
         {canAccept ? (
           <ActionButton
             pending={pending}

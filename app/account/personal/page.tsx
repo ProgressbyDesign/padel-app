@@ -1,3 +1,4 @@
+import PlayerDashboard from "@/components/account/PlayerDashboard";
 import Link from "next/link";
 import AccountHeader from "@/components/account/AccountHeader";
 import EmptyAccountState from "@/components/account/EmptyAccountState";
@@ -19,6 +20,7 @@ import {
 export default async function PersonalAccountPage() {
   const data = await loadAccountDashboard();
   const view = buildPersonalDashboardView(data);
+  if (view.isPurePlayer) return <PlayerDashboard account={data.account} />;
   const coachApplication = data.coachApplication;
   const venueApplication = data.venueApplication;
 

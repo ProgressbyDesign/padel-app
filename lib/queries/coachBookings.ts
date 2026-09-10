@@ -64,6 +64,7 @@ const BOOKING_CORE_SELECT = `
   responded_at,
   cancelled_at,
   completed_at,
+  paid_at,
   created_at,
   updated_at
 `;
@@ -148,6 +149,7 @@ export function asCoachBookingRequest(
     responded_at: (row.responded_at as string | null) ?? null,
     cancelled_at: (row.cancelled_at as string | null) ?? null,
     completed_at: (row.completed_at as string | null) ?? null,
+    paid_at: (row.paid_at as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
     coach: coach

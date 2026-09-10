@@ -17,9 +17,11 @@ const inputClass =
 export default function SignupForm({
   nextPath = "/account",
   submitLabel = "Create account",
+  hidePartnerLink = false,
 }: {
   nextPath?: string;
   submitLabel?: string;
+  hidePartnerLink?: boolean;
 }) {
   const [state, formAction] = useActionState<AuthActionState, FormData>(
     signupAction,
@@ -98,7 +100,7 @@ export default function SignupForm({
         </Link>
       </p>
 
-      {isPartnerSignupPath(nextPath) ? null : (
+      {hidePartnerLink || isPartnerSignupPath(nextPath) ? null : (
         <p className="text-center text-sm text-primary/65">
           Are you a coach, academy or venue?{" "}
           <Link href="/join" className="font-semibold text-primary underline underline-offset-4">

@@ -94,7 +94,7 @@ export default function VenueCoachSelectionDialog({
         <div className="flex items-start justify-between gap-3 border-b border-primary/10 px-5 py-4">
           <div>
             <h2 id={titleId} className="text-lg text-primary">
-              Choose a coach for {timeLabel}
+              {group.options.length === 1 ? "Session details" : "Choose a coach"} · {timeLabel}
             </h2>
             <p className="mt-1 text-sm text-primary/60">
               {dateLabel} · {timeLabel}
@@ -167,7 +167,7 @@ export default function VenueCoachSelectionDialog({
                     }}
                     className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
-                    Choose coach
+                    Request session
                   </button>
                 ) : null}
               </li>

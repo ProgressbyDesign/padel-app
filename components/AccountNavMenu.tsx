@@ -58,6 +58,7 @@ export default function AccountNavMenu({
   const itemClass =
     "block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-primary/80 transition hover:bg-surface hover:text-primary disabled:opacity-60";
 
+  const activeCoach = account.coaches.find(c => c.id === account.preference.entityId) ?? (account.coaches.length === 1 && account.venues.length === 0 ? account.coaches[0] : null);
   const menu = (
     <div
       id={menuId}
@@ -69,34 +70,25 @@ export default function AccountNavMenu({
           : "mt-2 space-y-1 rounded-2xl border border-primary/10 bg-surface/40 p-2"
       }
     >
-      <p className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
-        Personal
-      </p>
+
       <button
         type="button"
         role="menuitem"
         disabled={pending}
         className={itemClass}
-        onClick={() => prefer("personal")}
+        onClick={() => activeCoach ? prefer("coach", activeCoach.id) : prefer("personal")}
       >
-        Personal dashboard
+        Dashboard
       </button>
       <Link
-        href="/account/bookings"
+        href={activeCoach ? `/account/coaches/${activeCoach.id}/bookings` : "/account/bookings"}
         role="menuitem"
         className={itemClass}
         onClick={close}
       >
-        Session requests
+        Bookings
       </Link>
-      <Link
-        href="/account/applications"
-        role="menuitem"
-        className={itemClass}
-        onClick={close}
-      >
-        Applications
-      </Link>
+
       <Link
         href="/account/settings"
         role="menuitem"
@@ -106,10 +98,10 @@ export default function AccountNavMenu({
         Account settings
       </Link>
 
-      {account.coaches.length > 0 ? (
+      {account.coaches.length > 1 ? (
         <>
           <p className="mt-2 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary/40">
-            Coach profiles
+            Switch coach
           </p>
           {account.coaches.map((coach) => (
             <button
@@ -169,9 +161,7 @@ export default function AccountNavMenu({
       ) : null}
 
       <div className="my-2 border-t border-primary/10" />
-      <Link href="/join" role="menuitem" className={itemClass} onClick={close}>
-        Become a Padel Pathways partner
-      </Link>
+
       <form action={logoutAction}>
         <button
           type="submit"

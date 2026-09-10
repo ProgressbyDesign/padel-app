@@ -1,3 +1,6 @@
+import CoachImage from "@/components/CoachImage";
+import { loadCoachBookings } from "@/lib/queries/coachBookings";
+import { formatBookingWhen } from "@/lib/coachBookings/display";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -65,10 +68,20 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
     pendingBookingCount,
   });
 
+  const bookings = await loadCoachBookings(coachId);
+  const latest = [...bookings].sort((a,b) => Date.parse(b.created_at)-Date.parse(a.created_at))[0];
   const priceLine = formatCoachCardPrice(coach.price_from);
 
   return (
     <div className="space-y-8">
+      <section className="flex flex-wrap items-center gap-5 rounded-3xl bg-primary p-6 text-white">
+        <CoachImage src={coach.image_url} alt={coach.name ?? "Coach"} className="h-24 w-24 rounded-2xl object-cover" />
+        <div><h2 className="text-3xl text-white">{coach.name}</h2><p className="mt-2 text-sm text-white/80">{primaryLocation || "Add your primary location"}</p><Link href={`/coach/${coach.id}`} className="mt-3 inline-block text-sm text-accent underline">View public profile</Link></div>
+      </section>
+      <section className="rounded-3xl border border-primary/10 bg-white p-6">
+        <div className="flex justify-between gap-4"><h2 className="text-2xl">Latest booking</h2><Link href={`${base}/bookings`} className="text-sm font-semibold underline">All bookings</Link></div>
+        {latest ? <div className="mt-4"><p className="font-semibold">{latest.requester_name}</p><p className="mt-2 text-sm text-primary/65">{formatBookingWhen(latest)} · {latest.venue?.name ?? "Venue"}</p><p className="mt-2 text-sm capitalize">{latest.status} · {latest.paid_at ? "Paid" : "Payment not recorded"}</p></div> : <p className="mt-4 text-sm text-primary/65">Your latest booking will appear here.</p>}
+      </section>
       <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-7">
         <div>
           <h2 className="text-2xl text-primary">Overview</h2>

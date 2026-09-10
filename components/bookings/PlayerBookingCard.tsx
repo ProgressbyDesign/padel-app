@@ -59,9 +59,10 @@ export default function PlayerBookingCard({
             href={`/account/bookings/${booking.id}`}
             className="rounded-lg border border-primary/15 px-3 py-1.5 text-xs font-semibold text-primary/80 hover:bg-surface"
           >
-            View details
+            {booking.status === "completed" ? "Session & review" : "View details"}
           </Link>
-          {canCancel ? (
+
+      {canCancel ? (
             <ConfirmActionButton
               label="Cancel"
               confirmLabel="Confirm cancel"
@@ -75,6 +76,7 @@ export default function PlayerBookingCard({
           ) : null}
         </div>
       </div>
+      <p className="mt-3 text-sm font-semibold text-primary">{booking.paid_at ? "Paid · confirmed by coach" : "Payment not recorded"}</p>
       {canCancel ? (
         <p className="mt-3 text-xs text-primary/45">{confirmLabel}</p>
       ) : null}

@@ -8,7 +8,7 @@ export const JOIN_NAV_ITEMS = [
   },
   {
     id: "partner",
-    eyebrow: "For Coaches & Businesses",
+    eyebrow: "For Coaches & Business",
     description: "Join as a coach, academy, venue or travel partner",
     href: "/join",
     cta: "join-nav-partner",

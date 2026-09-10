@@ -43,6 +43,13 @@
     }
   }
 
+  /* button, input[type="submit"], input[type="button"], [role="button"],
+  nav a, nav button, a[class*="bg-primary"], a[class*="bg-accent"],
+  a[class*="rounded-xl"], a[class*="rounded-full"] {
+    font-family: var(--font-authein), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  } */
+
   body {
     @apply font-body antialiased;
   }

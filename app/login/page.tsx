@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import AuthFormShell from "@/components/auth/AuthFormShell";
+import AuthExperience from "@/components/auth/AuthExperience";
 import LoginForm from "@/components/auth/LoginForm";
 import { getAuthenticatedAccount } from "@/lib/auth/session";
 import { safeInternalPath } from "@/lib/auth/redirects";
@@ -37,11 +37,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <AuthFormShell
+    <AuthExperience
       title="Welcome back"
-      description="Log in to manage your Padel Pathways account."
+      description="Your next session, your favourite club, your progress. It all starts here."
     >
       <LoginForm nextPath={nextPath} initialError={initialError} />
-    </AuthFormShell>
+    </AuthExperience>
   );
 }

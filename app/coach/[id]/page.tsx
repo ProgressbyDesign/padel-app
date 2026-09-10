@@ -1,3 +1,4 @@
+import { loadCoachReviews } from "@/lib/queries/coachReviews";
 import { notFound } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import CoachProfilePage from "../../../components/CoachProfilePage";
@@ -49,7 +50,7 @@ export default async function CoachPdpPage({ params }: PageProps) {
     notFound();
   }
 
-  const [{ data: links }, availabilityGroups] = await Promise.all([
+  const [{ data: links }, availabilityGroups, reviewsData] = await Promise.all([
     supabase
       .from("coach_venues")
       .select("venue_id, is_primary, status")
@@ -57,6 +58,7 @@ export default async function CoachPdpPage({ params }: PageProps) {
       .in("status", [...PUBLIC_COACH_VENUE_STATUSES])
       .order("is_primary", { ascending: false }),
     loadPublicCoachAvailability(id, 14),
+    loadCoachReviews(id),
   ]);
 
   const venueIds = Array.from(
@@ -86,6 +88,7 @@ export default async function CoachPdpPage({ params }: PageProps) {
       coach={coach}
       venues={venues}
       availabilityGroups={availabilityGroups}
+      reviewsData={reviewsData}
     />
   );
 }

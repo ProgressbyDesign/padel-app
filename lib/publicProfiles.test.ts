@@ -397,21 +397,21 @@ describe("player booking payloads stay on the public projection", () => {
 });
 
 describe("public UI source", () => {
-  it("coach PDP has no mailto/tel/email/phone contact block and keeps the enquiry CTA", () => {
+  it("coach PDP has no mailto/tel/email/phone contact block and provides sessions and verified reviews", () => {
     const source = read("components/CoachProfilePage.tsx");
     expect(source).not.toContain("mailto:");
     expect(source).not.toContain("tel:");
     expect(source).not.toContain("coach.contact");
-    expect(source).toContain("Send a coaching enquiry");
-    expect(source).toContain("EnquiryButton");
+    expect(source).toContain("CoachPublicAvailabilitySection");
+    expect(source).toContain("CoachReviewsSection");
   });
 
-  it("venue PDP keeps address/hours/map and enquiry, without phone/website/socials", () => {
+  it("venue PDP keeps address/hours/map without legacy enquiry or private contact details", () => {
     const detail = read("components/VenueDetailPage.tsx");
     const info = read("components/venue-detail/VenueInfoSection.tsx");
     expect(detail).toContain("VenueInfoSection");
     expect(detail).toContain("VenueMapSection");
-    expect(detail).toContain("Send venue enquiry");
+    expect(detail).not.toContain("Send venue enquiry");
     expect(detail).not.toContain("VenueContactSection");
     expect(info).toContain("address");
     expect(info).toContain("Opening hours");
