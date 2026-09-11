@@ -218,10 +218,10 @@ export default function CoachApplicationReadOnly({
 
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/account/applications"
+          href="/account/personal#coach-verification"
           className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/15 px-5 py-2.5 text-sm font-semibold text-primary transition hover:bg-surface"
         >
-          Back to applications
+          Back to dashboard
         </Link>
         {canWithdraw ? (
           <WithdrawCoachApplicationButton applicationId={application.id} />

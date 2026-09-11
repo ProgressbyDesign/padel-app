@@ -1,5 +1,6 @@
 "use server";
 
+import { signupIntent } from "@/lib/auth/signupIntent";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -78,6 +79,7 @@ export async function signupAction(
       emailRedirectTo,
       data: {
         full_name: fullName,
+        signup_intent: signupIntent(nextPath),
       },
     },
   });

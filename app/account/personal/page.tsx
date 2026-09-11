@@ -20,7 +20,7 @@ import {
 export default async function PersonalAccountPage() {
   const data = await loadAccountDashboard();
   const view = buildPersonalDashboardView(data);
-  if (view.isPurePlayer) return <PlayerDashboard account={data.account} />;
+  if (view.useAccountDashboard) return <PlayerDashboard account={data.account} coachApplication={data.coachApplication} venueApplication={data.venueApplication} />;
   const coachApplication = data.coachApplication;
   const venueApplication = data.venueApplication;
 

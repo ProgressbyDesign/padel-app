@@ -103,3 +103,21 @@ describe("player personal dashboard view", () => {
     expect(withMembership.showManagedCoaches).toBe(true);
   });
 });
+
+
+describe("account dashboard continuity", () => {
+  it.each(["draft", "submitted", "under_review", "changes_requested"] as const)("keeps the new dashboard for a %s coach application", status => {
+    const view = buildPersonalDashboardView(dashboard({ coachApplication: {
+      id: "draft-1", status, currentStep: 2, submittedAt: null,
+      updatedAt: "2026-09-10", reviewNote: null, coachId: null,
+    }}));
+    expect(view.useAccountDashboard).toBe(true);
+    expect(view.showCoachApplication).toBe(true);
+  });
+  it("keeps the new dashboard after withdrawal", () => {
+    expect(buildPersonalDashboardView(dashboard()).useAccountDashboard).toBe(true);
+  });
+  it("preserves the managed workspace for approved members", () => {
+    expect(buildPersonalDashboardView(dashboard({coaches: [{id: "coach-1"} as ManagedCoach]})).useAccountDashboard).toBe(false);
+  });
+});

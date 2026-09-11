@@ -10,6 +10,7 @@ export type PersonalPlayerCta = {
 export type PersonalDashboardView = {
   accountJourney: AccountJourney;
   isPurePlayer: boolean;
+  useAccountDashboard: boolean;
   showPlayerEmptyState: boolean;
   showPlayerCtas: boolean;
   showManagedCoaches: boolean;
@@ -64,6 +65,7 @@ export function buildPersonalDashboardView(
   return {
     accountJourney: data.accountJourney,
     isPurePlayer,
+    useAccountDashboard: !hasMemberships,
     showPlayerEmptyState: isPurePlayer,
     showPlayerCtas: isPurePlayer,
     showManagedCoaches: data.coaches.length > 0,

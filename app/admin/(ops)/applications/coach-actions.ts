@@ -73,7 +73,14 @@ async function loadApplication(
   };
 }
 
-function revalidateCoachApplication(applicationId: string) {
+function revalidateCoachApplication(applicationId: string, coachId?: string) {
+  if (coachId) {
+    revalidatePath(`/coach/${coachId}`);
+    revalidatePath(`/account/coaches/${coachId}`);
+    revalidatePath("/coaches");
+    revalidatePath("/");
+    revalidatePath("/admin/coaches");
+  }
   revalidatePath("/admin");
   revalidatePath("/admin/applications");
   revalidatePath("/admin/applications/coaches");
@@ -233,6 +240,7 @@ async function approveWithCoachId(
   if (!canReview(application.status)) {
     return { ok: false, message: "This application cannot be approved from its current status." };
   }
+  await requireAdminPermission("profiles.manage", "not-found");
   if (!coachId.trim()) return { ok: false, message: "Select a coach profile." };
 
   const supabase = await createClient();
@@ -261,7 +269,7 @@ async function approveWithCoachId(
   if (error || !data) {
     return { ok: false, message: "The application could not be approved." };
   }
-  revalidateCoachApplication(application.id);
+  revalidateCoachApplication(application.id, coachId);
   void notifyApplicant({
     application: { ...application, coach_id: coachId },
     status: "approved",
@@ -273,7 +281,7 @@ async function approveWithCoachId(
     targetId: application.id,
     details: { coachId },
   }).catch(() => undefined);
-  return { ok: true, message: "Application approved.", entityId: coachId };
+  return { ok: true, message: "Application approved and coach published.", entityId: coachId };
 }
 
 export async function approveCoachClaim(
@@ -315,6 +323,7 @@ export async function createAndApproveCoachApplication(input: {
   phone: string;
 }): Promise<AdminApplicationActionResult> {
   const admin = await authorizeAdminAction();
+  await requireAdminPermission("profiles.manage", "not-found");
   const application = await loadApplication(input.applicationId);
   if (!application) return { ok: false, message: "Application not found." };
   if (application.application_mode === "claim_existing") {
@@ -398,7 +407,7 @@ export async function createAndApproveCoachApplication(input: {
     };
   }
 
-  revalidateCoachApplication(input.applicationId);
+  revalidateCoachApplication(input.applicationId, coachId);
   void notifyApplicant({
     application: { ...application, coach_id: coachId },
     status: "approved",
@@ -410,7 +419,7 @@ export async function createAndApproveCoachApplication(input: {
     targetId: input.applicationId,
     details: { coachId, created: true },
   }).catch(() => undefined);
-  return { ok: true, message: "Coach created and application approved.", entityId: coachId };
+  return { ok: true, message: "Coach created, approved and published.", entityId: coachId };
 }
 
 export async function searchCoachesForApprovalAction(

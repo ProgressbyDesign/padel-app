@@ -89,6 +89,7 @@ export default function AccountNavMenu({
         Bookings
       </Link>
 
+      {account.coaches.length === 0 && account.venues.length === 0 ? <Link href="/account/personal" role="menuitem" className={itemClass} onClick={close}>Account setup</Link> : null}
       <Link
         href="/account/settings"
         role="menuitem"

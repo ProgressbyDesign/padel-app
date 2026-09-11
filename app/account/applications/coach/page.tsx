@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import {
   CoachApplicationApprovedNotice,
 } from "@/components/account/applications/CoachApplicationClaimConflict";
-import CoachApplicationEntry from "@/components/account/applications/CoachApplicationEntry";
+import { redirect } from "next/navigation";
 import CoachApplicationReadOnly from "@/components/account/applications/CoachApplicationReadOnly";
 import CoachApplicationWizard from "@/components/account/applications/CoachApplicationWizard";
 import CoachLegacyClaimApplication from "@/components/account/applications/CoachLegacyClaimApplication";
@@ -49,7 +49,7 @@ export default async function CoachApplicationPage({ searchParams }: PageProps) 
       />
     );
   } else if (!active) {
-    content = <CoachApplicationEntry />;
+    redirect("/account/personal#coach-verification");
   } else if (active.application.application_mode === "claim_existing") {
     content = <CoachLegacyClaimApplication data={active} />;
   } else if (isEditableApplicationStatus(active.application.status)) {
@@ -70,7 +70,7 @@ export default async function CoachApplicationPage({ searchParams }: PageProps) 
 
   return (
     <AuthExperience joining wideForm audience="coach" title="Coach application" description="Your progress saves to your account. Complete your details when you are ready.">
-      <Link href="/account/applications" className="mb-5 text-sm font-semibold underline">Back to applications</Link>
+      <Link href="/account/personal#coach-verification" className="mb-3 text-sm font-semibold underline">Back to dashboard</Link>
       {content}
     </AuthExperience>
   );
