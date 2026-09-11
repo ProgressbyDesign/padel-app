@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { createCoachApplicationDraft } from "@/app/account/applications/coach/actions";
 import { ErrorSummary } from "@/components/forms/FormField";
 
-export default function CoachApplicationEntry() {
+export default function CoachApplicationEntry({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +27,12 @@ export default function CoachApplicationEntry() {
   }
 
   return (
-    <section className="rounded-[24px] border border-primary/10 bg-white p-6 sm:p-7">
-      <h2 className="text-xl text-primary">Start your application</h2>
-      <p className="mt-2 text-sm leading-6 text-primary/65">
+    <section className={compact ? "" : "rounded-[24px] border border-primary/10 bg-white p-6 sm:p-7"}>
+      {!compact ? <h2 className="text-xl text-primary">Start your application</h2> : null}
+      {!compact ? <p className="mt-2 text-sm leading-6 text-primary/65">
         Apply as a coach to create your profile on Padel Pathways. Progress saves
         to your account.
-      </p>
+      </p> : null}
 
       {error ? (
         <div className="mt-4">
@@ -40,7 +40,7 @@ export default function CoachApplicationEntry() {
         </div>
       ) : null}
 
-      <div className="mt-6">
+      <div className={compact ? "mt-4" : "mt-6"}>
         <button
           type="button"
           disabled={pending}

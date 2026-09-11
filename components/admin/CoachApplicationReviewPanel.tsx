@@ -221,7 +221,7 @@ export default function CoachApplicationReviewPanel({
             onClick={() => run(() => approveCoachClaim(application.id))}
             className="mt-4 min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent disabled:opacity-40"
           >
-            Approve claim
+            Approve claim and publish
           </button>
         </section>
       ) : null}
@@ -289,14 +289,14 @@ export default function CoachApplicationReviewPanel({
               }
               className="mt-4 min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent disabled:opacity-40"
             >
-              Approve selected coach
+              Approve and publish selected coach
             </button>
           </section>
 
           <section className="rounded-[24px] border border-primary/10 bg-white p-5">
             <h2 className="text-lg">Create and approve coach</h2>
             <p className="mt-2 text-xs leading-5 text-primary/50">
-              Review these profile fields before creating the approved coach.
+              Review these profile fields. Approval will publish the coach on the website.
             </p>
             <div className="mt-4 space-y-3">
               <Field label="Name" value={name} setValue={setName} />
@@ -343,7 +343,7 @@ export default function CoachApplicationReviewPanel({
               }
               className="mt-5 min-h-11 w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-accent disabled:opacity-40"
             >
-              Create coach and approve
+              Create, approve and publish coach
             </button>
           </section>
         </>

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -35,6 +36,8 @@ export default async function AccountApplicationsPage() {
     loadUserCoachApplications(),
     loadUserVenueApplications(),
   ]);
+
+  if (venueApplications.length === 0) redirect("/account/personal#coach-verification");
 
   const activeCoach = coachApplications.filter((application) =>
     isActiveApplicationStatus(application.status)

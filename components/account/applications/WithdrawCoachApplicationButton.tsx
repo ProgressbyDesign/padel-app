@@ -32,14 +32,14 @@ export default function WithdrawCoachApplicationButton({
     setError(null);
     startTransition(async () => {
       const result = await withdrawCoachApplication(applicationId, {
-        next: nextPath,
+        next: nextPath ?? "/account/personal#coach-verification",
       });
       if (result.status === "error") {
         setError(result.message ?? "We could not withdraw the application.");
         return;
       }
       closeDialog();
-      router.push(result.redirectTo ?? "/account/applications/coach");
+      router.push(result.redirectTo ?? "/account/personal#coach-verification");
       router.refresh();
     });
   }

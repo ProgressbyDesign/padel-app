@@ -212,7 +212,7 @@ export default function CoachApplicationWizard({
       }
       setMessage(result.message);
       if (options.exit) {
-        router.push("/account/applications");
+        router.push("/account/personal#coach-verification");
         router.refresh();
         return;
       }
@@ -243,7 +243,7 @@ export default function CoachApplicationWizard({
       }
       setMessage(result.message);
       if (options.exit) {
-        router.push("/account/applications");
+        router.push("/account/personal#coach-verification");
         router.refresh();
         return;
       }
@@ -274,7 +274,7 @@ export default function CoachApplicationWizard({
       }
       setMessage(result.message);
       if (options.exit) {
-        router.push("/account/applications");
+        router.push("/account/personal#coach-verification");
         router.refresh();
         return;
       }
@@ -371,7 +371,7 @@ export default function CoachApplicationWizard({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {initial.application.application_mode === "claim_existing" &&
       initial.targetCoach ? (
         <section className="rounded-[24px] border border-primary/10 bg-surface/50 p-5">
@@ -421,12 +421,7 @@ export default function CoachApplicationWizard({
           ) : null}
         </div>
       ) : null}
-      <div className="flex flex-wrap gap-3">
-        <WithdrawCoachApplicationButton
-          applicationId={initial.application.id}
-        />
-      </div>
-      <div className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
+      <div className="rounded-[24px] border border-primary/10 bg-white p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/45">
@@ -438,7 +433,7 @@ export default function CoachApplicationWizard({
           </div>
         </div>
         <div
-          className="mt-5 h-2 overflow-hidden rounded-full bg-primary/10"
+          className="mt-3 h-1.5 overflow-hidden rounded-full bg-primary/10"
           role="progressbar"
           aria-valuemin={1}
           aria-valuemax={COACH_APPLICATION_TOTAL_STEPS}
@@ -450,7 +445,7 @@ export default function CoachApplicationWizard({
             style={{ width: `${progress}%` }}
           />
         </div>
-        <ol className="mt-4 flex flex-wrap gap-2">
+        <ol className="mt-3 flex flex-wrap gap-2">
           {COACH_APPLICATION_STEPS.map((item) => (
             <li key={item.step}>
               <button
@@ -486,10 +481,10 @@ export default function CoachApplicationWizard({
           {message}
         </p>
       ) : null}
-      <RequiredLegend />
+      <div className="flex flex-wrap items-center justify-between gap-2"><RequiredLegend /><WithdrawCoachApplicationButton applicationId={initial.application.id} className="text-xs text-primary/60 underline" /></div>
 
       {step === 1 ? (
-        <section className="space-y-5 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
+        <section className="grid gap-4 rounded-2xl border border-primary/10 bg-white p-4 sm:grid-cols-2">
           <label
             className="block text-sm font-medium text-primary"
             htmlFor="full_name"
@@ -545,18 +540,46 @@ export default function CoachApplicationWizard({
             ) : null}
           </label>
 
-          <fieldset id="coaching_role" tabIndex={-1}>
+          <label
+            className="block text-sm font-medium text-primary"
+            htmlFor="experience_years"
+          >
+            Years of coaching experience
+            <RequiredIndicator />
+            <input
+              className={inputClass}
+              type="number"
+              min={0}
+              max={60}
+              value={experienceYears}
+              onChange={(event) => setExperienceYears(event.target.value)}
+              {...fieldAccessibility(
+                "experience_years",
+                fieldErrors.experience_years
+              )}
+            />
+            {fieldErrors.experience_years ? (
+              <span
+                id="experience_years-error"
+                className="mt-1.5 block text-sm text-red-700"
+              >
+                {fieldErrors.experience_years}
+              </span>
+            ) : null}
+          </label>
+
+          <fieldset className="sm:col-span-2" id="coaching_role" tabIndex={-1}>
             <legend className="text-sm font-medium text-primary">
               Coaching role
               <RequiredIndicator />
             </legend>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
               {COACHING_ROLES.map((role) => (
                 <button
                   key={role.value}
                   type="button"
                   onClick={() => setCoachingRole(role.value)}
-                  className={`rounded-xl border px-3.5 py-3 text-left text-sm font-semibold transition ${
+                  className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition ${
                     coachingRole === role.value ? cardSelected : cardIdle
                   }`}
                   aria-pressed={coachingRole === role.value}
@@ -599,35 +622,9 @@ export default function CoachApplicationWizard({
             </label>
           ) : null}
 
-          <label
-            className="block text-sm font-medium text-primary"
-            htmlFor="experience_years"
-          >
-            Years of coaching experience
-            <RequiredIndicator />
-            <input
-              className={inputClass}
-              type="number"
-              min={0}
-              max={60}
-              value={experienceYears}
-              onChange={(event) => setExperienceYears(event.target.value)}
-              {...fieldAccessibility(
-                "experience_years",
-                fieldErrors.experience_years
-              )}
-            />
-            {fieldErrors.experience_years ? (
-              <span
-                id="experience_years-error"
-                className="mt-1.5 block text-sm text-red-700"
-              >
-                {fieldErrors.experience_years}
-              </span>
-            ) : null}
-          </label>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+
+          <div className="flex flex-wrap gap-3 sm:col-span-2">
             <button
               type="button"
               disabled={pending}
@@ -822,7 +819,7 @@ export default function CoachApplicationWizard({
       ) : null}
 
       {step === 3 ? (
-        <section className="space-y-6 rounded-[24px] border border-primary/10 bg-white p-5 sm:p-7">
+        <section className="grid gap-4 rounded-2xl border border-primary/10 bg-white p-4 sm:grid-cols-2 [&>div:last-child]:sm:col-span-2">
           <fieldset>
             <legend className="text-sm font-medium text-primary">
               Player levels

@@ -2,7 +2,7 @@ import "server-only";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-export const HERO_POSTER_SRC = "/images/hero-padel-overlay.jpg";
+export const HERO_POSTER_SRC = existsSync(path.join(process.cwd(), "public/images/hero-padel-overlay.jpg")) ? "/images/hero-padel-overlay.jpg" : "/images/hero-padel-overlay2.jpg";
 
 const LOCAL_HERO_VIDEO = "/videos/hero-padel.mp4";
 
