@@ -59,12 +59,12 @@ export default function HomeBentoGrid({
 
   return (
     <>
-      <div className="mx-auto max-w-[1366px] px-4 sm:px-6">
+      <div className="mx-auto max-w-[1680px] px-4 sm:px-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
           <div className="flex min-w-0 flex-1 flex-col gap-6">
             <Link
               href="/coaches"
-              className="group relative flex min-h-[420px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[440px] lg:min-h-[520px]"
+              className="group relative flex min-h-[520px] overflow-hidden rounded-[20px] bg-accent sm:min-h-[440px] lg:min-h-[600px]"
             >
               <div className="relative z-10 flex max-w-md flex-col justify-center p-8 sm:p-[52px]">
                 <p className="text-2xl text-primary/50">
