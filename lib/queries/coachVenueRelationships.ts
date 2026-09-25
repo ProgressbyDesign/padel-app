@@ -19,7 +19,6 @@ import type {
 import { normalizeEmbeddedVenue } from "@/lib/coachVenueGeo";
 import {
   COACH_PUBLIC_PROFILES_TABLE,
-  VENUE_PUBLIC_PROFILES_TABLE,
 } from "@/lib/publicProfiles";
 import { loadPublicCoachVenueRelationships } from "@/lib/queries/publicCoachVenues";
 import {
@@ -273,56 +272,18 @@ async function managedCoachIdsForUser(
   return new Set((data ?? []).map((row) => String(row.coach_id)));
 }
 
-export async function searchVenuesForCoachRelationship(
-  coachId: string,
-  term: string
-): Promise<CoachVenueSearchVenue[]> {
-  const safe = sanitizeSearchTerm(term);
-  if (safe.length < 2) return [];
-
+export async function searchVenuesForCoachRelationship(coachId: string, term: string): Promise<CoachVenueSearchVenue[]> {
   const supabase = await createClient();
-  const pattern = `%${safe}%`;
-  const quoted = `"${pattern.replace(/"/g, "")}"`;
-
-  const [{ data: authData }, { data: venues, error }, { data: links }] =
-    await Promise.all([
-      supabase.auth.getClaims(),
-      supabase
-        .from(VENUE_PUBLIC_PROFILES_TABLE)
-        .select("id, name, city, country, image_url")
-        .or(`name.ilike.${quoted},city.ilike.${quoted},country.ilike.${quoted}`)
-        .order("name", { ascending: true })
-        .limit(12),
-      supabase
-        .from("coach_venues")
-        .select("venue_id, status")
-        .eq("coach_id", coachId)
-        .in("status", [...CURRENT_COACH_VENUE_STATUSES]),
-    ]);
-
-  const userId =
-    typeof authData?.claims?.sub === "string" ? authData.claims.sub : null;
-
-  if (error) {
-    const fallback = await supabase
-      .from(VENUE_PUBLIC_PROFILES_TABLE)
-      .select("id, name, city, country, image_url")
-      .ilike("name", pattern)
-      .order("name", { ascending: true })
-      .limit(12);
-    if (fallback.error) return [];
-    const managedIds = await managedVenueIdsForUser(
-      userId,
-      (fallback.data ?? []).map((row) => String(row.id))
-    );
-    return mapVenueSearch(fallback.data ?? [], links ?? [], managedIds);
-  }
-
-  const managedIds = await managedVenueIdsForUser(
-    userId,
-    (venues ?? []).map((row) => String(row.id))
-  );
-  return mapVenueSearch(venues ?? [], links ?? [], managedIds);
+  const [{ data: authData }, { data: venues, error }, { data: links, error: linksError }] = await Promise.all([
+    supabase.auth.getClaims(),
+    supabase.rpc("search_coaching_venue_catalogue", { p_coach_id: coachId, p_term: sanitizeSearchTerm(term) }),
+    supabase.from("coach_venues").select("venue_id, status").eq("coach_id", coachId).in("status", [...CURRENT_COACH_VENUE_STATUSES]),
+  ]);
+  if (error || linksError) throw new Error("Venue catalogue unavailable");
+  const userId = typeof authData?.claims?.sub === "string" ? authData.claims.sub : null;
+  const rows = (venues ?? []) as { id: string; name: string | null; city: string | null; country: string | null; image_url: string | null }[];
+  const managedIds = await managedVenueIdsForUser(userId, rows.map(row => row.id));
+  return mapVenueSearch(rows, links ?? [], managedIds);
 }
 
 function mapVenueSearch(

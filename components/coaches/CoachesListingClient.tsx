@@ -1,4 +1,5 @@
 "use client";
+import ResultsHeader from "@/components/discovery/ResultsHeader";
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -149,7 +150,7 @@ export default function CoachesListingClient({
         if (values.location.trim()) q.set("location", values.location.trim());
         if (values.entity.trim()) q.set("venue", values.entity.trim());
         const qs = q.toString();
-        router.push(qs ? `/venues?${qs}` : "/venues");
+        router.push(qs ? `/venues?${qs}` : "/venues?view=results");
         return;
       }
       commitUrl({
@@ -301,10 +302,7 @@ export default function CoachesListingClient({
 
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-8 sm:px-6 lg:py-10">
-      <header className="max-w-2xl">
-        <h1>Find a Padel Coach</h1>
-        <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
-      </header>
+      <ResultsHeader kind="coaches" />
 
       <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto">
         <MarketplaceSearch

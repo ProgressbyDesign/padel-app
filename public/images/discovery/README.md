@@ -1,0 +1,7 @@
+Generated with the built-in image-generation tool. Illustrative editorial imagery; not photographs of named real venues or coaches. PNG masters converted to WebP with Sharp at quality 85.
+
+coastal-venue.webp
+Create one photorealistic editorial website photograph, landscape 3:2. Premium but welcoming padel club on the Mediterranean coast, blue padel courts with correct glass walls and black metal mesh, realistic nets and court markings, warm sandstone clubhouse, olive trees, distant coastal hills, morning sunlight, a few small adult players. Composition with courts on right and calm architectural space on left for website text crop. Natural colours, dark navy and lime accents in furnishings, realistic sports travel photography, no text, no logos, no watermark. This is illustrative, not a depiction of a named real club.
+
+coaching-session.webp
+Create one photorealistic editorial website photograph, landscape 3:2. Candid padel coaching session: adult female coach in navy athletic clothing showing an adult male recreational player a forehand grip with perforated solid padel rackets, at the side of a blue glass-enclosed padel court. Both relaxed, engaged, anatomically natural, visible racket holes and wrist straps, basket of yellow balls, warm late afternoon sun, authentic contemporary Spanish club setting. Frame medium-wide showing people on right, court context on left, useful for hero and editorial crops. Premium sports magazine photography, no text, no logos, no watermark.

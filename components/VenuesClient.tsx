@@ -1,4 +1,5 @@
 "use client";
+import ResultsHeader from "@/components/discovery/ResultsHeader";
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -138,7 +139,7 @@ export default function VenuesClient({
         if (values.location.trim()) q.set("location", values.location.trim());
         if (values.entity.trim()) q.set("coach", values.entity.trim());
         const qs = q.toString();
-        router.push(qs ? `/coaches?${qs}` : "/coaches");
+        router.push(qs ? `/coaches?${qs}` : "/coaches?view=results");
         return;
       }
       setNearbyMode(false);
@@ -263,10 +264,7 @@ export default function VenuesClient({
   return (
     <div className="mx-auto max-w-[1680px] px-4 py-6 sm:px-6 sm:py-8">
 
-            <header className="max-w-2xl">
-        <h1>Find your next Padel Destination</h1>
-        <p className="mt-2 text-lg text-primary/70">Train anywhere, improve faster</p>
-      </header>
+            <ResultsHeader kind="venues" />
 
       <StickySearchBar anchorRef={searchRowRef} innerClassName="mx-auto">
         <MarketplaceSearch

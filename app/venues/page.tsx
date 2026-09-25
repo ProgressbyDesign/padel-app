@@ -1,3 +1,6 @@
+import DiscoveryLanding from "@/components/discovery/DiscoveryLanding";
+import VenueCard from "@/components/VenueCard";
+import { hasListingSearch } from "@/lib/listingUrlParams";
 import VenuesClient from "../../components/VenuesClient";
 import { parseVenueListingParams, firstQueryString } from "../../lib/listingUrlParams";
 import { fetchVenueListingPage } from "../../lib/queries/venueListingQuery";
@@ -28,6 +31,8 @@ export default async function VenuesPage({ searchParams }: PageProps) {
       nearLat: Number.isFinite(nearLat) ? nearLat : null,
       nearLng: Number.isFinite(nearLng) ? nearLng : null,
     });
+
+  if (!hasListingSearch(sp)) return <DiscoveryLanding kind="venues" hasProfiles={listing.venues.length > 0}>{listing.venues.slice(0,3).map(venue => <VenueCard key={venue.id} venue={venue} />)}</DiscoveryLanding>;
 
   return (
     <VenuesClient

@@ -106,7 +106,7 @@ export function buildVenuesSearchUrl(
     }
   }
   const qs = q.toString();
-  return qs ? `/venues?${qs}` : "/venues";
+  return qs ? `/venues?${qs}` : "/venues?view=results";
 }
 
 export function buildCoachesSearchUrl(
@@ -124,7 +124,7 @@ export function buildCoachesSearchUrl(
     }
   }
   const qs = q.toString();
-  return qs ? `/coaches?${qs}` : "/coaches";
+  return qs ? `/coaches?${qs}` : "/coaches?view=results";
 }
 
 export function buildMarketplaceSearchUrl(values: MarketplaceSearchValues): string {

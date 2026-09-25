@@ -9,10 +9,13 @@ export async function sendEmailWithResult(input: {
   subject: string;
   html: string;
   logLabel?: string;
+  from?: string;
+  bcc?: string[];
+  replyTo?: string;
 }): Promise<EmailDeliveryResult> {
   const label = input.logLabel ?? "product-email";
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = configuredSenderAddress();
+  const from = input.from?.trim() || configuredSenderAddress();
 
   if (!apiKey) {
     const mapped = mapEmailProviderError({ missingApiKey: true });
@@ -43,6 +46,8 @@ export async function sendEmailWithResult(input: {
       to: input.to.trim(),
       subject: input.subject,
       html: input.html,
+      ...(input.bcc?.length ? { bcc: input.bcc } : {}),
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     });
 
     if (error) {
@@ -97,6 +102,9 @@ export async function sendProductEmail(input: {
   subject: string;
   html: string;
   logLabel?: string;
+  from?: string;
+  bcc?: string[];
+  replyTo?: string;
 }): Promise<void> {
   await sendEmailWithResult(input);
 }

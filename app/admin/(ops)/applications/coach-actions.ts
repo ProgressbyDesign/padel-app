@@ -117,7 +117,7 @@ async function notifyApplicant(input: {
   const { sendCoachApplicationStatusEmail } = await import(
     "@/lib/notifications/applicationEmails"
   );
-  void sendCoachApplicationStatusEmail({
+  await sendCoachApplicationStatusEmail({
     to: email,
     status: input.status,
     mode: input.application.application_mode,
@@ -178,7 +178,7 @@ export async function requestCoachApplicationChanges(
     return { ok: false, message: "The change request could not be saved." };
   }
   revalidateCoachApplication(applicationId);
-  void notifyApplicant({
+  await notifyApplicant({
     application,
     status: "changes_requested",
     note: reviewNote,
@@ -219,7 +219,7 @@ export async function declineCoachApplication(
     return { ok: false, message: "The application could not be declined." };
   }
   revalidateCoachApplication(applicationId);
-  void notifyApplicant({
+  await notifyApplicant({
     application,
     status: "declined",
     note: reviewNote,
@@ -270,7 +270,7 @@ async function approveWithCoachId(
     return { ok: false, message: "The application could not be approved." };
   }
   revalidateCoachApplication(application.id, coachId);
-  void notifyApplicant({
+  await notifyApplicant({
     application: { ...application, coach_id: coachId },
     status: "approved",
     coachName: (coach.name as string | null) ?? application.full_name,
@@ -408,7 +408,7 @@ export async function createAndApproveCoachApplication(input: {
   }
 
   revalidateCoachApplication(input.applicationId, coachId);
-  void notifyApplicant({
+  await notifyApplicant({
     application: { ...application, coach_id: coachId },
     status: "approved",
     coachName: name,

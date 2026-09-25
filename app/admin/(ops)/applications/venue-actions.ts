@@ -106,7 +106,7 @@ async function notifyVenueApplicant(input: {
   const { sendVenueApplicationStatusEmail } = await import(
     "@/lib/notifications/applicationEmails"
   );
-  void sendVenueApplicationStatusEmail({
+  await sendVenueApplicationStatusEmail({
     to: email,
     status: input.status,
     mode: input.application.application_mode,
@@ -163,7 +163,7 @@ export async function requestVenueApplicationChanges(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The change request could not be saved." };
   revalidateVenueApplication(applicationId);
-  void notifyVenueApplicant({
+  await notifyVenueApplicant({
     application,
     status: "changes_requested",
     note: reviewNote,
@@ -201,7 +201,7 @@ export async function declineVenueApplication(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The application could not be declined." };
   revalidateVenueApplication(applicationId);
-  void notifyVenueApplicant({
+  await notifyVenueApplicant({
     application,
     status: "declined",
     note: reviewNote,
@@ -247,7 +247,7 @@ async function approveWithVenue(
     .maybeSingle();
   if (error || !data) return { ok: false, message: "The application could not be approved." };
   revalidateVenueApplication(applicationId);
-  void notifyVenueApplicant({
+  await notifyVenueApplicant({
     application,
     status: "approved",
     venueName: application.proposed_venue_name,
@@ -392,7 +392,7 @@ export async function createAndApproveVenueApplication(input: {
     };
   }
   revalidateVenueApplication(input.applicationId);
-  void notifyVenueApplicant({
+  await notifyVenueApplicant({
     application,
     status: "approved",
     venueName: name,
