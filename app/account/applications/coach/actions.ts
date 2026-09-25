@@ -413,6 +413,7 @@ export async function submitCoachApplication(input: {
     .from("coach_profile_applications")
     .update({
       status: "submitted",
+      applicationId: application.id,
       current_step: 4,
       terms_accepted_at: now,
       privacy_accepted_at: now,
@@ -432,9 +433,10 @@ export async function submitCoachApplication(input: {
     const { sendCoachApplicationStatusEmail } = await import(
       "@/lib/notifications/applicationEmails"
     );
-    void sendCoachApplicationStatusEmail({
+    await sendCoachApplicationStatusEmail({
       to: email,
       status: "submitted",
+      applicationId: application.id,
       mode: application.application_mode,
       coachName: application.full_name,
     });

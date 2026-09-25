@@ -398,6 +398,7 @@ export async function submitVenueApplication(input: {
     .from("venue_profile_applications")
     .update({
       status: "submitted",
+      applicationId: application.id,
       current_step: 4,
       terms_accepted_at: now,
       privacy_accepted_at: now,
@@ -417,9 +418,10 @@ export async function submitVenueApplication(input: {
     const { sendVenueApplicationStatusEmail } = await import(
       "@/lib/notifications/applicationEmails"
     );
-    void sendVenueApplicationStatusEmail({
+    await sendVenueApplicationStatusEmail({
       to: email,
       status: "submitted",
+      applicationId: application.id,
       mode: application.application_mode,
       venueName:
         application.proposed_venue_name ||

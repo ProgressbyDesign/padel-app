@@ -86,7 +86,7 @@ export default function CoachApplicationReviewPanel({
   }
 
   return (
-    <aside className="space-y-5">
+    <aside id="decision" className="scroll-mt-24 space-y-5">
       <section className="rounded-[24px] border border-primary/10 bg-white p-5">
         <h2 className="text-lg">Review controls</h2>
         <p className="mt-2 text-sm text-primary/60">

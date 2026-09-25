@@ -1,3 +1,6 @@
+import DiscoveryLanding from "@/components/discovery/DiscoveryLanding";
+import CoachCard from "@/components/CoachCard";
+import { hasListingSearch } from "@/lib/listingUrlParams";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import CoachesListingClient from "../../components/coaches/CoachesListingClient";
@@ -34,6 +37,8 @@ export default async function CoachesPage({ searchParams }: PageProps) {
     nearLat: Number.isFinite(nearLat) ? nearLat : null,
     nearLng: Number.isFinite(nearLng) ? nearLng : null,
   });
+
+  if (!hasListingSearch(sp)) return <DiscoveryLanding kind="coaches" hasProfiles={listing.coaches.length > 0}>{listing.coaches.slice(0,3).map(coach => <CoachCard key={coach.id} {...coach} href={`/coach/${coach.id}?from=coaches`} />)}</DiscoveryLanding>;
 
   return (
     <Suspense

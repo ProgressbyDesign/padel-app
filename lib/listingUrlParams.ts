@@ -148,6 +148,7 @@ export function buildVenueListingQuery(
   if (state.sortDirection !== "desc") q.set("order", state.sortDirection);
   if (extra?.lat) q.set("lat", extra.lat);
   if (extra?.lng) q.set("lng", extra.lng);
+  if (q.size === 0) q.set("view", "results");
   return q;
 }
 
@@ -166,6 +167,7 @@ export function buildCoachListingQuery(
   if (state.sort !== "recommended") q.set("sort", state.sort);
   if (extra?.lat) q.set("lat", extra.lat);
   if (extra?.lng) q.set("lng", extra.lng);
+  if (q.size === 0) q.set("view", "results");
   return q;
 }
 
@@ -175,4 +177,9 @@ export function listingPageCount(totalCount: number, pageSize: number = LISTING_
 
 export function clampPage(page: number, totalPages: number): number {
   return Math.min(Math.max(1, page), Math.max(1, totalPages));
+}
+
+/** Tracking parameters alone should not bypass the discovery landing page. */
+export function hasListingSearch(sp: Record<string, string | string[] | undefined>): boolean {
+  return ["view", "location", "venue", "coach", "search", "city", "country", "level", "adults", "juniors", "audience", "travel", "sort", "order", "environment", "minCourts", "page", "lat", "lng"].some(key => Boolean(firstQueryString(sp[key])));
 }

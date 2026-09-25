@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, Star } from "lucide-react";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { Building2, Star, Plus, X } from "lucide-react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import {
   acceptCoachVenueRelationship,
   cancelCoachVenueRelationship,
@@ -72,6 +72,7 @@ export default function CoachVenuesManager({
   board: CoachVenueBoard;
 }) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -82,7 +83,14 @@ export default function CoachVenuesManager({
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
-    if (!pickerOpen || term.trim().length < 2) {
+    if (!pickerOpen) return;
+    dialogRef.current?.showModal();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, [pickerOpen]);
+  useEffect(() => {
+    if (!pickerOpen) {
       return;
     }
     let cancelled = false;
@@ -96,7 +104,7 @@ export default function CoachVenuesManager({
           setResults([]);
           setError(res.message);
         }
-      });
+      }).catch(() => { if (!cancelled) { setSearching(false); setError("Venue search failed. Please try again."); } });
     }, 300);
     return () => {
       cancelled = true;
@@ -123,6 +131,7 @@ export default function CoachVenuesManager({
   }
 
   function closePicker() {
+    dialogRef.current?.close();
     setPickerOpen(false);
     setTerm("");
     setResults([]);
@@ -131,7 +140,6 @@ export default function CoachVenuesManager({
   function addVenue(venue: CoachVenueSearchVenue) {
     if (isBlockedForSelection(venue, selections)) return;
     setSelections((prev) => [...prev, { ...venue, error: null }]);
-    closePicker();
     setError(null);
   }
 
@@ -149,8 +157,12 @@ export default function CoachVenuesManager({
       let requestedCount = 0;
 
       for (const venue of selections) {
-        const result: RelationshipActionResult =
-          await requestCoachVenueRelationship(coachId, venue.id);
+        let result: RelationshipActionResult;
+        try {
+          result = await requestCoachVenueRelationship(coachId, venue.id);
+        } catch {
+          result = { ok: false, message: "Could not save this venue. Please try again." };
+        }
         if (result.ok) {
           if (result.activatedImmediately) connectedCount += 1;
           else requestedCount += 1;
@@ -165,6 +177,7 @@ export default function CoachVenuesManager({
       }
 
       setSelections(remaining);
+      if (remaining.length === 0) closePicker();
 
       const successCount = connectedCount + requestedCount;
       if (successCount > 0) {
@@ -212,162 +225,26 @@ export default function CoachVenuesManager({
         </div>
       )}
 
-      <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
-        <h2 className="text-xl text-primary">Add coaching venues</h2>
-        <p className="mt-1 text-sm text-primary/60">
-          Select one or more venues, then send coaching relationship requests.
-          You do not need to own the venue.
-        </p>
-
-        {selections.length > 0 ? (
-          <ul className="mt-5 space-y-3">
-            {selections.map((venue) => (
-              <li
-                key={venue.id}
-                className="rounded-2xl border border-primary/10 bg-surface/70 p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-primary">{venue.name}</p>
-                    <p className="mt-1 text-sm text-primary/55">
-                      {searchLocationLabel(venue)}
-                    </p>
-                    {venue.managedByCurrentUser ? (
-                      <p className="mt-2 text-xs font-semibold text-emerald-800">
-                        You manage both profiles. This venue will be connected
-                        immediately.
-                      </p>
-                    ) : (
-                      <p className="mt-2 text-xs font-semibold text-emerald-800">
-                        Ready to request
-                      </p>
-                    )}
-                    {venue.error ? (
-                      <div className="mt-2 space-y-1" role="alert">
-                        <p className="text-xs text-red-800">{venue.error}</p>
-                        {venue.alreadyConnected ? (
-                          <Link
-                            href={
-                              venue.relationshipId
-                                ? `/account/coaches/${encodeURIComponent(coachId)}/availability/${encodeURIComponent(venue.relationshipId)}`
-                                : `/account/coaches/${encodeURIComponent(coachId)}/availability`
-                            }
-                            className="inline-block text-xs font-semibold text-primary underline"
-                          >
-                            View availability
-                          </Link>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                  <ActionButton
-                    tone="secondary"
-                    pending={pending}
-                    onClick={() => removeSelection(venue.id)}
-                  >
-                    Remove
-                  </ActionButton>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-5 text-sm text-primary/55">
-            No venues selected yet. Add a venue to prepare a request.
-          </p>
-        )}
-
-        <div className="mt-5 space-y-3">
-          {pickerOpen ? (
-            <div className="rounded-2xl border border-primary/10 bg-surface/50 p-4">
-              <label className="block text-sm font-semibold text-primary">
-                Search venues
-                <input
-                  type="search"
-                  value={term}
-                  autoFocus
-                  onChange={(e) => {
-                    setTerm(e.target.value);
-                    if (e.target.value.trim().length < 2) setResults([]);
-                  }}
-                  placeholder="Name, city, or country"
-                  className="mt-2 w-full rounded-xl border border-primary/15 bg-white px-3 py-2.5 text-sm font-normal text-primary outline-none focus:border-primary/40"
-                />
-              </label>
-
-              {searching ? (
-                <p className="mt-3 text-sm text-primary/50">Searching…</p>
-              ) : null}
-
-              {results.length > 0 ? (
-                <ul className="mt-4 divide-y divide-primary/10 rounded-2xl border border-primary/10 bg-white">
-                  {results.map((venue) => {
-                    const blocked = isBlockedForSelection(venue, selections);
-                    return (
-                      <li
-                        key={venue.id}
-                        className="flex flex-wrap items-center justify-between gap-3 p-3"
-                      >
-                        <div>
-                          <p className="font-semibold text-primary">{venue.name}</p>
-                          <p className="text-sm text-primary/55">
-                            {searchLocationLabel(venue)}
-                          </p>
-                          {blocked ? (
-                            <p className="mt-1 text-xs text-amber-800">
-                              {venue.existingStatus
-                                ? `Existing: ${COACH_VENUE_STATUS_LABELS[venue.existingStatus]}`
-                                : "Already selected"}
-                            </p>
-                          ) : null}
-                        </div>
-                        <ActionButton
-                          tone="secondary"
-                          pending={pending || blocked}
-                          onClick={() => addVenue(venue)}
-                        >
-                          {blocked ? "Unavailable" : "Add"}
-                        </ActionButton>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : term.trim().length >= 2 && !searching ? (
-                <p className="mt-3 text-sm text-primary/50">No venues found.</p>
-              ) : null}
-
-              <div className="mt-3">
-                <ActionButton
-                  tone="secondary"
-                  pending={pending}
-                  onClick={closePicker}
-                >
-                  Cancel
-                </ActionButton>
-              </div>
-            </div>
-          ) : (
-            <ActionButton
-              tone="secondary"
-              pending={pending}
-              onClick={() => setPickerOpen(true)}
-            >
-              + Add another venue
-            </ActionButton>
-          )}
-
-          <ActionButton
-            pending={pending || requestCount === 0}
-            onClick={sendVenueRequests}
-          >
-            {requestCount === 0
-              ? "Send venue requests"
-              : requestCount === 1
-                ? "Send 1 venue request"
-                : `Send ${requestCount} venue requests`}
-          </ActionButton>
+      <button type="button" onClick={() => { setPickerOpen(true); setError(null); }} className="group flex min-h-60 w-full flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-primary/20 bg-white p-8 text-center transition hover:border-primary/50 hover:bg-surface">
+        <span className="relative rounded-2xl bg-accent/25 p-5"><Building2 className="h-10 w-10" aria-hidden /><Plus className="absolute -right-2 -top-2 h-8 w-8 rounded-full bg-primary p-1.5 text-accent" aria-hidden /></span>
+        <span className="text-2xl font-semibold">Add venue</span>
+        <span className="max-w-md text-sm text-primary/65">Choose where you coach. Find your club in our venue catalogue and add it to your coaching locations.</span>
+      </button>
+      {pickerOpen ? <dialog ref={dialogRef} aria-labelledby="venue-picker-title" onCancel={(event) => { event.preventDefault(); if (!pending) closePicker(); }} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-3xl overflow-y-auto rounded-3xl bg-white p-0 text-primary shadow-2xl backdrop:bg-primary/60">
+        <div className="sticky top-0 z-10 border-b border-primary/10 bg-white p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4"><h2 id="venue-picker-title" className="text-2xl">Add coaching venues</h2><button type="button" aria-label="Close venue picker" disabled={pending} onClick={closePicker} className="rounded-full p-2 hover:bg-surface"><X /></button></div>
+          <p className="mt-2 text-sm text-primary/65">Browse our catalogue, including venues not yet listed publicly. Requests need venue or admin approval unless you manage both profiles.</p>
+          <label className="mt-4 block text-sm font-semibold">Search venues<input autoFocus type="search" value={term} onChange={e => setTerm(e.target.value)} placeholder="Venue name, city or country" className="mt-2 w-full rounded-xl border border-primary/20 p-3 font-normal" /></label>
         </div>
-      </section>
+        <div className="p-5 sm:p-6">
+          {error ? <p role="alert" className="mb-3 text-sm text-red-800">{error}</p> : null}
+          {selections.length ? <ul className="mb-5 flex flex-wrap gap-2">{selections.map(venue => <li key={venue.id} className="rounded-xl bg-surface p-3 text-sm"><button type="button" disabled={pending} onClick={() => removeSelection(venue.id)} aria-label={`Remove ${venue.name}`}>{venue.name} ×</button>{venue.error ? <p className="mt-1 text-red-800">{venue.error}</p> : null}</li>)}</ul> : null}
+          {searching ? <p role="status" className="text-sm">Searching…</p> : null}
+          <ul className="divide-y divide-primary/10">{results.map(venue => { const selected = selections.some(row => row.id === venue.id); const connected = Boolean(venue.existingStatus && isCurrentCoachVenueStatus(venue.existingStatus)); return <li key={venue.id}><label className={`flex items-center gap-4 py-4 ${connected ? "opacity-50" : "cursor-pointer"}`}><input type="checkbox" checked={selected || connected} disabled={pending || connected} onChange={() => selected ? removeSelection(venue.id) : addVenue(venue)} className="h-5 w-5 accent-primary" /><Building2 className="h-8 w-8 shrink-0 text-primary/40" /><span><span className="block font-semibold">{venue.name}</span><span className="text-sm text-primary/60">{searchLocationLabel(venue)}{connected ? " · Already added" : ""}</span></span></label></li>; })}</ul>
+          {!results.length && !searching ? <p className="py-6 text-sm text-primary/65">No venues found. Try a different name or location.</p> : null}
+        </div>
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-primary/10 bg-white p-5"><p className="text-sm">{requestCount} selected</p><div className="flex gap-3"><ActionButton tone="secondary" pending={pending} onClick={closePicker}>Cancel</ActionButton><ActionButton pending={pending || !requestCount} onClick={sendVenueRequests}>{pending ? "Saving…" : "Save selected venues"}</ActionButton></div></div>
+      </dialog> : null}
 
       <RelationshipSection
         title="Current venues"
@@ -378,7 +255,7 @@ export default function CoachVenuesManager({
             key={row.id}
             title={row.venue?.name ?? "Venue"}
             subtitle={locationLabel(row)}
-            href={row.venue ? `/venue/${row.venue.id}` : undefined}
+            href={undefined}
             status={row.status}
             isPrimary={row.is_primary}
             meta={
@@ -439,7 +316,7 @@ export default function CoachVenuesManager({
             key={row.id}
             title={row.venue?.name ?? "Venue"}
             subtitle={locationLabel(row)}
-            href={row.venue ? `/venue/${row.venue.id}` : undefined}
+            href={undefined}
             status={row.status}
             actions={
               <>
@@ -470,7 +347,7 @@ export default function CoachVenuesManager({
             key={row.id}
             title={row.venue?.name ?? "Venue"}
             subtitle={locationLabel(row)}
-            href={row.venue ? `/venue/${row.venue.id}` : undefined}
+            href={undefined}
             status={row.status}
             actions={
               <ConfirmActionButton
@@ -493,7 +370,7 @@ export default function CoachVenuesManager({
             key={row.id}
             title={row.venue?.name ?? "Venue"}
             subtitle={locationLabel(row)}
-            href={row.venue ? `/venue/${row.venue.id}` : undefined}
+            href={undefined}
             status={row.status}
             meta={`Via ${COACH_VENUE_INITIATOR_LABELS[row.initiated_by]}`}
           />
@@ -505,7 +382,6 @@ export default function CoachVenuesManager({
 
 function RelationshipSection({
   title,
-  empty,
   items,
   renderItem,
 }: {
@@ -514,14 +390,11 @@ function RelationshipSection({
   items: CoachVenueRelationship[];
   renderItem: (row: CoachVenueRelationship) => ReactNode;
 }) {
+  if (!items.length) return null;
   return (
     <section className="rounded-[24px] border border-primary/10 bg-white p-5 shadow-[0_8px_28px_rgba(3,19,34,0.04)] sm:p-6">
       <h2 className="text-xl text-primary">{title}</h2>
-      {items.length === 0 ? (
-        <p className="mt-3 text-sm text-primary/55">{empty}</p>
-      ) : (
-        <ul className="mt-4 space-y-3">{items.map(renderItem)}</ul>
-      )}
+      <ul className="mt-4 space-y-3">{items.map(renderItem)}</ul>
     </section>
   );
 }
