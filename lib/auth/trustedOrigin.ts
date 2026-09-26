@@ -21,6 +21,24 @@ export function trustedAppOrigin(): string | null {
   );
 }
 
+/** Recovery must fail closed in production instead of trusting headers or a dev URL. */
+export function productionRecoveryOrigin(): string {
+  const raw = configuredAppOrigin() || process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  try {
+    const url = new URL(raw || "");
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (
+      url.protocol !== "https:" || url.username || url.password ||
+      hostname === "localhost" || hostname.endsWith(".localhost") ||
+      hostname.startsWith("127.") || hostname === "[::1]" ||
+      hostname === "0.0.0.0" || hostname.startsWith("[::ffff:")
+    ) throw new Error("Invalid origin");
+    return url.origin;
+  } catch {
+    throw new Error("Password recovery requires a configured public HTTPS app origin.");
+  }
+}
+
 /** Auth callback URL that requires a configured trusted origin. */
 export function trustedAuthCallbackUrl(nextPath: string): string | null {
   const origin = trustedAppOrigin();
