@@ -21,3 +21,21 @@ export function invitationPasswordLoginHref(): string {
 }
 
 export { ACCEPT_PATH as ADMIN_INVITATION_ACCEPT_PATH };
+
+/** Map RPC errors without exposing PostgreSQL text to the invitee. */
+export function mapAcceptAdminInvitationError(message: string): string {
+  const msg = message.toLowerCase();
+  if (msg.includes("this invitation has expired")) {
+    return "This invitation has expired.";
+  }
+  if (msg.includes("was cancelled") || msg.includes("was canceled")) {
+    return "This invitation was cancelled.";
+  }
+  if (
+    msg.includes("this invitation belongs to another account") ||
+    msg.includes("cannot be accepted by the current account")
+  ) {
+    return "This invitation cannot be used with the current account.";
+  }
+  return "We couldn't accept this invitation. Please try again or ask an Owner to resend it.";
+}

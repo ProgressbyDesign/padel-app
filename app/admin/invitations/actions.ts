@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { writeAdminAuditEvent } from "@/lib/admin/audit";
-import { ADMIN_INVITATION_ACCEPT_PATH as ACCEPT_PATH } from "@/lib/admin/invitationAcceptHelpers";
+import {
+  ADMIN_INVITATION_ACCEPT_PATH as ACCEPT_PATH,
+  mapAcceptAdminInvitationError,
+} from "@/lib/admin/invitationAcceptHelpers";
 import {
   clearAdminInvitationTokenCookie,
   readAdminInvitationTokenFromCookie,
@@ -160,22 +163,9 @@ export async function acceptAdminInvitationAction(): Promise<AcceptInvitationRes
 
   if (rpcError) {
     // Preserve cookie so the user can switch account or retry.
-    const msg = rpcError.message.toLowerCase();
-    if (msg.includes("another account") || msg.includes("belongs")) {
-      return {
-        ok: false,
-        message: "This invitation cannot be used with the current account.",
-      };
-    }
-    if (msg.includes("expired")) {
-      return { ok: false, message: "This invitation has expired." };
-    }
-    if (msg.includes("cancelled") || msg.includes("canceled")) {
-      return { ok: false, message: "This invitation was cancelled." };
-    }
     return {
       ok: false,
-      message: "This invitation cannot be used with the current account.",
+      message: mapAcceptAdminInvitationError(rpcError.message),
     };
   }
 

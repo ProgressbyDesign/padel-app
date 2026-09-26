@@ -12,6 +12,7 @@ import {
   describeAdminInvitationCookieConfig,
   sanitizeInvitationTokenForCookie,
 } from "@/lib/admin/invitationCookieConfig";
+import { mapAcceptAdminInvitationError } from "@/lib/admin/invitationAcceptHelpers";
 import { safeInternalPath } from "@/lib/auth/safePath";
 import { trustedAuthCallbackUrl } from "@/lib/auth/trustedOrigin";
 
@@ -108,6 +109,43 @@ describe("admin invitation onboarding decisions", () => {
   });
 });
 
+describe("accept invitation error mapping", () => {
+  it("keeps account-mismatch, expired and cancelled messages specific", () => {
+    expect(
+      mapAcceptAdminInvitationError("This invitation belongs to another account.")
+    ).toBe("This invitation cannot be used with the current account.");
+    expect(
+      mapAcceptAdminInvitationError("This invitation cannot be accepted by the current account.")
+    ).toBe("This invitation cannot be used with the current account.");
+    expect(mapAcceptAdminInvitationError("This invitation has expired.")).toBe(
+      "This invitation has expired."
+    );
+    expect(mapAcceptAdminInvitationError("This invitation was cancelled.")).toBe(
+      "This invitation was cancelled."
+    );
+  });
+
+  it("does not treat owner-workflow 23514 as an email mismatch", () => {
+    expect(
+      mapAcceptAdminInvitationError(
+        "Owners may only resend, cancel or expire a pending invitation."
+      )
+    ).toBe(
+      "We couldn't accept this invitation. Please try again or ask an Owner to resend it."
+    );
+  });
+
+  it("does not treat the generic lookup string as an account mismatch", () => {
+    expect(
+      mapAcceptAdminInvitationError(
+        "This invitation is invalid, expired, or belongs to another account."
+      )
+    ).toBe(
+      "We couldn't accept this invitation. Please try again or ask an Owner to resend it."
+    );
+  });
+});
+
 describe("invitation state mapping", () => {
   it("maps invitation statuses for UI without revealing secrets", () => {
     const states = [
@@ -146,6 +184,34 @@ describe("magic-link invitation options", () => {
 });
 
 describe("invitation route security", () => {
+  it("maps unexpected accept errors through the dedicated helper", async () => {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const root = process.cwd();
+    const actionSource = await fs.readFile(
+      path.join(root, "app/admin/invitations/actions.ts"),
+      "utf8"
+    );
+    const migrationDir = path.join(root, "supabase/migrations");
+    const migrationFiles = await fs.readdir(migrationDir);
+    const migrationName = migrationFiles.find((name) =>
+      name.endsWith("_fix_owner_invitation_self_acceptance.sql")
+    );
+    expect(migrationName).toBeTruthy();
+    const migrationSource = await fs.readFile(
+      path.join(migrationDir, migrationName!),
+      "utf8"
+    );
+    expect(actionSource).toContain("mapAcceptAdminInvitationError");
+    expect(actionSource).not.toContain(
+      'message: "This invitation cannot be used with the current account."'
+    );
+    expect(migrationSource).toContain("self_acceptance");
+    expect(migrationSource).toContain(
+      "Owners may only resend, cancel or expire a pending invitation."
+    );
+  });
+
   it("does not import service-role helpers in invitation modules", async () => {
     const fs = await import("node:fs/promises");
     const path = await import("node:path");
