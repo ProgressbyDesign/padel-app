@@ -22,6 +22,7 @@ import {
 } from "@/lib/queries/venueProfileApplication";
 import type { VenueApplicationTargetVenue } from "@/lib/venueProfileApplication/types";
 import { createClient } from "@/lib/supabase/server";
+import { logApplicationMutationFailure } from "@/lib/applications/mutationDiagnostics";
 
 function errorResult(
   message: string,
@@ -394,11 +395,12 @@ export async function submitVenueApplication(input: {
   const now = new Date().toISOString();
   const supabase = await createClient();
   const applicantEmail = await claimsEmail();
+  // Payload keys must be real venue_profile_applications columns: PostgREST
+  // rejects unknown keys with PGRST204 before any SQL (or trigger) runs.
   const { error } = await supabase
     .from("venue_profile_applications")
     .update({
       status: "submitted",
-      applicationId: application.id,
       current_step: 4,
       terms_accepted_at: now,
       privacy_accepted_at: now,
@@ -408,6 +410,11 @@ export async function submitVenueApplication(input: {
     .eq("user_id", userId);
 
   if (error) {
+    logApplicationMutationFailure(
+      "submitVenueApplication",
+      { applicationId: application.id, userId },
+      error
+    );
     return errorResult(
       "We could not submit your application. Please try again shortly."
     );
