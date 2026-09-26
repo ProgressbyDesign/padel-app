@@ -3,6 +3,7 @@ import { safeInternalPath } from "@/lib/auth/safePath";
 import {
   trustedAppOrigin,
   trustedAuthCallbackUrl,
+  productionRecoveryOrigin,
 } from "@/lib/auth/trustedOrigin";
 
 export { safeInternalPath };
@@ -41,7 +42,9 @@ export async function getRequestOrigin(): Promise<string> {
 }
 
 export async function authCallbackUrl(nextPath: string): Promise<string> {
-  const origin = await getRequestOrigin();
+  const origin = process.env.NODE_ENV === "production" && safeInternalPath(nextPath) === "/reset-password"
+    ? productionRecoveryOrigin()
+    : await getRequestOrigin();
   const url = new URL("/auth/callback", origin);
   url.searchParams.set("next", safeInternalPath(nextPath));
   return url.toString();

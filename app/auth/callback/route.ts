@@ -36,19 +36,29 @@ export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;
   const code = requestUrl.searchParams.get("code");
   const nextPath = safeInternalPath(requestUrl.searchParams.get("next"));
+  const isRecovery = nextPath === "/reset-password" || requestUrl.searchParams.get("type") === "recovery";
+  const failurePath = (reason: "missing_code" | "invalid_code") =>
+    isRecovery ? "/forgot-password?error=invalid" : `/login?error=${reason}`;
 
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=missing_code", requestUrl.origin));
+    return NextResponse.redirect(new URL(failurePath("missing_code"), requestUrl.origin));
   }
 
   const pending = NextResponse.redirect(new URL(nextPath, requestUrl.origin));
   const supabase = createCallbackClient(request, pending);
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  let exchangeFailed = false;
+  try {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    exchangeFailed = Boolean(error);
+  } catch (error) {
+    if (!isRecovery) throw error;
+    exchangeFailed = true;
+  }
 
-  if (error) {
+  if (exchangeFailed) {
     return copyResponseCookies(
       pending,
-      NextResponse.redirect(new URL("/login?error=invalid_code", requestUrl.origin))
+      NextResponse.redirect(new URL(failurePath("invalid_code"), requestUrl.origin))
     );
   }
 

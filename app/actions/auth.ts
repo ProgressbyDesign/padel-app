@@ -105,7 +105,13 @@ export async function forgotPasswordAction(
   const email = text(formData, "email").toLowerCase();
   if (!validEmail(email)) return error("Enter a valid email address.");
 
-  const redirectTo = await authCallbackUrl("/reset-password");
+  let redirectTo: string;
+  try {
+    redirectTo = await authCallbackUrl("/reset-password");
+  } catch {
+    console.error("[auth] Password recovery origin is not configured correctly.");
+    return error("We could not send the reset email. Please try again later.");
+  }
   const supabase = await createClient();
   const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
