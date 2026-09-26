@@ -22,7 +22,9 @@ describe("application email journey", () => {
   it("escapes review feedback and routes approvals to the dashboard", async () => {
     await sendCoachApplicationStatusEmail({ to: "player@example.com", status: "approved", mode: "create_new", note: '<script>alert("bad")</script>' });
     const html = send.mock.calls[0][0].html;
-    expect(html).toContain("profile is now published");
+    expect(html).toContain("application is approved");
+    expect(html).toContain("complete and manage your profile");
+    expect(html).not.toContain("now published");
     expect(html).toContain('href="https://example.com/account"');
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");

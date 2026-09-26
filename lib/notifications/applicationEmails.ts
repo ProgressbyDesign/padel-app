@@ -24,7 +24,7 @@ async function notifyAdmin(kind: "coach" | "venue", applicationId: string, name?
   if (!to) { console.warn("[application-email] APPLICATION_NOTIFY_EMAIL not configured"); return; }
   await deliver({ to, title: `New ${kind} application to review`,
     paragraphs: [`${name?.trim() || "An applicant"} has submitted a ${kind} application.`,
-      kind === "coach" ? "Open the application to review the details and approve or decline it. Approval publishes the coach profile. You must sign in with an authorised admin account." : "Sign in to review the venue details and approve, request changes or decline the application."],
+      kind === "coach" ? "Open the application to review the details and approve or decline it. You must sign in with an authorised admin account." : "Sign in to review the venue details and approve, request changes or decline the application."],
     path: `/admin/applications/${kind === "coach" ? "coaches" : "venues"}/${encodeURIComponent(applicationId)}${kind === "coach" ? "#decision" : ""}`,
     label: kind === "coach" ? "Review and approve coach" : "Review venue application" });
 }
@@ -39,7 +39,7 @@ async function statusEmail(input: {
   const copy: Record<AppStatus, { title: string; paragraphs: string[]; label: string }> = {
     submitted: { title: `We’ve received your ${item}`, paragraphs: ["Thanks for taking the next step with Padel Pathways.", `Our team will review your ${item} and email you when there is an update. You can check its progress from your dashboard.`], label: "View application progress" },
     changes_requested: { title: `A few updates to your ${item}`, paragraphs: ["Our team has reviewed your details. Please make the updates below and resubmit when you are ready."], label: "Update my application" },
-    approved: { title: `Your ${item} is approved`, paragraphs: [kind === "coach" ? "Welcome to the coaching community. Your coach profile is now published." : "Welcome to Padel Pathways. You can now manage your venue from your account.", kind === "coach" ? "Visit your dashboard to add photos, connect your coaching venues and set up session availability." : "Visit your dashboard to complete your venue details and keep your profile up to date."], label: "Open my dashboard" },
+    approved: { title: `Your ${item} is approved`, paragraphs: [kind === "coach" ? "Welcome to the coaching community. Your coach application is approved and you can now complete and manage your profile." : "Welcome to Padel Pathways. You can now manage your venue from your account.", kind === "coach" ? "Visit your dashboard to add photos, connect your coaching venues and set up session availability." : "Visit your dashboard to complete your venue details and keep your profile up to date."], label: "Open my dashboard" },
     declined: { title: `An update on your ${item}`, paragraphs: [`Thank you for your interest in Padel Pathways. We have reviewed your ${item} and are unable to approve it at this time.`, "You can read our feedback below. If you have questions, reply to this email and our team will help."], label: "View my application" },
   };
   const selected = copy[input.status];

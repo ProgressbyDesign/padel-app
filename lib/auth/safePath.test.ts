@@ -5,6 +5,7 @@ describe("safeInternalPath", () => {
   it("accepts valid internal paths", () => {
     expect(safeInternalPath("/account")).toBe("/account");
     expect(safeInternalPath("/account/settings")).toBe("/account/settings");
+    expect(safeInternalPath("/reset-password")).toBe("/reset-password");
     expect(safeInternalPath("/book/coach/abc?start=1")).toBe(
       "/book/coach/abc?start=1"
     );
