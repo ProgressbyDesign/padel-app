@@ -10,6 +10,13 @@ import type {
 import { isCoachApplicationMode } from "@/lib/coachProfileApplication/constants";
 import { loadTargetCoachSummary } from "@/lib/queries/coachProfileApplication";
 import { createClient } from "@/lib/supabase/server";
+import {
+  DUPLICATE_FETCH_LIMIT,
+  duplicateRetrievalFilters,
+  rankDuplicateCandidates,
+  type DuplicateCoachCandidate,
+  type DuplicateCoachSource,
+} from "@/lib/admin/coachDuplicates";
 import type {
   ApprovedMembershipRole,
   VenueApplicationStatus,
@@ -19,7 +26,7 @@ import type {
   VenueProfileApplicationRow,
 } from "@/lib/venueProfileApplication/types";
 
-const COACH_APPLICATION_SELECT = `
+export const COACH_APPLICATION_SELECT = `
   id, user_id, status, current_step, application_mode, target_coach_id,
   applicant_email, full_name, phone, coaching_role, coaching_role_other,
   experience_years, description, player_levels, audiences, outcomes,
@@ -80,7 +87,7 @@ export type AdminVenueApplicationDetail = {
   memberships: AdminVenueMembership[];
 };
 
-function coachApplication(row: Record<string, unknown>): AdminCoachApplication {
+export function coachApplication(row: Record<string, unknown>): AdminCoachApplication {
   const modeRaw = row.application_mode;
   return {
     id: String(row.id),
@@ -335,6 +342,76 @@ export async function searchCoachesForAdminApproval(
     experience_years: row.experience_years ?? null,
     phone: row.phone ?? null,
   }));
+}
+
+/**
+ * Existing coaches that may belong to this applicant. Name-led, corroborated
+ * by location/role where available. Returns a short ranked list; an empty
+ * array means approval can create a new coach without interruption.
+ */
+export async function findPossibleDuplicateCoaches(input: {
+  applicantUserId: string;
+  fullName: string | null;
+  roleLabel: string | null;
+  locations: ReadonlyArray<{ city: string | null; country: string | null }>;
+}): Promise<DuplicateCoachCandidate[]> {
+  await requireAdminPermission("applications.read");
+  const filters = duplicateRetrievalFilters(input.fullName);
+  if (filters.length === 0) return [];
+
+  const supabase = await createClient();
+  // Tokens are normalised to [a-z0-9]; vowel wildcards use `_` only. Both
+  // are safe inside the PostgREST `or` filter string.
+  const { data: coaches, error } = await supabase
+    .from("coaches")
+    .select("id, name, role, publication_status, is_claimed")
+    .or(filters.join(","))
+    .limit(DUPLICATE_FETCH_LIMIT);
+  if (error) throw new Error(`Unable to check for duplicate coaches: ${error.message}`);
+  if (!coaches || coaches.length === 0) return [];
+
+  const ids = coaches.map((coach) => String(coach.id));
+  const [locationResult, membershipResult] = await Promise.all([
+    supabase
+      .from("coach_locations")
+      .select("coach_id, city, country, is_primary")
+      .in("coach_id", ids),
+    supabase.from("coach_memberships").select("coach_id, user_id").in("coach_id", ids),
+  ]);
+  if (locationResult.error) {
+    throw new Error(`Unable to load coach locations: ${locationResult.error.message}`);
+  }
+  if (membershipResult.error) {
+    throw new Error(`Unable to load coach memberships: ${membershipResult.error.message}`);
+  }
+
+  const sources: DuplicateCoachSource[] = coaches.map((coach) => {
+    const id = String(coach.id);
+    return {
+      id,
+      name: (coach.name as string | null) ?? null,
+      role: (coach.role as string | null) ?? null,
+      publicationStatus: (coach.publication_status as string | null) ?? null,
+      isClaimed: Boolean(coach.is_claimed),
+      managedByOtherAccount: (membershipResult.data ?? []).some(
+        (membership) =>
+          String(membership.coach_id) === id &&
+          String(membership.user_id) !== input.applicantUserId
+      ),
+      locations: (locationResult.data ?? [])
+        .filter((location) => String(location.coach_id) === id)
+        .map((location) => ({
+          city: (location.city as string | null) ?? null,
+          country: (location.country as string | null) ?? null,
+          isPrimary: Boolean(location.is_primary),
+        })),
+    };
+  });
+
+  return rankDuplicateCandidates(
+    { fullName: input.fullName, roleLabel: input.roleLabel, locations: input.locations },
+    sources
+  );
 }
 
 export async function searchVenuesForAdminApproval(

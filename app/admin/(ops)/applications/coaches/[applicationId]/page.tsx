@@ -11,6 +11,7 @@ import {
   optionLabel,
 } from "@/lib/coachProfileApplication/constants";
 import { getCoachApplicationDetail } from "@/lib/admin/applicationQueries";
+import { beginCoachApplicationReviewOnOpen } from "@/lib/admin/coachApplicationReview";
 
 export default async function CoachApplicationDetailPage({
   params,
@@ -20,7 +21,9 @@ export default async function CoachApplicationDetailPage({
   const { applicationId } = await params;
   const detail = await getCoachApplicationDetail(applicationId);
   if (!detail) notFound();
-  const { application, locations, targetCoach } = detail;
+  const { locations, targetCoach } = detail;
+  // Opening the full review page starts the review (submitted → under review).
+  const application = await beginCoachApplicationReviewOnOpen(detail.application);
   const isClaim = application.application_mode === "claim_existing";
 
   return (

@@ -1,18 +1,17 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-
-const RECOVERY_COOKIE = "pp_password_recovery";
+import type { NextResponse } from "next/server";
+import { RECOVERY_COOKIE, recoveryCookieOptions } from "@/lib/auth/recoverySession";
 
 export async function markPasswordRecoverySession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(RECOVERY_COOKIE, "active", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 20,
-  });
+  cookieStore.set(RECOVERY_COOKIE, "active", recoveryCookieOptions());
+}
+
+/** Attach the recovery marker to a redirect response so it survives the callback hop. */
+export function applyPasswordRecoveryCookie(response: NextResponse): void {
+  response.cookies.set(RECOVERY_COOKIE, "active", recoveryCookieOptions());
 }
 
 export async function hasPasswordRecoverySession(): Promise<boolean> {

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { redirectedAdminPath } from "@/lib/admin/legacyAdminRedirect";
+import { strandedAuthCallbackPath } from "@/lib/auth/strandedAuthCode";
 import { updateSession } from "@/lib/supabase/proxy";
 
 function copyResponseCookies(source: NextResponse, target: NextResponse) {
@@ -10,6 +11,15 @@ function copyResponseCookies(source: NextResponse, target: NextResponse) {
 export async function proxy(request: NextRequest) {
   const response = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  // Site URL fallback only: /?code=... → /auth/callback?code=...
+  const strandedCallback = strandedAuthCallbackPath(pathname, request.nextUrl.search);
+  if (strandedCallback) {
+    return copyResponseCookies(
+      response,
+      NextResponse.redirect(new URL(strandedCallback, request.nextUrl.origin))
+    );
+  }
 
   const redirected = redirectedAdminPath(pathname);
   if (redirected) {

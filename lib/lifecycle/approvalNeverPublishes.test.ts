@@ -23,6 +23,19 @@ const LIFECYCLE_WRITE_PATTERNS = [
   /selected_by_user_id\s*:/,
 ];
 
+describe("approval trigger does not write publication_status", () => {
+  it("Pass 1 approval migration never assigns published", () => {
+    const source = readFileSync(
+      path.join(
+        ROOT,
+        "supabase/migrations/20260926120000_separate_coach_approval_from_publication.sql"
+      ),
+      "utf8"
+    );
+    expect(/publication_status\s*=\s*'published'/.test(source)).toBe(false);
+  });
+});
+
 describe("approval never auto-publishes", () => {
   for (const relativePath of APPROVAL_SOURCES) {
     it(`${relativePath} does not write lifecycle columns`, () => {

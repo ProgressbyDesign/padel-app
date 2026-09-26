@@ -82,6 +82,7 @@ export default async function CoachApplicationQueuePage({ searchParams }: Props)
               <Link
                 key={application.id}
                 href={`/admin/applications/coaches/${application.id}`}
+                prefetch={false}
                 className="block rounded-2xl border border-primary/10 bg-white p-5"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -127,6 +128,7 @@ export default async function CoachApplicationQueuePage({ searchParams }: Props)
                     <td className="px-5 py-4 text-right">
                       <Link
                         href={`/admin/applications/coaches/${application.id}`}
+                        prefetch={false}
                         className="font-semibold hover:underline"
                       >
                         Review
