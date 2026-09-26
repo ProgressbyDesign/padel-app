@@ -372,6 +372,11 @@ begin
   end if;
 
   if caller_id is not null and caller_id = new.user_id then
+    -- Mirrors 20260926000000_application_email_claim_fallback.sql.
+    if caller_email is null and tg_op = 'UPDATE' then
+      caller_email := lower(nullif(btrim(old.applicant_email), ''));
+    end if;
+
     if caller_email is null then
       raise exception 'A verified account email is required.' using errcode = '23514';
     end if;
