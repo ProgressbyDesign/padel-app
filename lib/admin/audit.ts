@@ -28,6 +28,9 @@ export const ADMIN_AUDIT_ACTIONS = [
   "account_deletion.processing",
   "account_deletion.declined",
   "profile.admin_updated",
+  "coach.verification_verified",
+  "coach.verification_unverified",
+  "coach.account_unclaimed",
 ] as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
@@ -57,6 +60,9 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   "account_deletion.processing": "Account deletion marked processing",
   "account_deletion.declined": "Account deletion declined",
   "profile.admin_updated": "Profile updated by admin",
+  "coach.verification_verified": "Coach marked as approved",
+  "coach.verification_unverified": "Coach marked as needs review",
+  "coach.account_unclaimed": "Coach made unclaimed",
 };
 
 const SECRET_DETAIL_KEYS = new Set([
