@@ -4,9 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  bulkUnclaimCoaches,
+  bulkSetCoachVerification,
+} from "@/app/admin/(ops)/coachDirectoryActions";
+import {
   bulkPublishProfiles,
   bulkUnpublishProfiles,
 } from "@/app/admin/(ops)/publicationActions";
+import {
+  unclaimConfirmMessage,
+  verificationConfirmMessage,
+  type CoachVerificationTarget,
+} from "@/lib/admin/coachDirectoryOps";
 import { AdminBadge } from "@/components/admin/ui";
 import {
   PROFILE_DIRECTORY_FILTERS,
@@ -363,19 +372,35 @@ function BulkActionBar({
   const [pending, startTransition] = useTransition();
   const noun = publicationKindNoun(kind, selectedIds.length);
 
-  function run(action: "publish" | "unpublish") {
+  function run(action: string) {
     const count = selectedIds.length;
-    const confirmMessage =
-      action === "publish"
-        ? `Publish ${count} selected ${noun}?`
-        : `Unpublish ${count} selected ${noun}?`;
-    if (!window.confirm(confirmMessage)) return;
+    let confirmMessage: string | null = null;
+    if (action === "publish") {
+      confirmMessage = `Publish ${count} selected ${noun}?`;
+    } else if (action === "unpublish") {
+      confirmMessage = `Unpublish ${count} selected ${noun}?`;
+    } else if (action === "mark-unverified") {
+      confirmMessage = verificationConfirmMessage(count, "needs_review");
+    } else if (action === "make-unclaimed") {
+      confirmMessage = unclaimConfirmMessage(count);
+    }
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
 
     startTransition(async () => {
-      const result =
-        action === "publish"
-          ? await bulkPublishProfiles(kind, selectedIds)
-          : await bulkUnpublishProfiles(kind, selectedIds);
+      let result;
+      if (action === "publish") {
+        result = await bulkPublishProfiles(kind, selectedIds);
+      } else if (action === "unpublish") {
+        result = await bulkUnpublishProfiles(kind, selectedIds);
+      } else if (action === "mark-verified" || action === "mark-unverified") {
+        const target: CoachVerificationTarget =
+          action === "mark-verified" ? "approved" : "needs_review";
+        result = await bulkSetCoachVerification(selectedIds, target);
+      } else if (action === "make-unclaimed") {
+        result = await bulkUnclaimCoaches(selectedIds);
+      } else {
+        return;
+      }
       onResult(result.ok, result.message);
       if (result.ok) router.refresh();
     });
@@ -394,15 +419,28 @@ function BulkActionBar({
           onChange={(event) => {
             const value = event.target.value;
             event.target.value = "";
-            if (value === "publish" || value === "unpublish") run(value);
+            if (value) run(value);
           }}
           className="min-h-10 rounded-xl border border-primary/15 bg-white px-3 py-2 font-semibold text-primary disabled:opacity-50"
         >
           <option value="" disabled>
             {pending ? "Updating…" : "Actions"}
           </option>
-          <option value="publish">Publish</option>
-          <option value="unpublish">Unpublish</option>
+          {kind === "coach" ? (
+            <>
+              <optgroup label="Verification">
+                <option value="mark-verified">Mark as approved</option>
+                <option value="mark-unverified">Mark as needs review</option>
+              </optgroup>
+              <optgroup label="Account">
+                <option value="make-unclaimed">Make unclaimed</option>
+              </optgroup>
+            </>
+          ) : null}
+          <optgroup label="Status">
+            <option value="publish">Publish</option>
+            <option value="unpublish">Unpublish</option>
+          </optgroup>
         </select>
       </label>
     </div>

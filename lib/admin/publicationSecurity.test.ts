@@ -90,6 +90,8 @@ describe("operational publication UI", () => {
     expect(directory).toContain("applySelectAllPage");
     expect(directory).toContain("bulkPublishProfiles");
     expect(directory).toContain("bulkUnpublishProfiles");
+    expect(directory).toContain("bulkSetCoachVerification");
+    expect(directory).toContain("bulkUnclaimCoaches");
     expect(directory).toContain(">Status<");
     expect(directory).not.toContain(">Launch<");
     expect(directory).not.toContain(">Visibility<");
