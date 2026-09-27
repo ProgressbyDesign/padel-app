@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   approveCoachApplication,
   approveCoachApplicationWithExisting,
@@ -36,12 +36,15 @@ const secondaryButtonClass =
 export default function CoachApplicationReviewPanel({
   application,
   targetCoach,
+  onBusyChange,
 }: {
   application: AdminCoachApplication;
   targetCoach: CoachClaimTargetSummary | null;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  useEffect(() => { onBusyChange?.(pending); }, [pending, onBusyChange]);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [note, setNote] = useState(application.review_note ?? "");
@@ -49,6 +52,13 @@ export default function CoachApplicationReviewPanel({
   const [duplicateCandidates, setDuplicateCandidates] = useState<
     DuplicateCoachCandidate[] | null
   >(null);
+  const [reviewedVersion, setReviewedVersion] = useState(application.updated_at);
+  // Inline corrections can change duplicate matching. Discard only the old
+  // matches when fresh application data arrives; retain the admin's review note.
+  if (reviewedVersion !== application.updated_at) {
+    setReviewedVersion(application.updated_at);
+    setDuplicateCandidates(null);
+  }
 
   const reviewable =
     application.status === "submitted" || application.status === "under_review";
