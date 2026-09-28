@@ -72,7 +72,7 @@ export async function signupAction(
 
   const emailRedirectTo = await authCallbackUrl(nextPath);
   const supabase = await createClient();
-  const { error: authError } = await supabase.auth.signUp({
+  const { data, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -84,10 +84,17 @@ export async function signupAction(
     },
   });
 
+  const existingAccountMessage =
+    "An account with this email already exists. Log in or reset your password.";
+  if (authError && (authError.code === "user_already_exists" || /already registered|already exists/i.test(authError.message))) {
+    return error(existingAccountMessage);
+  }
+  // Supabase returns a sanitized user with no identities for a confirmed duplicate.
+  // Missing identities are not evidence of a duplicate; never use a privileged lookup.
+  if (!authError && data.user?.identities?.length === 0) {
+    return error(existingAccountMessage);
+  }
   if (authError) {
-    if (/already registered|already exists/i.test(authError.message)) {
-      return error("An account with this email already exists.");
-    }
     return error("We could not create your account. Please try again.");
   }
 
