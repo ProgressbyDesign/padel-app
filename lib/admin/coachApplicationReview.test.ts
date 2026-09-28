@@ -50,7 +50,9 @@ describe("review starts automatically on the detail page only", () => {
   const panel = read("components/admin/CoachApplicationReviewPanel.tsx");
 
   it("detail page opens the review; queue and panel do not", () => {
-    expect(detailPage).toContain("beginCoachApplicationReviewOnOpen(detail.application)");
+    expect(detailPage).toMatch(
+      /beginCoachApplicationReviewOnOpen\(\s*detail\.application\s*,?\s*\)/
+    );
     expect(queuePage).not.toContain("beginCoachApplicationReviewOnOpen");
     expect(panel).not.toContain("startCoachApplicationReview");
     expect(panel).not.toContain("Start review");

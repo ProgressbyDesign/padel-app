@@ -469,6 +469,19 @@ export async function withdrawVenueApplication(
   if (error) return errorResult("We could not withdraw the application.");
 
   revalidateVenueApplicationPaths();
+
+  const claimsMail = await claimsEmail();
+  const applicantEmail = application.applicant_email?.trim() || claimsMail || "";
+  const { sendVenueApplicationWithdrawnEmails } = await import(
+    "@/lib/notifications/applicationEmails"
+  );
+  void sendVenueApplicationWithdrawnEmails({
+    applicantEmail,
+    previousStatus: application.status,
+    venueName: application.proposed_venue_name,
+    applicationId: application.id,
+  });
+
   return successResult("Application withdrawn.", application.id);
 }
 

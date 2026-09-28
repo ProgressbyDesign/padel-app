@@ -21,6 +21,8 @@ export function mapEmailProviderError(input: {
   providerMessage?: string | null;
   providerName?: string | null;
   httpStatus?: number | null;
+  /** Invitation UI keeps its existing wording. Other flows use a generic message. */
+  context?: "invitation" | "product";
 }): { errorCode: string; message: string } {
   if (input.missingApiKey) {
     return {
@@ -96,15 +98,19 @@ export function mapEmailProviderError(input: {
       message: "Email could not be sent because the mail service is unavailable.",
     };
   }
+  const failedMessage =
+    input.context === "invitation"
+      ? "Invitation created, but the email could not be sent."
+      : "The email could not be sent.";
   if (input.providerMessage?.toLowerCase().includes("missing message id")) {
     return {
       errorCode: "provider_missing_message_id",
-      message: "Invitation created, but the email could not be sent.",
+      message: failedMessage,
     };
   }
   return {
     errorCode: "delivery_failed",
-    message: "Invitation created, but the email could not be sent.",
+    message: failedMessage,
   };
 }
 
