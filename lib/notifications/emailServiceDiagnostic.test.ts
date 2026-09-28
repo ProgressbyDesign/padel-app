@@ -25,9 +25,15 @@ describe("email service diagnostic", () => {
     expect(JSON.stringify(diagnostic)).not.toMatch(/re_[A-Za-z0-9]+/);
   });
 
-  it("maps missing provider message id to a safe code", () => {
+  it("keeps invitation failures specific and other failures generic", () => {
     expect(
-      mapEmailProviderError({ providerMessage: "missing message id" }).errorCode
-    ).toBe("provider_missing_message_id");
+      mapEmailProviderError({
+        providerMessage: "missing message id",
+        context: "invitation",
+      }).message
+    ).toBe("Invitation created, but the email could not be sent.");
+    expect(
+      mapEmailProviderError({ providerMessage: "missing message id" }).message
+    ).toBe("The email could not be sent.");
   });
 });

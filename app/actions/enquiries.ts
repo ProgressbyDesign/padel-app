@@ -1,12 +1,12 @@
 "use server";
 
-import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { buildTeamEnquiryEmailHtml, buildUserConfirmationEmailHtml } from "@/lib/enquiryEmail";
 import {
   pickPrimaryVenueFromCoachRow,
   venueLocationLabels,
 } from "@/lib/coachVenueGeo";
+import { sendProductEmail } from "@/lib/notifications/productEmail";
 import { validateEnquiryPayload, type EnquirySubmitPayload } from "@/lib/enquiryPayload";
 import {
   applyPublishedCoachFilter,
@@ -171,63 +171,31 @@ export async function submitEnquiry(payload: EnquirySubmitPayload): Promise<Subm
     source_url: sourceUrl,
   };
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const notifyTo = process.env.ENQUIRY_NOTIFY_EMAIL?.trim();
   const from =
     process.env.ENQUIRY_FROM_EMAIL?.trim() ||
     process.env.RESEND_FROM_EMAIL?.trim() ||
-    "Padel Pathways <matthew@progressbydesign.co.uk>";
-  const notifyTo = process.env.ENQUIRY_NOTIFY_EMAIL?.trim();
-
-  if (!apiKey) {
-    console.warn(
-      "[enquiry] RESEND_API_KEY is missing — enquiry saved but no emails were sent."
-    );
-    return { ok: true };
-  }
-
-  const resend = new Resend(apiKey);
+    undefined;
 
   if (notifyTo) {
-    try {
-      const teamResult = await resend.emails.send({
-        from,
-        to: notifyTo,
-        subject: "New enquiry — Padel Pathways",
-        html: buildTeamEnquiryEmailHtml(teamEmailPayload),
-      });
-      if (teamResult.error) {
-        console.error(
-          "[enquiry] team notify email failed:",
-          teamResult.error.name,
-          teamResult.error.message,
-          teamResult.error.statusCode != null ? `(status ${teamResult.error.statusCode})` : ""
-        );
-      }
-    } catch (e) {
-      console.error("[enquiry] team notify email exception", e);
-    }
+    await sendProductEmail({
+      to: notifyTo,
+      from,
+      subject: "New enquiry — Padel Pathways",
+      html: buildTeamEnquiryEmailHtml(teamEmailPayload),
+      logLabel: "enquiry",
+    });
   } else {
     console.warn("[enquiry] ENQUIRY_NOTIFY_EMAIL is not set — skipping team notification email.");
   }
 
-  try {
-    const userResult = await resend.emails.send({
-      from,
-      to: payload.email.trim(),
-      subject: "We received your enquiry",
-      html: buildUserConfirmationEmailHtml(payload),
-    });
-    if (userResult.error) {
-      console.error(
-        "[enquiry] user confirmation email failed:",
-        userResult.error.name,
-        userResult.error.message,
-        userResult.error.statusCode != null ? `(status ${userResult.error.statusCode})` : ""
-      );
-    }
-  } catch (e) {
-    console.error("[enquiry] user confirmation email exception", e);
-  }
+  await sendProductEmail({
+    to: payload.email.trim(),
+    from,
+    subject: "We received your enquiry",
+    html: buildUserConfirmationEmailHtml(payload),
+    logLabel: "enquiry",
+  });
 
   return { ok: true };
 }

@@ -507,6 +507,7 @@ export async function withdrawCoachApplication(
     previousStatus,
     mode: application.application_mode,
     coachName: application.full_name,
+    applicationId: application.id,
   });
 
   const nextPath = safeInternalPath(

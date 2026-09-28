@@ -182,7 +182,7 @@ export async function createCoachBookingRequest(input: {
   if (booking) {
     void sendBookingEmail({
       to: accountEmail,
-      subject: "Your coaching session request was sent",
+      subject: "Coaching request sent",
       html: buildBookingRequestPlayerEmailHtml(booking),
     });
     const coachEmail = await resolveCoachNotificationEmail(booking.coach_id);
@@ -295,20 +295,22 @@ async function mutateBookingStatus(input: {
     if (input.status === "accepted") {
       void sendBookingEmail({
         to: updated.requester_email,
-        subject: "Your coaching session request was accepted",
+        subject: "Your coaching request was accepted",
         html: buildBookingAcceptedPlayerEmailHtml(updated),
       });
     } else if (input.status === "declined") {
       void sendBookingEmail({
         to: updated.requester_email,
-        subject: "Your coaching session request was declined",
+        subject: "Your coaching request wasn't available this time",
         html: buildBookingDeclinedPlayerEmailHtml(updated),
       });
     } else if (input.status === "cancelled") {
+      const cancelledBy =
+        input.as === "player" ? "player" : input.as === "admin" ? "admin" : "coach";
       void sendBookingEmail({
         to: updated.requester_email,
         subject: "Coaching session cancelled",
-        html: buildBookingCancelledEmailHtml(updated, "player"),
+        html: buildBookingCancelledEmailHtml(updated, "player", cancelledBy),
       });
       const coachEmail =
         input.as === "player"
@@ -318,7 +320,7 @@ async function mutateBookingStatus(input: {
         void sendBookingEmail({
           to: coachEmail,
           subject: "A player cancelled a coaching session",
-          html: buildBookingCancelledEmailHtml(updated, "coach"),
+          html: buildBookingCancelledEmailHtml(updated, "coach", "player"),
         });
       }
     }

@@ -41,6 +41,7 @@ export async function sendAdminInvitationEmail(input: {
     to: input.to,
     subject: "You’re invited to join the Padel Pathways admin team",
     logLabel: "admin-invitation",
+    deliveryContext: "invitation",
     html: `
       <p>${escapeEmailHtml(input.inviterName)} invited you to the Padel Pathways admin team.</p>
       <p><strong>Role:</strong> ${escapeEmailHtml(ROLE_LABELS[input.role])}</p>

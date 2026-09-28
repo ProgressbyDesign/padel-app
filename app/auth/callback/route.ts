@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { applyPasswordRecoveryCookie } from "@/lib/auth/recovery";
 import { passwordRecoveryDestination } from "@/lib/auth/recoverySession";
 import { safeInternalPath } from "@/lib/auth/redirects";
+import { maybeSendRegistrationAdminNotification, registrationIntentLabel } from "@/lib/notifications/registrationAdminEmail";
 
 function copyResponseCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => target.cookies.set(cookie));
@@ -75,6 +76,47 @@ export async function GET(request: NextRequest) {
 
   if (destination === "/reset-password") {
     applyPasswordRecoveryCookie(response);
+  } else {
+    try {
+      await maybeSendRegistrationAdminNotification({
+        isRecovery,
+        nextPath: destination,
+        claim: async () => {
+          const { data, error } = await supabase.rpc(
+            "claim_registration_admin_notification"
+          );
+          if (error) return false;
+          return data === true;
+        },
+        loadAccount: async () => {
+          const { data } = await supabase.auth.getUser();
+          const user = data.user;
+          if (!user?.email) return null;
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          const metadata = user.user_metadata ?? {};
+          const metadataName =
+            typeof metadata.full_name === "string" ? metadata.full_name : "";
+          const confirmedAt = user.email_confirmed_at
+            ? new Date(user.email_confirmed_at).toLocaleString("en-GB", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })
+            : null;
+          return {
+            name: profile?.full_name?.trim() || metadataName.trim() || "Not provided",
+            email: user.email,
+            intent: registrationIntentLabel(metadata.signup_intent),
+            confirmedAt,
+          };
+        },
+      });
+    } catch {
+      console.warn("[registration-email] notification skipped after an unexpected error");
+    }
   }
 
   return response;

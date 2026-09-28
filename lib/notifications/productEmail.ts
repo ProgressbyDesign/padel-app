@@ -12,6 +12,7 @@ export async function sendEmailWithResult(input: {
   from?: string;
   bcc?: string[];
   replyTo?: string;
+  deliveryContext?: "invitation" | "product";
 }): Promise<EmailDeliveryResult> {
   const label = input.logLabel ?? "product-email";
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -54,6 +55,7 @@ export async function sendEmailWithResult(input: {
       const mapped = mapEmailProviderError({
         providerMessage: error.message,
         providerName: error.name,
+        context: input.deliveryContext,
       });
       if (process.env.NODE_ENV === "development") {
         console.warn(
@@ -74,6 +76,7 @@ export async function sendEmailWithResult(input: {
     if (!providerId) {
       const mapped = mapEmailProviderError({
         providerMessage: "missing message id",
+        context: input.deliveryContext,
       });
       if (process.env.NODE_ENV === "development") {
         console.warn(`[${label}] ${mapped.errorCode}: Resend returned no data.id`);
@@ -86,7 +89,10 @@ export async function sendEmailWithResult(input: {
     return { ok: true, providerId };
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
-    const mapped = mapEmailProviderError({ providerMessage: message });
+    const mapped = mapEmailProviderError({
+      providerMessage: message,
+      context: input.deliveryContext,
+    });
     if (process.env.NODE_ENV === "development") {
       console.warn(`[${label}] exception:`, message);
     } else {
@@ -105,6 +111,7 @@ export async function sendProductEmail(input: {
   from?: string;
   bcc?: string[];
   replyTo?: string;
+  deliveryContext?: "invitation" | "product";
 }): Promise<void> {
   await sendEmailWithResult(input);
 }

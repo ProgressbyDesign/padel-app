@@ -150,6 +150,8 @@ async function notifyApplicant(input: {
     mode: input.application.application_mode,
     coachName: input.coachName ?? input.application.full_name,
     note: input.note,
+    applicationId: input.application.id,
+    coachId: input.application.coach_id,
   });
 }
 

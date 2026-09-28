@@ -88,6 +88,7 @@ async function notifyVenueApplicant(input: {
   status: "changes_requested" | "approved" | "declined";
   note?: string | null;
   venueName?: string | null;
+  venueId?: string | null;
 }) {
   const email = input.application.applicant_email?.trim() || "";
   if (!email) {
@@ -112,6 +113,8 @@ async function notifyVenueApplicant(input: {
     mode: input.application.application_mode,
     venueName: input.venueName ?? input.application.proposed_venue_name,
     note: input.note,
+    applicationId: input.application.id,
+    venueId: input.venueId,
   });
 }
 
@@ -251,6 +254,7 @@ async function approveWithVenue(
     application,
     status: "approved",
     venueName: application.proposed_venue_name,
+    venueId,
   });
   void writeAdminAuditEvent({
     action: "venue_application.approved",
@@ -396,6 +400,7 @@ export async function createAndApproveVenueApplication(input: {
     application,
     status: "approved",
     venueName: name,
+    venueId,
   });
   void writeAdminAuditEvent({
     action: "venue_application.approved",
