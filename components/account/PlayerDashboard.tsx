@@ -10,6 +10,7 @@ import PlayerFavourites from "@/components/account/PlayerFavourites";
 import { loadPlayerBookings, partitionPlayerBookings } from "@/lib/queries/coachBookings";
 import { loadOptionalAccountNavContext } from "@/lib/workspace/resolve";
 import { createClient } from "@/lib/supabase/server";
+import { developmentPreviewEnabled } from "@/lib/development/flags";
 
 export default async function PlayerDashboard({account, coachApplication, venueApplication}: {account:{id:string;fullName:string|null;email:string}; coachApplication: AccountCoachApplicationSummary; venueApplication: AccountVenueApplicationSummary}) {
   const supabase = await createClient();
@@ -32,6 +33,7 @@ export default async function PlayerDashboard({account, coachApplication, venueA
         {[{Icon:LayoutDashboard,label:"Dashboard",href:"/account/personal"},{Icon:CalendarDays,label:"Bookings",href:"/account/bookings"},{Icon:Heart,label:"Favourites",href:"#favourites"},{Icon:Compass,label:"Find a coach",href:"/coaches"},{Icon:Settings,label:"Account settings",href:"/account/settings"}].map((item,i)=><Link key={item.label} href={item.href} className={`flex min-h-12 shrink-0 items-center gap-3 rounded-xl px-4 text-sm font-semibold ${i===0?"bg-primary text-accent":"bg-white text-primary/75"}`}><item.Icon className="h-4 w-4" />{item.label}</Link>)}
       </nav></aside>
       <div className="min-w-0 space-y-7">
+        {developmentPreviewEnabled() ? <Link href="/account/development" className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-accent px-5 py-4 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-offset-4"><span>Explore your Progress Passport <span className="font-normal">· development preview</span></span><span aria-hidden>→</span></Link> : null}
         <section className="relative overflow-hidden rounded-3xl bg-primary p-7 text-white sm:p-9">
           <Image src={HERO_POSTER_SRC} alt="" fill sizes="900px" className="object-cover opacity-25" />
           <div className="relative flex flex-wrap items-center gap-5"><AccountAvatar url={nav?.avatarUrl} name={account.fullName} email={account.email} size="lg" /><div><h1 className="text-3xl text-white sm:text-4xl">Welcome{account.fullName ? `, ${account.fullName}` : " back"}</h1><p className="mt-3 text-sm text-white/80">Your next session starts here.</p><Link href="/account/settings" className="mt-3 inline-block text-xs underline text-white/80">Account details</Link></div></div>
