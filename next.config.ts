@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const projectRoot = path.resolve(__dirname);
 
 const nextConfig: NextConfig = {
+  // Isolated local browser validation must not contend with an open dev server.
+  distDir: process.env.NODE_ENV === "development" && process.env.PADEL_PASSPORT_C1_CHECK === "true"
+    ? ".next/passport-c1" : ".next",
   // A package-lock.json in C:\Users\matth otherwise makes Next/Turbopack
   // treat the home directory as the workspace root, so @import "tailwindcss"
   // resolves outside this repo.

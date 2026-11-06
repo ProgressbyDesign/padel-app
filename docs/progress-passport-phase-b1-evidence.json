@@ -1,0 +1,216 @@
+{
+  "date": "2026-10-30",
+  "environment": "native PostgreSQL; Supabase platform compatibility shim",
+  "migrations": [
+    {
+      "database": "passport_b1_replay1_1793401347973",
+      "files": [
+        "20260803010000_sprint6a_launch_foundation_publication_security.sql",
+        "20260828010000_sprint6a4_public_profile_projections.sql",
+        "20260828020000_sprint6a4_lock_public_profile_base_access.sql",
+        "20260909064447_verified_coach_reviews.sql",
+        "20260909071018_fix_player_booking_publication_lookup.sql",
+        "20260909174404_coach_booking_paid_status.sql",
+        "20260909223854_player_favourites.sql",
+        "20260910230118_publish_coach_on_application_approval.sql",
+        "20260924174032_coach_member_venue_catalogue.sql",
+        "20260926000000_application_email_claim_fallback.sql",
+        "20260926120000_separate_coach_approval_from_publication.sql",
+        "20260926230638_fix_owner_invitation_self_acceptance.sql",
+        "20260926231158_preserve_last_owner_on_invitation_accept.sql",
+        "20260927185846_coach_application_inline_review_edits.sql",
+        "20260927224957_admin_coach_directory_bulk_ops.sql",
+        "20260927225107_fix_coach_directory_bulk_ops_id_ambiguity.sql",
+        "20260928090000_claim_registration_admin_notification.sql",
+        "20261030222020_progress_passport_foundation.sql",
+        "20261030222021_progress_passport_operations.sql",
+        "20261030222023_progress_passport_draft_curriculum.sql"
+      ],
+      "legacy": {
+        "objects": 253,
+        "sha256": "b1ed6e1c80de0d75baf02cda5edaf625263ec98ee8c962751f2683bdb5c0be1d"
+      },
+      "releaseEnabled": false
+    },
+    {
+      "database": "passport_b1_replay2_1793401348535",
+      "files": [
+        "20260803010000_sprint6a_launch_foundation_publication_security.sql",
+        "20260828010000_sprint6a4_public_profile_projections.sql",
+        "20260828020000_sprint6a4_lock_public_profile_base_access.sql",
+        "20260909064447_verified_coach_reviews.sql",
+        "20260909071018_fix_player_booking_publication_lookup.sql",
+        "20260909174404_coach_booking_paid_status.sql",
+        "20260909223854_player_favourites.sql",
+        "20260910230118_publish_coach_on_application_approval.sql",
+        "20260924174032_coach_member_venue_catalogue.sql",
+        "20260926000000_application_email_claim_fallback.sql",
+        "20260926120000_separate_coach_approval_from_publication.sql",
+        "20260926230638_fix_owner_invitation_self_acceptance.sql",
+        "20260926231158_preserve_last_owner_on_invitation_accept.sql",
+        "20260927185846_coach_application_inline_review_edits.sql",
+        "20260927224957_admin_coach_directory_bulk_ops.sql",
+        "20260927225107_fix_coach_directory_bulk_ops_id_ambiguity.sql",
+        "20260928090000_claim_registration_admin_notification.sql",
+        "20261030222020_progress_passport_foundation.sql",
+        "20261030222021_progress_passport_operations.sql",
+        "20261030222023_progress_passport_draft_curriculum.sql"
+      ],
+      "legacy": {
+        "objects": 253,
+        "sha256": "b1ed6e1c80de0d75baf02cda5edaf625263ec98ee8c962751f2683bdb5c0be1d"
+      },
+      "releaseEnabled": false
+    }
+  ],
+  "checks": [
+    "Original lifecycle SQL passed against complete application tables; fixture rolled back",
+    "Release switch blocks player and worker operations before fixture activation",
+    "Concurrent duplicate creation returns one order; changed idempotency payload rejected; no pending earnings",
+    "Concurrent payment confirmation records once; amount tampering and payment-reference reuse denied; no undelivered earnings",
+    "Concurrent technical retry allocates exactly one new attempt on the same paid order",
+    "Queued readiness starts clock after lock acquisition; duplicate webhooks do not reset deadline",
+    "Concurrent unusable-footage replacement is free and unique; old media cannot revive",
+    "Player isolation, assigned-only evidence, admin matrix, anonymous denial and worker/client write restrictions",
+    "Developing completes exactly once and recognises quoted earnings only after payment/delivery; reassessment needs new payment",
+    "Different concurrent Verified requests create one immutable review and milestone",
+    "Legacy coach suspension committing first blocks a waiting review; historical verification survives",
+    "Legacy membership removal committing first blocks a waiting review",
+    "A review committing first holds eligibility rows until completion; later suspension does not rewrite history",
+    "Explicit grant suspension and final review serialize; suspended assessor cannot issue later decisions",
+    "Refund request/review race has a valid serial outcome; duplicate refund applies once; refunded order cannot deliver or earn anew",
+    "Payment/refund concurrency, unsolicited refund and late payment after cancellation fail safely",
+    "Post-delivery refund preserves historical milestone but zeros recognised earnings; verification insert guard rejects refunded funding",
+    "All Passport tables retain RLS and no direct writes despite inherited Supabase defaults; release switch restored disabled",
+    "Legacy SQL passed: application_email_claim_fallback.sql (fixture rolled back)",
+    "Legacy SQL passed: approved_coach_publication.sql (fixture rolled back)",
+    "Legacy SQL passed: approve_with_existing_coach_preserves_profile.sql (fixture rolled back)",
+    "Legacy SQL passed: registration_admin_notification.sql (fixture rolled back)",
+    "Legacy SQL passed: player_favourites_regression.sql (fixture rolled back)",
+    "Legacy SQL passed: coaching_venue_catalogue.sql (fixture rolled back)",
+    "Legacy SQL passed: booking_payment_regression.sql (fixture rolled back)"
+  ],
+  "migrationSha256": {
+    "20260803010000_sprint6a_launch_foundation_publication_security.sql": "568b3fb75f7b4dbe717b7c388db5d23183fe049732bb68173a2e8ea04fdd5230",
+    "20260828010000_sprint6a4_public_profile_projections.sql": "f22d5890e599880f46190c3c8905464fc77e7dffd5c6c9c2dd19bf094c7cca60",
+    "20260828020000_sprint6a4_lock_public_profile_base_access.sql": "f435c34dde38a6a5899469dec15a349b3f6a455606b22eb5056dc1e7c2492b54",
+    "20260909064447_verified_coach_reviews.sql": "0bc1f29d4dc4b96009174d4ad2415bf61619b7916e4d86a263d93c4b2dd921a0",
+    "20260909071018_fix_player_booking_publication_lookup.sql": "5d3b62730f555bb6fd9ce149012fb100dbeb67403463c5cc13140456a7b7e0fb",
+    "20260909174404_coach_booking_paid_status.sql": "463a6bae1125402b4d099ee914662b6813dd0d9d9e40f6d7d40e02bffbb49e38",
+    "20260909223854_player_favourites.sql": "dac8aca38eebecb7f6e10d01f1f71a1a3170f92901c56f5ea7c706a335fc3dc2",
+    "20260910230118_publish_coach_on_application_approval.sql": "c055ef17eb1d28e88d71c5d94959f1cb05ace24f02642224fae2a091fa3a305a",
+    "20260924174032_coach_member_venue_catalogue.sql": "14787fc4a919b151e9b744673630787fc62c2fba3ee58002d4544d4211e43517",
+    "20260926000000_application_email_claim_fallback.sql": "b1f06283f975ad3de907e8e4ed205ca6b61109d888d79e063177780d430a3bdb",
+    "20260926120000_separate_coach_approval_from_publication.sql": "5e3a1f2ec88a8353ba4f8b1b9699f616b7843adcb67afef39b4b7afdfeed0ef5",
+    "20260926230638_fix_owner_invitation_self_acceptance.sql": "c03d847d9989ff624cb9b1770c9d52bc3ca0b9ab2bf7386ca2102b0d89e0d4e9",
+    "20260926231158_preserve_last_owner_on_invitation_accept.sql": "1e15afa1aca93dfa1c2e2b57ba7c6e3fbf51d182eabe785d9a8a7ed828060fed",
+    "20260927185846_coach_application_inline_review_edits.sql": "7b5f505f888cfcae19407c99d68d351f999154d6b02d7cf84ea98eae269710db",
+    "20260927224957_admin_coach_directory_bulk_ops.sql": "e10a30453a483b41bded31814508934ab634c4982ed867faa608ef149fcf061f",
+    "20260927225107_fix_coach_directory_bulk_ops_id_ambiguity.sql": "a58bd768036f8701b1ad5e66a471d51ddc6038c0a53406511a481f0026bb0c5e",
+    "20260928090000_claim_registration_admin_notification.sql": "d2f3154a1d8a45a6aabc1ddee94b9d2224b5863e08692b7300eb1aa44431bd36",
+    "20261030222020_progress_passport_foundation.sql": "c029c91f64e489f1396c62ad97d92f68ac9d7c504e60a484b12fd31e3fe8d53a",
+    "20261030222021_progress_passport_operations.sql": "d4b58f1ec69458d75e5a137f5fc726344894de002600e9a60101238ac0ef0e17",
+    "20261030222023_progress_passport_draft_curriculum.sql": "945e1b1e1cefdbc10388c888d42360465fb3ba998c1dd4324094ba5eae8fd8f1"
+  },
+  "identity": {
+    "database": "postgres",
+    "host": "127.0.0.1",
+    "port": 55439,
+    "directory": "<disposable-project-mirror>/.phase-b1-local/data",
+    "version": "PostgreSQL 17.6 on x86_64-windows, compiled by msvc-19.44.35213, 64-bit"
+  },
+  "baselineSha256": "3a3f1c3ce371a5c2bd1699d1824b13bf004f6baee969808c8750d403f47549f2",
+  "success": true,
+  "disposableDatabasesRemoved": 3,
+  "platformLimitations": [
+    "Docker backend socket startup failure",
+    "No managed/local Supabase Auth, PostgREST, Storage or Vault integration test",
+    "Historical baseline not in versioned migrations"
+  ],
+  "advisor": {
+    "cliVersion": "2.122.0",
+    "target": "127.0.0.1:55439 native full-schema replay",
+    "groups": {
+      "INFO:unindexed_foreign_keys": 14,
+      "WARN:auth_rls_initplan": 4,
+      "INFO:unused_index": 85,
+      "WARN:multiple_permissive_policies": 23,
+      "INFO:rls_enabled_no_policy": 3,
+      "ERROR:security_definer_view": 5
+    },
+    "passportErrorsAndWarnings": [],
+    "passportInfo": [
+      {
+        "name": "unindexed_foreign_keys",
+        "level": "INFO",
+        "detail": "Table `public.pp_reviews` has a foreign key `pp_reviews_attempt_id_order_id_fkey` without a covering index. This can lead to suboptimal query performance."
+      },
+      {
+        "name": "unindexed_foreign_keys",
+        "level": "INFO",
+        "detail": "Table `public.pp_skill_verifications` has a foreign key `pp_skill_verifications_order_id_player_id_skill_id_standar_fkey` without a covering index. This can lead to suboptimal query performance."
+      },
+      {
+        "name": "rls_enabled_no_policy",
+        "level": "INFO",
+        "detail": "Table `private.pp_provider_events` has RLS enabled, but no policies exist"
+      },
+      {
+        "name": "rls_enabled_no_policy",
+        "level": "INFO",
+        "detail": "Table `private.pp_requests` has RLS enabled, but no policies exist"
+      },
+      {
+        "name": "rls_enabled_no_policy",
+        "level": "INFO",
+        "detail": "Table `private.pp_runtime` has RLS enabled, but no policies exist"
+      }
+    ],
+    "legacyErrors": [
+      {
+        "name": "security_definer_view",
+        "detail": "View `public.coach_public_profiles` is defined with the SECURITY DEFINER property"
+      },
+      {
+        "name": "security_definer_view",
+        "detail": "View `public.venue_relationship_identities` is defined with the SECURITY DEFINER property"
+      },
+      {
+        "name": "security_definer_view",
+        "detail": "View `public.coach_public_reviews` is defined with the SECURITY DEFINER property"
+      },
+      {
+        "name": "security_definer_view",
+        "detail": "View `public.venue_public_profiles` is defined with the SECURITY DEFINER property"
+      },
+      {
+        "name": "security_definer_view",
+        "detail": "View `public.coach_relationship_identities` is defined with the SECURITY DEFINER property"
+      }
+    ]
+  },
+  "appChecks": {
+    "vitest": {
+      "files": 50,
+      "tests": 439,
+      "passed": true
+    },
+    "typecheck": "passed",
+    "lint": {
+      "errors": 0,
+      "existingWarnings": 17
+    },
+    "productionBuild": "passed"
+  },
+  "cleanup": {
+    "primaryRunnerRemoved": 3,
+    "additionalExploratoryReplayDatabasesRemoved": 9,
+    "remainingTestDatabases": 0,
+    "allRemainingReplayReleaseSwitchesWereDisabled": true
+  },
+  "productionWrites": 0,
+  "deployed": false,
+  "pushed": false,
+  "merged": false,
+  "phaseCStarted": false
+}
