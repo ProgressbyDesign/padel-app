@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-03T01:01:15.907Z",
+  "environment": "padel-b1-local / Next dev 127.0.0.1:3107",
+  "checks": [
+    "Synthetic orders use existing commands; only the trusted local worker funds one order; another remains pending",
+    "Existing login form creates real SSR cookies and returns to the authorised Bandeja submission route",
+    "Mobile 320/390px preview, file/type/size errors, keyboard focus and 44px upload action pass using real synthetic video",
+    "Interrupted upload retry keeps the same funded order; server validates/decode-checks bytes, records one attempt and serves private playable ranged video",
+    "Lost-response replay does not reset the SLA; client payment headers cannot fund an order; anonymous and cross-account upload/playback denied",
+    "Unusable evidence replacement creates attempt 2 under the original payment; assigned-assessor playback works and suspension immediately removes access",
+    "Developing completes the paid service with no Verified award; linked reassessment remains payment-gated; My Assessments shows server status"
+  ],
+  "success": true,
+  "database": {
+    "version": "17.11",
+    "system_id": "7703743577865527328"
+  },
+  "releaseEnabled": false,
+  "migrationHashes": {
+    "20260803010000_sprint6a_launch_foundation_publication_security.sql": "568b3fb75f7b4dbe717b7c388db5d23183fe049732bb68173a2e8ea04fdd5230",
+    "20260828010000_sprint6a4_public_profile_projections.sql": "f22d5890e599880f46190c3c8905464fc77e7dffd5c6c9c2dd19bf094c7cca60",
+    "20260828020000_sprint6a4_lock_public_profile_base_access.sql": "f435c34dde38a6a5899469dec15a349b3f6a455606b22eb5056dc1e7c2492b54",
+    "20260909064447_verified_coach_reviews.sql": "0bc1f29d4dc4b96009174d4ad2415bf61619b7916e4d86a263d93c4b2dd921a0",
+    "20260909071018_fix_player_booking_publication_lookup.sql": "5d3b62730f555bb6fd9ce149012fb100dbeb67403463c5cc13140456a7b7e0fb",
+    "20260909174404_coach_booking_paid_status.sql": "463a6bae1125402b4d099ee914662b6813dd0d9d9e40f6d7d40e02bffbb49e38",
+    "20260909223854_player_favourites.sql": "dac8aca38eebecb7f6e10d01f1f71a1a3170f92901c56f5ea7c706a335fc3dc2",
+    "20260910230118_publish_coach_on_application_approval.sql": "c055ef17eb1d28e88d71c5d94959f1cb05ace24f02642224fae2a091fa3a305a",
+    "20260924174032_coach_member_venue_catalogue.sql": "14787fc4a919b151e9b744673630787fc62c2fba3ee58002d4544d4211e43517",
+    "20260926000000_application_email_claim_fallback.sql": "b1f06283f975ad3de907e8e4ed205ca6b61109d888d79e063177780d430a3bdb",
+    "20260926120000_separate_coach_approval_from_publication.sql": "5e3a1f2ec88a8353ba4f8b1b9699f616b7843adcb67afef39b4b7afdfeed0ef5",
+    "20260926230638_fix_owner_invitation_self_acceptance.sql": "c03d847d9989ff624cb9b1770c9d52bc3ca0b9ab2bf7386ca2102b0d89e0d4e9",
+    "20260926231158_preserve_last_owner_on_invitation_accept.sql": "1e15afa1aca93dfa1c2e2b57ba7c6e3fbf51d182eabe785d9a8a7ed828060fed",
+    "20260927185846_coach_application_inline_review_edits.sql": "7b5f505f888cfcae19407c99d68d351f999154d6b02d7cf84ea98eae269710db",
+    "20260927224957_admin_coach_directory_bulk_ops.sql": "e10a30453a483b41bded31814508934ab634c4982ed867faa608ef149fcf061f",
+    "20260927225107_fix_coach_directory_bulk_ops_id_ambiguity.sql": "a58bd768036f8701b1ad5e66a471d51ddc6038c0a53406511a481f0026bb0c5e",
+    "20260928090000_claim_registration_admin_notification.sql": "d2f3154a1d8a45a6aabc1ddee94b9d2224b5863e08692b7300eb1aa44431bd36",
+    "20261030222020_progress_passport_foundation.sql": "c029c91f64e489f1396c62ad97d92f68ac9d7c504e60a484b12fd31e3fe8d53a",
+    "20261030222021_progress_passport_operations.sql": "d4b58f1ec69458d75e5a137f5fc726344894de002600e9a60101238ac0ef0e17",
+    "20261030222023_progress_passport_draft_curriculum.sql": "945e1b1e1cefdbc10388c888d42360465fb3ba998c1dd4324094ba5eae8fd8f1"
+  },
+  "migrationCount": 21,
+  "loopbackGuard": {
+    "publishAllRejected": true,
+    "ipv6WildcardRejected": true,
+    "listenerAddresses": [
+      "127.0.0.1"
+    ],
+    "ports": [
+      55321,
+      55322,
+      55323,
+      55324
+    ]
+  },
+  "finalCleanDatabase": {
+    "users": 0,
+    "orders": 0,
+    "release_enabled": false
+  }
+}

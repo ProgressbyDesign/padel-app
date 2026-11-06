@@ -79,14 +79,14 @@ const NAV_ITEMS = [
   },
 ] as const;
 
-export default function ManagedCoachNav({ coachId }: { coachId: string }) {
+export default function ManagedCoachNav({ coachId, assessmentsEnabled = false }: { coachId: string; assessmentsEnabled?: boolean }) {
   const pathname = usePathname() ?? "";
   const base = `/account/coaches/${encodeURIComponent(coachId)}`;
 
   return (
     <nav aria-label="Coach sections">
       <ul className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-        {NAV_ITEMS.map((item) => {
+        {[...NAV_ITEMS, ...(assessmentsEnabled ? [{ href: "/assessments", label: "Assessments", icon: Award, match: (path: string, root: string) => path.startsWith(`${root}/assessments`) }] : [])].map((item) => {
           const href = `${base}${item.href}`;
           const isCurrent = item.match(pathname, base);
           const Icon = item.icon;

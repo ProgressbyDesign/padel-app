@@ -7,6 +7,7 @@ import CoachCompletionPanel from "@/components/account/CoachCompletionPanel";
 import { buildCoachCompletion } from "@/lib/coachProfileCompletion";
 import { formatCoachCardPrice } from "@/lib/formatCoachPrice";
 import { loadManagedCoachOverview } from "@/lib/queries/managedCoach";
+import { loadReviewSummaries } from "@/lib/passport/review/queries";
 
 export const metadata: Metadata = {
   title: "Coach overview",
@@ -68,9 +69,11 @@ export default async function ManagedCoachOverviewPage({ params }: PageProps) {
   const bookings = await loadCoachBookings(coachId);
   const latest = [...bookings].sort((a,b) => Date.parse(b.created_at)-Date.parse(a.created_at))[0];
   const priceLine = formatCoachCardPrice(coach.price_from);
+  const assessments = await loadReviewSummaries(coachId);
 
   return (
     <div className="space-y-8">
+      {assessments.length ? <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/15 bg-white p-5"><div><h2 className="text-xl">Player assessments</h2><p className="mt-2 text-sm">{assessments.filter(item => ["ready_for_review", "in_review"].includes(item.order.state)).length} ready or in review · {assessments.filter(item => item.order.state === "replacement_requested").length} awaiting replacement</p></div><Link className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-accent" href={`${base}/assessments`}>Open assessments</Link></section> : null}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[{label:"Awaiting response",value:pendingBookingCount,href:`${base}/bookings`},{label:"Upcoming sessions",value:partitionCoachBookings(bookings).upcoming.length,href:`${base}/bookings`},{label:"Completed sessions",value:bookings.filter(b => b.status === "completed").length,href:`${base}/bookings`},{label:"Coaching venues",value:venueCount,href:`${base}/venues`}].map(item => <Link key={item.label} href={item.href} className="rounded-2xl border border-primary/10 bg-white p-5 transition hover:border-primary/40"><p className="text-sm text-primary/60">{item.label}</p><p className="mt-3 text-3xl font-semibold">{item.value}</p></Link>)}
       </section>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import ManagedCoachHeader from "@/components/account/ManagedCoachHeader";
 import ManagedCoachNav from "@/components/account/ManagedCoachNav";
 import { loadCoachAvailabilityAccess } from "@/lib/queries/coachAvailabilityAccess";
+import { reviewExperienceEnabled } from "@/lib/passport/review/access";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -27,9 +28,9 @@ export default async function ManagedCoachLayout({
         coachingRole={shell.role}
       />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <ManagedCoachNav coachId={shell.id} />
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <ManagedCoachNav coachId={shell.id} assessmentsEnabled={reviewExperienceEnabled()} />
         </aside>
         <div className="min-w-0">{children}</div>
       </div>

@@ -8,6 +8,7 @@ import type { ProfileDirectoryStats } from "@/lib/admin/profileDirectory";
 import { loadAdminProfileDirectoryStats } from "@/lib/admin/profileDirectoryQueries";
 import { requireAdminAccess } from "@/lib/auth/adminSession";
 import { createClient } from "@/lib/supabase/server";
+import { reviewExperienceEnabled } from "@/lib/passport/review/access";
 
 const STATUSES = [
   { key: "submitted", label: "Submitted" },
@@ -47,6 +48,7 @@ export default async function AdminOverviewPage() {
         </p>
       </div>
 
+      {reviewExperienceEnabled() && hasAdminPermission(account, "bookings.manage") ? <Link href="/admin/passport/assessments" className="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-accent">Local Passport assessment watch →</Link> : null}
       {profileStats ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <ProfileDirectoryCard
